@@ -17,7 +17,12 @@ from debug_utils import LOG_CURRENT_EXCEPTION
 
 from wgmod_research.domain import types as t
 
-_itemsCache = dependency.descriptor(IItemsCache)
+
+def _items_cache():
+    # NOTE: dependency.instance() returns the live service. dependency.descriptor()
+    # is only valid as a class attribute (descriptor protocol) and raises if called
+    # at module level -- verified in-game.
+    return dependency.instance(IItemsCache)
 
 
 def build_snapshot():
@@ -60,7 +65,7 @@ def _safe_int(fn, default):
 
 def _safe_stats():
     try:
-        return _itemsCache().items.stats
+        return _items_cache().items.stats
     except Exception:
         LOG_CURRENT_EXCEPTION()
         return None
@@ -70,7 +75,7 @@ def _read_tech_unlocks(veh, unlocks):
     """Tech-tree unlocks: modules + next vehicles (incl. Tier XI) via the
     vehicle's unlock graph. getUnlocksDescrs() yields (idx, xpCost, intCD, prereqs)."""
     try:
-        cache = _itemsCache()
+        cache = _items_cache()
         out = []
         for _idx, xp_cost, int_cd, prereqs in veh.getUnlocksDescrs():
             try:
