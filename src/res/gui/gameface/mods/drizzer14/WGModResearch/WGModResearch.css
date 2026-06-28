@@ -1,15 +1,75 @@
-/* WGMod research-progress widget styles. Sizing in rem (engine scales root font). */
-#wgmod-test {
+/* WGMod research-progress bar. Sizing in rem (engine scales the root font). */
+#wgmod-root {
     position: fixed;
-    top: 90rem;
     left: 50%;
+    bottom: 120rem;
     transform: translateX(-50%);
-    z-index: 99999;
-    padding: 8rem 18rem;
-    background: rgba(20, 20, 20, 0.85);
-    color: #ffd24a;
-    font-size: 18rem;
-    border: 1rem solid #ffd24a;
-    border-radius: 4rem;
+    width: 520rem;
+    z-index: 9000;
+    font-family: "$FieldFont", sans-serif;
+    color: #ede6d9;
     pointer-events: none;
+}
+
+#wgmod-root .wg-label {
+    font-size: 14rem;
+    letter-spacing: 0.5rem;
+    text-transform: uppercase;
+    margin-bottom: 4rem;
+    text-shadow: 0 1rem 2rem rgba(0, 0, 0, 0.8);
+}
+
+#wgmod-root .wg-track {
+    position: relative;
+    height: 14rem;
+    background: rgba(0, 0, 0, 0.55);
+    border: 1rem solid rgba(255, 255, 255, 0.25);
+    border-radius: 3rem;
+    overflow: visible;
+}
+
+#wgmod-root .wg-fill {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    border-radius: 2rem;
+}
+
+/* earned vehicle XP, then global free XP stacked on top */
+#wgmod-root .wg-fill-veh {
+    background: linear-gradient(to bottom, #9ad14b, #6fae2e);
+}
+#wgmod-root .wg-fill-free {
+    background: linear-gradient(to bottom, #62b4ff, #3d86d6);
+    opacity: 0.9;
+}
+
+#wgmod-root .wg-ticks {
+    position: absolute;
+    top: -3rem;
+    bottom: -3rem;
+    left: 0;
+    right: 0;
+}
+
+#wgmod-root .wg-tick {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 2rem;
+    margin-left: -1rem;
+    background: #cfcfcf;
+    opacity: 0.85;
+}
+
+/* category coding */
+#wgmod-root .wg-cat-techtree { background: #ffd24a; }
+#wgmod-root .wg-cat-fieldmod { background: #c98bff; }
+
+/* affordable ticks are brighter / thicker */
+#wgmod-root .wg-tick.wg-aff {
+    width: 3rem;
+    margin-left: -1.5rem;
+    opacity: 1;
+    box-shadow: 0 0 4rem rgba(255, 255, 255, 0.7);
 }
