@@ -1,60 +1,41 @@
 # -*- coding: utf-8 -*-
+"""Mode state machine for the EU 2.3 model.
+
+Per selected vehicle:
+- not elite (something left to unlock) -> TECH_TREE (modules + next vehicles).
+- elite (fully researched) with remaining field-mod steps -> FIELD_MODS.
+- elite and no field mods remaining (or none exist) -> COMPLETE (full bar).
+
+Fill is the player's spendable XP shown as two stacked segments: vehicle XP
+first, then global free XP. The view treats a scale_min == scale_max range as
+100% (guard divide-by-zero).
+"""
 from wgmod_research.domain import types as t
-from wgmod_research.domain.resolvers import techtree, fieldmods, tierxi, elite
+from wgmod_research.domain.resolvers import techtree, fieldmods
 
 
 def _max_pos(ticks, default):
     return max([tk.xp_position for tk in ticks]) if ticks else default
 
 
-def _elite_ceiling(snapshot):
-    """The cap: highest milestone threshold, or the earned baseline if none."""
-    thresholds = [m.xp_threshold for m in snapshot.elite_milestones]
-    return max(thresholds) if thresholds else snapshot.elite_earned_xp
-
-
 def build_model(snapshot):
-    spendable = snapshot.vehicle_xp + snapshot.free_xp
+    fill_vehicle = snapshot.vehicle_xp
+    fill_free = snapshot.free_xp
 
-    if snapshot.tier == 11:
-        node_ticks = tierxi.resolve_nodes(snapshot)
-        if node_ticks:
-            return t.ResearchProgressModel(
-                mode=t.Mode.TIERXI_NODES,
-                scale_min=snapshot.tierxi_earned_xp,
-                scale_max=_max_pos(node_ticks, snapshot.tierxi_earned_xp),
-                fill_spendable=spendable, fill_earned=0, ticks=node_ticks)
-        elite_ticks = elite.resolve(snapshot)
-        ceiling = _elite_ceiling(snapshot)
-        clamped = min(snapshot.elite_earned_xp, ceiling)
-        return t.ResearchProgressModel(
-            mode=t.Mode.ELITE_PLUS_TIERXI_REWARDS,
-            scale_min=clamped,
-            scale_max=ceiling,
-            fill_spendable=0, fill_earned=clamped, ticks=elite_ticks)
-
-    # tiers I-X
     if not snapshot.is_elite:
         ticks = techtree.resolve(snapshot)
         return t.ResearchProgressModel(
             mode=t.Mode.TECH_TREE, scale_min=0, scale_max=_max_pos(ticks, 0),
-            fill_spendable=spendable, fill_earned=0, ticks=ticks)
+            fill_vehicle=fill_vehicle, fill_free=fill_free, ticks=ticks)
 
-    # elite tiers I-X: field mods + (real/potential) Tier XI successor
+    # elite = fully researched: show remaining Field Modifications ("upgrades").
     fm_ticks = fieldmods.resolve(snapshot)
-    fm_end = _max_pos(fm_ticks, 0)
-    succ_ticks = tierxi.resolve_successor(snapshot, start_position=fm_end)
-    research_ticks = fm_ticks + succ_ticks
-    if research_ticks:
+    if fm_ticks:
         return t.ResearchProgressModel(
-            mode=t.Mode.RESEARCH_PLUS_TIERXI, scale_min=0,
-            scale_max=_max_pos(research_ticks, 0),
-            fill_spendable=spendable, fill_earned=0, ticks=research_ticks)
+            mode=t.Mode.FIELD_MODS, scale_min=0, scale_max=_max_pos(fm_ticks, 0),
+            fill_vehicle=fill_vehicle, fill_free=fill_free, ticks=fm_ticks)
 
-    elite_ticks = elite.resolve(snapshot)
-    ceiling = _elite_ceiling(snapshot)
-    clamped = min(snapshot.elite_earned_xp, ceiling)
+    # nothing left to research or upgrade.
     return t.ResearchProgressModel(
-        mode=t.Mode.ELITE, scale_min=clamped,
-        scale_max=ceiling,
-        fill_spendable=0, fill_earned=clamped, ticks=elite_ticks)
+        mode=t.Mode.COMPLETE, scale_min=0, scale_max=0,
+        fill_vehicle=fill_vehicle, fill_free=fill_free, ticks=[])

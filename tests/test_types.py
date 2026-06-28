@@ -3,9 +3,8 @@ from wgmod_research.domain import types as t
 
 
 def test_mode_constants_are_distinct():
-    modes = {t.Mode.TECH_TREE, t.Mode.RESEARCH_PLUS_TIERXI,
-             t.Mode.TIERXI_NODES, t.Mode.ELITE, t.Mode.ELITE_PLUS_TIERXI_REWARDS}
-    assert len(modes) == 5
+    modes = {t.Mode.TECH_TREE, t.Mode.FIELD_MODS, t.Mode.COMPLETE}
+    assert len(modes) == 3
 
 
 def test_tick_holds_fields():
@@ -19,9 +18,11 @@ def test_tick_holds_fields():
 
 def test_model_defaults_empty_ticks():
     m = t.ResearchProgressModel(mode=t.Mode.TECH_TREE, scale_min=0, scale_max=0,
-                                fill_spendable=0, fill_earned=0, ticks=[])
+                                fill_vehicle=0, fill_free=0, ticks=[])
     assert m.ticks == []
     assert m.mode == t.Mode.TECH_TREE
+    assert m.fill_vehicle == 0
+    assert m.fill_free == 0
 
 
 def test_snapshot_list_defaults_are_independent():
@@ -29,8 +30,6 @@ def test_snapshot_list_defaults_are_independent():
     b = t.VehicleSnapshot(tier=6, is_elite=False, vehicle_xp=0, free_xp=0)
     assert a.tech_unlocks == []
     assert a.field_mod_steps == []
-    assert a.tierxi_nodes == []
-    assert a.elite_milestones == []
     # distinct instances must not share the same default list object
     a.tech_unlocks.append("x")
     assert b.tech_unlocks == []
