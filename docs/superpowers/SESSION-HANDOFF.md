@@ -9,12 +9,10 @@ the Garage from live data: tech-tree (green vehicle-XP fill + yellow ticks),
 field-modifications (purple ticks), and a "Fully researched" complete state — all
 verified via the debug REPL + visually.
 
-**Immediate next step (do first):** the last fix (strong-ref the `onChanged`
-handler — WG events are weak-ref based) was deployed but **not yet visually
-verified**. Relaunch, switch tanks (Kranvagn → field-mods, AMX 50 B → tech-tree,
-T57 Heavy 7×7 → complete), and confirm the bar **updates live**. Check
-`python.log` for `[wgmod] onChanged -> refresh ok=True` + a `[wgmod] push mode=…`
-per switch. (Current HEAD: `1e11b90`.)
+**Live refresh is now VERIFIED** (incl. the battle-exit cycle): garage → switch
+tanks → play a battle → exit → switch tanks again, all firing `[wgmod] onChanged
+-> refresh ok=True`. (Current HEAD: `c54ac37`.) The next step is the remaining v1
+work below — start with the owner-requested locked/prereqs-unmet ticks (item 2).
 
 ## Architecture (as built, EU 2.3)
 - **Domain (engine-free, tested):** `wgmod_research/domain` — `VehicleSnapshot` →
@@ -76,8 +74,13 @@ docs/superpowers/research/decompiled-findings.md   # verified EU symbols
 - **WoT 2.3 loads only `.wotmod`** from `mods/<version>/`; `res_mods` outranks it, so
   a stale loose copy SHADOWS the package and the client silently ignores the mod.
   Always deploy via `deploy_wotmod.py` (auto-cleans), with the **client closed**.
-- **WG `Event` is weak-ref** (`Event.WeakMethodProxy`): keep a strong reference to any
-  handler or it is GC'd and never fires.
+- **`g_currentVehicle.onChanged` is a STRONG-ref delegate `list`** (not a weak-ref
+  Event — the earlier `1e11b90` theory was wrong). The real trap: WoT tears down and
+  rebuilds the hangar space on **battle exit**, repopulating that list with WG's own
+  presenters while dropping any handler that doesn't re-subscribe. WG presenters
+  re-add themselves on each hangar load; so must we. `install_vehicle_listener()` is
+  self-healing (re-adds iff not in the list) and is called from the patched
+  `_onLoading` on every mount. Don't go back to a once-only subscription.
 - **Field-mod tick names are empty** — the `step.action` label lookup in
   `engine_adapter._step_label` doesn't resolve; fix when wiring tooltips.
 - **Special "7×7" tanks** (T57 Heavy 7×7, etc.) use a hangar without
