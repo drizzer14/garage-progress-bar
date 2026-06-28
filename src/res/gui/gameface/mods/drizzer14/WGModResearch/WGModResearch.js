@@ -82,7 +82,8 @@ function render(model) {
         if (!t) continue;
         const mark = document.createElement("div");
         mark.className =
-            "wg-tick wg-cat-" + (t.category || "x") + (t.affordable ? " wg-aff" : "");
+            "wg-tick wg-cat-" + (t.category || "x") +
+            (t.locked ? " wg-locked" : t.affordable ? " wg-aff" : "");
         mark.style.left = pct(t.position) + "%";
         mark.title = (t.name || "") + " — " + (t.xpRequired || 0) + " XP";
         ticksEl.appendChild(mark);

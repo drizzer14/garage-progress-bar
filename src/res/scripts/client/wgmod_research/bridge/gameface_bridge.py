@@ -64,7 +64,7 @@ def install_vehicle_listener():
 
 
 class TickVM(ViewModel):
-    def __init__(self, properties=5, commands=0):
+    def __init__(self, properties=6, commands=0):
         super(TickVM, self).__init__(properties=properties, commands=commands)
 
     def _initialize(self):
@@ -74,6 +74,7 @@ class TickVM(ViewModel):
         self._addStringProperty("category", "")  # 2
         self._addStringProperty("name", "")      # 3
         self._addBoolProperty("affordable", False)  # 4
+        self._addBoolProperty("locked", False)   # 5
 
     def setPosition(self, v):
         self._setNumber(0, v)
@@ -89,6 +90,9 @@ class TickVM(ViewModel):
 
     def setAffordable(self, v):
         self._setBool(4, v)
+
+    def setLocked(self, v):
+        self._setBool(5, v)
 
 
 class ResearchVM(ViewModel):
@@ -180,6 +184,7 @@ def push(rvm, host_vm=None):
                 tv.setCategory(t.category)
                 tv.setName(t.name or "")
                 tv.setAffordable(bool(t.affordable))
+                tv.setLocked(bool(t.locked))
                 arr.addViewModel(tv)
             arr.invalidate()
         # Nudge the host sub-view so its data re-syncs to JS (nested-model

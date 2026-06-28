@@ -14,6 +14,14 @@ def test_tick_holds_fields():
     assert tick.xp_position == 1500
     assert tick.category == "techtree"
     assert tick.affordable is False
+    assert tick.locked is False  # defaults to unlocked
+
+
+def test_tick_locked_field():
+    tick = t.Tick(xp_position=0, category="techtree", icon="", name="",
+                  xp_gained=0, xp_required=0, affordable=True, completed=False,
+                  locked=True)
+    assert tick.locked is True
 
 
 def test_model_defaults_empty_ticks():

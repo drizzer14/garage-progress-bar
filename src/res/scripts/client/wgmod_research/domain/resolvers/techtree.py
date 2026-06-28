@@ -14,5 +14,6 @@ def resolve(snapshot):
         ticks.append(t.Tick(
             xp_position=running, category="techtree", icon=u.icon, name=u.name,
             xp_gained=0, xp_required=u.xp_cost,
-            affordable=(running <= spendable), completed=False))
+            affordable=(running <= spendable), completed=False,
+            locked=not u.prereqs_met))
     return ticks

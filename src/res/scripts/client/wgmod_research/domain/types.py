@@ -18,7 +18,7 @@ class Mode(object):
 
 class Tick(object):
     def __init__(self, xp_position, category, icon, name,
-                 xp_gained, xp_required, affordable, completed):
+                 xp_gained, xp_required, affordable, completed, locked=False):
         self.xp_position = xp_position
         self.category = category          # techtree | fieldmod
         self.icon = icon
@@ -27,6 +27,9 @@ class Tick(object):
         self.xp_required = xp_required
         self.affordable = affordable
         self.completed = completed
+        # True = prerequisites not yet met, so this item can't be researched yet
+        # even if affordable (only meaningful for tech-tree unlocks).
+        self.locked = locked
 
 
 class UnlockItem(object):

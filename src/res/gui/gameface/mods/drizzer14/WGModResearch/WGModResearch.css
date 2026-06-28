@@ -73,3 +73,11 @@
     opacity: 1;
     box-shadow: 0 0 4rem rgba(255, 255, 255, 0.7);
 }
+
+/* locked ticks (prerequisites not met) are muted and grayed out, overriding
+   the category color -- you can't research these yet even if affordable. */
+#wgmod-root .wg-tick.wg-locked {
+    background: #5a5a5a;
+    opacity: 0.5;
+    box-shadow: none;
+}
