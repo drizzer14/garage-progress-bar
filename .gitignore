@@ -1,0 +1,20 @@
+# Build outputs / artifacts
+/dist/
+*.wotmod
+
+# Compiled Python bytecode (build output, not source)
+*.pyc
+*.pyo
+__pycache__/
+
+# OS cruft
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/
+*.swp
+
+# Local, machine-specific config (e.g. your WoT install path)
+deploy.local.json

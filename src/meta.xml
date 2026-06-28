@@ -1,0 +1,9 @@
+<root>
+    <!-- Reverse-domain unique id. Controls load order; mods with the same id
+         are treated as versions/parts of the same modification. -->
+    <id>com.drizzer14.wgmod</id>
+    <!-- Compared character-by-character (ASCII). Use zero-padded segments. -->
+    <version>0.1.0</version>
+    <name>WGMod</name>
+    <description>A World of Tanks mod. Replace this description.</description>
+</root>
