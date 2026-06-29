@@ -458,6 +458,51 @@
     color: #ede6d9;
     text-shadow: 0 0 3rem #000, 0 1rem 2rem rgba(0, 0, 0, 0.95);
 }
+/* Battle score-panel prestige badge (ELITE mode): a solid grade-colored chevron
+   glyph whose underline carries the level number. The art is a 36x16 canvas (ratio
+   2.25:1); contain-scale it so the chevrons sit at the right and the underline runs
+   left. The level number is laid over the left ~58% (the underline), right-aligned
+   so it butts against the chevrons -- matching the in-game player panel. */
+#wgmod-root .wg-tick-badge {
+    position: absolute;
+    left: 50%;
+    top: 100%;
+    margin-top: 5rem;
+    transform: translateX(-50%);
+    /* Box is wider than the contained art so background-position has horizontal
+       slack to push the chevrons toward the right edge (like the in-game panel).
+       Without this slack a position % has no visible effect. */
+    width: 46rem;
+    height: 17rem;
+    background-repeat: no-repeat;
+    background-position: 85% center;
+    background-size: contain;
+    filter: drop-shadow(0 1rem 2rem rgba(0, 0, 0, 0.85));
+}
+#wgmod-root .wg-tick-badge-num {
+    position: absolute;
+    left: 0;
+    width: 56%;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 1rem;
+    font-family: "PFDINMax", sans-serif;
+    font-size: 11rem;
+    font-weight: 700;
+    /* default; per-grade rules below recolor it to match the chevron outline. */
+    color: #f4eee2;
+    text-shadow: 0 0 2rem #000, 0 1rem 2rem rgba(0, 0, 0, 0.95);
+}
+/* Level number tinted to the grade's chevron-outline color (sampled from the tab
+   art). Enamel reuses the prestige amber. */
+#wgmod-root .wg-grade-iron   .wg-tick-badge-num { color: #7a8387; }
+#wgmod-root .wg-grade-bronze .wg-tick-badge-num { color: #ad6b45; }
+#wgmod-root .wg-grade-silver .wg-tick-badge-num { color: #849ed3; }
+#wgmod-root .wg-grade-gold   .wg-tick-badge-num { color: #e3b770; }
+#wgmod-root .wg-grade-enamel .wg-tick-badge-num { color: #fbbb57; }
 
 /* State treatment, shared by reward thumbnails and grade emblems. */
 /* The grade emblems are colored by METAL TIER (bronze is dark, silver/gold are
@@ -468,7 +513,8 @@
    badges keep full color + a gold halo. grayscale()/brightness() are confirmed to
    render in Gameface (see .wg-locked .wg-tick-img above). */
 #wgmod-root .wg-state-achieved .wg-tick-reward,
-#wgmod-root .wg-state-achieved .wg-tick-emblem {
+#wgmod-root .wg-state-achieved .wg-tick-emblem,
+#wgmod-root .wg-state-achieved .wg-tick-badge {
     /* earned -> the solid badge keeps its full color (bronze/silver/gold) + a warm
        gold halo so it reads as lit/earned, matching the gold fill bar. */
     filter: drop-shadow(0 0 3rem rgba(232, 184, 75, 0.9))
@@ -476,14 +522,16 @@
     opacity: 1;
 }
 #wgmod-root .wg-state-next .wg-tick-reward,
-#wgmod-root .wg-state-next .wg-tick-emblem {
+#wgmod-root .wg-state-next .wg-tick-emblem,
+#wgmod-root .wg-state-next .wg-tick-badge {
     /* next -> full color + bright white halo, the one you're working toward. */
     filter: drop-shadow(0 0 4rem rgba(255, 255, 255, 0.9))
             drop-shadow(0 1rem 2rem rgba(0, 0, 0, 0.85));
     opacity: 1;
 }
 #wgmod-root .wg-state-upcoming .wg-tick-reward,
-#wgmod-root .wg-state-upcoming .wg-tick-emblem {
+#wgmod-root .wg-state-upcoming .wg-tick-emblem,
+#wgmod-root .wg-state-upcoming .wg-tick-badge {
     /* not yet -> grey out the solid badge + dim it, so it clearly reads as locked
        next to the colored earned badges. (The badge is solid now, so grayscale
        reads as a clean grey hexagon rather than a see-through one.) */

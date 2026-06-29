@@ -35,6 +35,47 @@ function eliteIcon(vehClass) {
         vehClass.replace(/-/g, "_") + "_elite.png";
 }
 
+// The battle score-panel prestige badge: a solid grade-colored CHEVRON glyph + the
+// level number as text on its underline (NOT the translucent hexagon emblem). The
+// chevron art lives at prestige/tab/<grade>/<short|medium|long>/<sub>.png:
+//   - grade family  -> chevron color (iron/bronze/silver/gold/enamel)
+//   - sub-grade 1..4 -> chevron count (1/2/3 chevrons, 4 = solid filled chevron)
+//   - short|medium|long -> underline width for a 1/2/3-digit level number
+// All five families exist here (unlike emblemFont, which lacks enamel). The grade
+// family is recovered from the tick's emblem icon URL.
+const TAB_FAMILIES = { iron: 1, bronze: 1, silver: 1, gold: 1, enamel: 1 };
+function gradeFamily(emblemUrl) {
+    // emblem URL is .../prestige/emblem/<size>/<family>/<sub>.png -- pull <family>.
+    const m = /\/emblem\/\d+x\d+\/([a-z]+)\//.exec(emblemUrl || "");
+    const fam = m ? m[1] : "";
+    return TAB_FAMILIES[fam] ? fam : "";
+}
+function tabChevronUrl(family, sub, digits) {
+    const len = digits <= 1 ? "short" : (digits === 2 ? "medium" : "long");
+    const s = sub < 1 ? 1 : (sub > 4 ? 4 : sub);
+    return "img://gui/maps/icons/prestige/tab/" + family + "/" + len + "/" + s + ".png";
+}
+// The terminal MAX ("prestige") grade has a single tab badge -- a solid gold
+// hexagon + chevron, no per-sub/length variants. Its emblem icon ends in
+// .../emblem/<size>/prestige.png. The hexagon fills the badge, so it carries no
+// level number (unlike the chevron badges, whose underline holds one).
+function isPrestigeEmblem(emblemUrl) {
+    return /\/emblem\/\d+x\d+\/prestige\.png$/.test(emblemUrl || "");
+}
+const PRESTIGE_TAB_URL = "img://gui/maps/icons/prestige/tab/prestige.png";
+// The tab badge art is drawn at ~28% mean alpha -- it's meant to sit on the dark
+// battle player panel, where the (dark) plate blends in and the gold chevrons still
+// read. On our brighter hangar a single draw washes out. Stacking the SAME image as
+// N identical background layers composites it up toward opaque (effective alpha
+// 1-(1-a)^N) WITHOUT a CSS backing and WITHOUT changing the art's shape -- the
+// asset's own dark plate then provides the contrast, exactly like the battle panel.
+const BADGE_OPACITY_LAYERS = 13;
+function stackedBg(url) {
+    var reps = [];
+    for (var k = 0; k < BADGE_OPACITY_LAYERS; k++) reps.push("url('" + url + "')");
+    return reps.join(", ");
+}
+
 const ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"];
 function romanize(n) {
     n = n | 0;
@@ -370,16 +411,37 @@ function renderElite(root, data, isRewards) {
         mark._wgLeft = leftPct;
         tickMeta.push({ left: leftPct, body: body });
 
-        if (t.icon) {
-            // ELITE_REWARDS -> reward art thumbnail; ELITE -> the grade emblem
-            // (the same badge the battle team-HP bars show). Both are state-treated
-            // background-image divs (Gameface clips an <img>).
+        const gradeFam = isRewards ? "" : gradeFamily(t.icon);
+        const prestigeMax = !isRewards && !gradeFam && isPrestigeEmblem(t.icon);
+        if (!isRewards && (gradeFam || prestigeMax)) {
+            // ELITE grade tick -> the battle score-panel badge: a solid grade-colored
+            // chevron glyph (its underline carries the level number). MAX uses the
+            // gold prestige hexagon badge (no number). Replaces the translucent emblem.
+            const level = t.position | 0;
+            const fam = gradeFam || "prestige";
+            const badge = document.createElement("div");
+            badge.className = "wg-tick-badge wg-grade-" + fam;
+            const badgeUrl = prestigeMax
+                ? PRESTIGE_TAB_URL
+                : tabChevronUrl(fam, t.level | 0, String(level).length);
+            badge.style.backgroundImage = stackedBg(badgeUrl);
+            if (!prestigeMax) {
+                // level number on the underline, colored to match the chevron outline.
+                const num = document.createElement("span");
+                num.className = "wg-tick-badge-num";
+                num.textContent = String(level);
+                badge.appendChild(num);
+            }
+            mark.appendChild(badge);
+        } else if (t.icon) {
+            // ELITE_REWARDS -> reward art thumbnail; ELITE fallback (the terminal
+            // MAX "prestige" tick has no grade family) -> the emblem art + a plain
+            // number. Both are state-treated background-image divs (Gameface clips
+            // an <img>).
             const img = document.createElement("div");
             img.className = isRewards ? "wg-tick-reward" : "wg-tick-emblem";
             img.style.backgroundImage = "url('" + t.icon + "')";
             if (!isRewards) {
-                // overlay the elite level this emblem is reached at (the badge
-                // art ships without the number -- the game renders it on top).
                 const num = document.createElement("span");
                 num.className = "wg-tick-emblem-num";
                 num.textContent = String(t.position | 0);
