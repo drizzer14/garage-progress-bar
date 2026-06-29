@@ -109,24 +109,30 @@ function tickName(t) {
     return "";
 }
 
-// Tooltip body for a tick: the base mod name, then (for field-mod levels with a
-// paired choice) the two selectable variants, then the XP cost. A status line
-// is appended when the tick is locked.
+// Tooltip body for a tick. For a field-mod level that offers an A/B choice the
+// TITLE is its two selectable variants (each distinct) under a small level
+// caption -- the leveled step's own base-mod label repeats across every choice
+// level, so titling by it made them all read identically. Every other tick
+// (single-mod field levels, tech-tree) keeps the base name as the title. XP sits
+// below the title; a status line is appended when the tick is locked.
 function tooltipHtml(t) {
-    const name = tickName(t);
-    let html = "";
-    if (name) html += '<div class="wg-tip-name">' + escapeHtml(name) + "</div>";
-    // XP sits directly under the title.
-    html += '<div class="wg-tip-xp">' + fmtXp(t.xpRequired || 0) + " XP</div>";
-    // The field-mod variant names ("description") + the divider above them show
-    // only when the level actually has a paired choice -- below the title + XP.
     const opts = (t.options || "").split("\n").filter(function (s) { return s; });
-    if (opts.length) {
-        html += '<div class="wg-tip-opts">';
+    let html = "";
+    if (t.category === "fieldmod" && opts.length) {
+        const r = romanize(t.level);
+        if (r) html += '<div class="wg-tip-caption">Field Modification ' + r + "</div>";
+        // The variants are the title; the container scopes the "or" separator (CSS)
+        // so it sits between them, not after the last (the XP div follows).
+        html += '<div class="wg-tip-variants">';
         for (let i = 0; i < opts.length; i++) {
-            html += '<div class="wg-tip-opt">' + escapeHtml(opts[i]) + "</div>";
+            html += '<div class="wg-tip-variant">' + escapeHtml(opts[i]) + "</div>";
         }
         html += "</div>";
+        html += '<div class="wg-tip-xp">' + fmtXp(t.xpRequired || 0) + " XP</div>";
+    } else {
+        const name = tickName(t);
+        if (name) html += '<div class="wg-tip-name">' + escapeHtml(name) + "</div>";
+        html += '<div class="wg-tip-xp">' + fmtXp(t.xpRequired || 0) + " XP</div>";
     }
     if (t.locked) {
         html += '<div class="wg-tip-status">Prerequisites not met</div>';

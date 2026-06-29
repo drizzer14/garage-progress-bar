@@ -570,30 +570,26 @@
     opacity: 0.95;
     line-height: 1.1;
 }
-/* The two selectable variants of the level's paired modification ("pick one") --
-   the level's "description". Shown only when present (field-mod pair levels),
-   below the title + XP, and led by the native tooltip divider graphic so the
-   panel reads title / XP / rule / description, like the client's tooltips. Body
-   uses the native tertiary token. */
-#wgmod-root .wg-tip-opts {
-    margin-top: 6rem;
+/* A field-mod choice level's title is its two selectable variants (each
+   distinct), not the base-mod label (which repeats across every choice level).
+   A small caption above keeps the level's identity. */
+#wgmod-root .wg-tip-caption {
+    font-size: 11rem;
+    font-weight: 700;
+    letter-spacing: 0.5rem;
+    text-transform: uppercase;
+    color: #8e867d;             /* dim, like the locked/status token */
+    margin-bottom: 3rem;
 }
-#wgmod-root .wg-tip-opts::before {
-    content: "";
-    display: block;
-    height: 7rem;
-    margin: 0 0 6rem;
-    background: url('img://gui/maps/icons/tooltip/divider.png') center / contain no-repeat;
+#wgmod-root .wg-tip-variant {
+    font-size: 17rem;           /* title weight/size, like .wg-tip-name */
+    font-weight: 600;
+    color: #ede6d9;
+    opacity: 0.95;
+    line-height: 1.1;
 }
-#wgmod-root .wg-tip-opt {
-    font-size: 15rem;
-    font-weight: 400;
-    line-height: 1.15;
-    color: #d8d2c6;
-    padding: 1rem 0;
-}
-#wgmod-root .wg-tip-opt:not(:last-child)::after {
-    content: "or";
+#wgmod-root .wg-tip-variants .wg-tip-variant:not(:last-child)::after {
+    content: "or";              /* "pick one" -- mirrors the description separator */
     display: block;
     font-size: 11rem;
     font-weight: 700;
