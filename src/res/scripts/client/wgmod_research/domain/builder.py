@@ -46,16 +46,18 @@ def build_model(snapshot):
 
     # Tier-XI "vehicle skill tree" upgrade: a branching post-progression tree, so
     # the linear FIELD_MODS reader doesn't apply (the adapter reads it as an
-    # aggregate instead). Show the remaining-XP-to-fully-upgrade readout. resolve()
-    # returns None once fully upgraded, so the bar then falls through to the
-    # prestige / COMPLETE branches like any other elite vehicle.
+    # aggregate instead). Show the cumulative "% upgraded" readout: axis = the fixed
+    # full-upgrade cost, fill = the XP already invested (a SINGLE segment, so it
+    # rides the vehicle slot with the free slot empty -- like the elite modes).
+    # resolve() returns None once fully upgraded, so the bar then falls through to
+    # the prestige / COMPLETE branches like any other elite vehicle.
     if snapshot.is_skill_tree:
         st = skilltree.resolve(snapshot)
         if st is not None:
             return t.ResearchProgressModel(
                 mode=t.Mode.SKILL_TREE, scale_min=st["scale_min"],
-                scale_max=st["scale_max"], fill_vehicle=fill_vehicle,
-                fill_free=fill_free, ticks=[],
+                scale_max=st["scale_max"], fill_vehicle=st["fill"],
+                fill_free=0, ticks=[],
                 fieldmods_done=st["done"], fieldmods_total=st["total"],
                 vehicle_class=veh_class)
 

@@ -125,8 +125,8 @@ class VehicleSnapshot(object):
                  has_prestige=False, elite_level=0, elite_max_level=0,
                  elite_current_xp=0, elite_next_xp=0,
                  elite_grades=None, elite_rewards=None, elite_level_xp=None,
-                 is_skill_tree=False, skilltree_remaining_xp=0,
-                 skilltree_done=0, skilltree_total=0):
+                 is_skill_tree=False, skilltree_total_xp=0,
+                 skilltree_spent_xp=0, skilltree_done=0, skilltree_total=0):
         self.tier = tier                          # 1..11
         self.is_elite = is_elite                  # True = fully researched
         self.vehicle_xp = vehicle_xp              # unspent accumulated vehicle XP
@@ -152,11 +152,13 @@ class VehicleSnapshot(object):
         # show each milestone's XP "cost" in its tooltip. Empty if unavailable.
         self.elite_level_xp = elite_level_xp or {}
         # --- Tier-XI "vehicle skill tree" upgrade (branching post-progression). A
-        # skill-tree vehicle is shown as an aggregate XP readout, not per-node:
-        # the bar axis is the XP still needed to fully upgrade it. ---
+        # skill-tree vehicle is shown as an aggregate, monotonic "% upgraded"
+        # readout: the bar axis is the FIXED full-upgrade cost and the fill is the
+        # cumulative XP already invested (it only grows as nodes are unlocked). ---
         self.is_skill_tree = is_skill_tree              # branching upgrade tree (id >= 10000)
-        self.skilltree_remaining_xp = skilltree_remaining_xp  # XP to fully upgrade (sum of unreceived node prices)
-        self.skilltree_done = skilltree_done            # researched nodes
+        self.skilltree_total_xp = skilltree_total_xp    # fixed full-upgrade cost (sum of ALL priced nodes)
+        self.skilltree_spent_xp = skilltree_spent_xp    # cumulative XP invested (sum of RECEIVED node prices)
+        self.skilltree_done = skilltree_done            # unlocked nodes
         self.skilltree_total = skilltree_total          # total priced nodes
 
 

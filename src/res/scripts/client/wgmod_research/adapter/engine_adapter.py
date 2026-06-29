@@ -42,8 +42,8 @@ def build_snapshot():
 
     is_skill_tree = _is_skill_tree(veh)
     fm_steps, fm_done, fm_total = _read_post_progression(veh)
-    st_remaining, st_done, st_total = (
-        _read_skill_tree(veh) if is_skill_tree else (0, 0, 0))
+    st_total_xp, st_spent_xp, st_done, st_total = (
+        _read_skill_tree(veh) if is_skill_tree else (0, 0, 0, 0))
     prestige = _read_prestige(veh)
 
     return t.VehicleSnapshot(
@@ -66,7 +66,7 @@ def build_snapshot():
         # raising and blanking the whole bar (see _prestige_defaults).
         elite_level_xp=prestige.get("elite_level_xp", {}),
         is_skill_tree=is_skill_tree,
-        skilltree_remaining_xp=st_remaining,
+        skilltree_total_xp=st_total_xp, skilltree_spent_xp=st_spent_xp,
         skilltree_done=st_done, skilltree_total=st_total)
 
 
@@ -142,23 +142,36 @@ def _is_skill_tree(veh):
 
 
 def _read_skill_tree(veh):
-    """Aggregate the branching skill tree into (remaining_xp, done, total) -- no
-    per-node detail (owner directive). remaining_xp is the XP still needed to fully
-    upgrade (sum of the unreceived nodes' prices); done/total count the priced,
-    non-ghost nodes researched vs. available, for the header N/M counter.
+    """Aggregate the branching skill tree into (total_xp, spent_xp, done, total) --
+    no per-node detail (owner directive). The bar is a monotonic "% upgraded"
+    readout: total_xp is the FIXED full-upgrade cost (sum of every priced node),
+    spent_xp the cumulative XP already invested (sum of the RECEIVED nodes' prices),
+    and done/total the priced, non-ghost nodes unlocked vs. available (the header
+    N/M counter).
 
     Steps come from the same veh.postProgression.iterOrderedSteps() the linear
     reader uses, but here each is a tree node: getPrice().xp, isReceived(),
     getType() ('major'/'special'/'final'/'common'/'ghost'). 'ghost' nodes are
     layout placeholders and zero-price nodes aren't purchasable, so neither counts.
-    Fully guarded -> (0, 0, 0) on any failure (bar falls back to COMPLETE)."""
-    remaining_xp = 0
+
+    CRITICAL: the skill tree is a DAG, so iterOrderedSteps() visits a node ONCE PER
+    incoming parent edge -- a node with two parents is yielded twice (verified live:
+    Hirschkaefer yields 32 steps for 26 unique nodes). We dedupe by stepID, else
+    both the cost and the N/M count are inflated. Fully guarded -> (0, 0, 0, 0) on
+    any failure (bar falls back to COMPLETE)."""
+    total_xp = 0
+    spent_xp = 0
     done = 0
     total = 0
+    seen = set()
     try:
         pp = veh.postProgression
         for step in pp.iterOrderedSteps():
             try:
+                step_id = getattr(step, "stepID", None)
+                if step_id in seen:
+                    continue  # DAG: shared node already counted via another parent
+                seen.add(step_id)
                 node_type = _safe(lambda: step.getType(), "") or ""
                 if node_type == "ghost":
                     continue
@@ -166,19 +179,18 @@ def _read_skill_tree(veh):
                 xp_cost = int(getattr(price, "xp", 0) or 0)
                 if xp_cost <= 0:
                     continue  # not a purchasable upgrade node
-                received = bool(step.isReceived())
                 total += 1
-                if received:
+                total_xp += xp_cost
+                if bool(step.isReceived()):
                     done += 1
-                else:
-                    remaining_xp += xp_cost
+                    spent_xp += xp_cost
             except Exception:
                 LOG_CURRENT_EXCEPTION()
                 continue
-        return remaining_xp, done, total
+        return total_xp, spent_xp, done, total
     except Exception:
         LOG_CURRENT_EXCEPTION()
-        return 0, 0, 0
+        return 0, 0, 0, 0
 
 
 def _read_post_progression(veh):
