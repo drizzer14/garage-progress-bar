@@ -8,10 +8,14 @@ Target client: **WoT EU 2.3.0.1**. Hard dependency: **OpenWG GameFace**.
 
 ## For players (installing)
 
-See **[`INSTALL.md`](./INSTALL.md)**. The distributable is built to
-`dist/com.drizzer14.wgmod_<version>.wotmod` (plus a ready-to-share
-`dist/Research-Progress-Bar_<version>.zip` containing the `.wotmod` + a plain-text
-install guide).
+**Easiest: run the installer.** `dist/ResearchProgressBar-Setup-<version>.exe` finds
+your World of Tanks folder, installs the **OpenWG GameFace** dependency for you only
+if it's missing, and drops the mod into `mods\<version>\` (close the game first). See
+[`installer/README.md`](./installer/README.md).
+
+Prefer to do it by hand? See **[`INSTALL.md`](./INSTALL.md)** — the raw mod is built to
+`dist/com.drizzer14.wgmod_<version>.wotmod` and requires OpenWG GameFace installed
+separately.
 
 ## For developers
 
@@ -30,6 +34,10 @@ build/
   build_wotmod.py    # compile (.py->.pyc) + package -> dist/<id>_<version>.wotmod   (Python 2.7!)
   deploy_wotmod.py   # clean + build + copy the .wotmod into a WoT install            (Python 2.7!)
   deploy_dev.py      # DEPRECATED — loose res_mods scripts do NOT load in WoT 2.3; use deploy_wotmod.py
+installer/
+  wgmod-setup.iss      # Inno Setup script -> dist/ResearchProgressBar-Setup-<version>.exe
+  build_installer.ps1  # locate ISCC + compile the installer
+  vendor/              # bundled OpenWG GameFace .wotmod (installed only if missing)
 tests/               # pytest (run with Python 3.13) for the domain layer
 tools/dev/           # debug REPL server/client (NOT shipped) + dev notes
 dist/                # build output (gitignored)
@@ -75,7 +83,7 @@ python tools/dev/sync_gameface.py "<install>" 2.3.0.1
 - **WoT 2.3 loads mods only from `.wotmod` in `mods/<version>/`.** `res_mods/<version>/`
   outranks `.wotmod`, so a stale loose copy silently shadows the package — always
   deploy via `deploy_wotmod.py` and keep `res_mods` clean for ship verification.
-- This build targets the **Wargaming EU/global** client (version 2.3.0.1), not other regional clients.
+- Built for the **Wargaming EU/global** client (version 2.3.0.1) only.
 
 ## Renaming the mod
 

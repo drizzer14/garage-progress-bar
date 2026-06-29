@@ -18,106 +18,86 @@ switch vehicles.
 | Requirement | Detail |
 |-------------|--------|
 | **Game** | World of Tanks **EU (Wargaming)** client, version **2.3.0.1**. Built and tested against this version. |
-| **Dependency** | **OpenWG GameFace** — this is a *hard* dependency. The bar will not appear without it. |
+| **Dependency** | **OpenWG GameFace**. The installer sets this up for you; for a manual install you add it yourself. |
 
-> ⚠️ **Region note:** this build targets the **Wargaming EU/global** client
-> (version 2.3.0.1) and is not built for other regional clients.
+This build targets the Wargaming EU/global client (version 2.3.0.1).
 
 ---
 
-## Step 1 — Install OpenWG GameFace (do this first)
+## Install with the installer (recommended)
 
-This mod renders through OpenWG's GameFace bridge and **will silently do nothing**
-without it.
+1. Close World of Tanks completely (exit the Game Center launcher too).
+2. Run **`ResearchProgressBar-Setup-0.1.0.exe`**.
+3. Confirm your World of Tanks folder when the installer shows it — the folder that
+   contains `version.xml`. The installer detects it automatically in most cases.
+4. The installer adds OpenWG GameFace when your client doesn't already have it, then
+   installs the mod into `mods\<version>\`.
+5. Start the game and go to the Garage.
 
-1. Get **OpenWG GameFace** from the official WG mod portal (**wgmods.net**, search
-   "OpenWG GameFace") or the OpenWG project's GitHub releases.
-2. Install it the same way as any `.wotmod`: drop its `.wotmod` file into your
-   game's `mods\<version>\` folder (see Step 2 for where that is), or run its
-   installer if it ships one.
+To remove the mod later, use its entry in Windows **Apps & features**, or re-run the
+installer. OpenWG GameFace stays in place for other mods that use it.
 
-If you already run other GameFace-based mods, you most likely already have it.
+---
 
-## Step 2 — Install the Research Progress Bar
+## Manual install
 
-1. Locate your World of Tanks install folder. The default is something like:
-
-   ```
-   C:\Games\World_of_Tanks_EU\
-   ```
-
-2. Open the version-matched mods folder inside it:
+1. Get **OpenWG GameFace** from the official WG mod portal (**wgmods.net**) or the
+   OpenWG project's GitLab releases, and install its `.wotmod` into your game's
+   `mods\<version>\` folder. If you already run other GameFace mods you likely have it.
+2. Open your World of Tanks folder and the version-matched mods folder inside it:
 
    ```
    <World of Tanks>\mods\2.3.0.1\
    ```
 
-   > The folder name **must match your installed client version exactly**. If
-   > `2.3.0.1` doesn't exist, create it, or use whichever version folder is already
-   > there for your client. After a game update the version number changes and you
-   > must move the mod into the new version folder.
+   The folder name matches your installed client version. After a game update the
+   version changes and you move the mod into the new version folder.
 
-3. Copy **`com.drizzer14.wgmod_0.1.0.wotmod`** into that `mods\2.3.0.1\` folder.
+3. Copy **`com.drizzer14.wgmod_0.1.0.wotmod`** into that folder.
+4. Delete any older version of this mod from the same folder first.
+5. Fully restart the game client: exit completely and relaunch.
 
-4. **Delete any older version** of this mod from the same folder first
-   (e.g. `com.drizzer14.wgmod_0.0.x.wotmod`). Leaving old copies behind can make
-   the client ignore the mod.
-
-5. Fully **restart the game client** (not just return to Garage — exit and relaunch).
-
-That's it. Your `mods\2.3.0.1\` folder should contain at least:
-
-```
-mods\2.3.0.1\
-  <OpenWG GameFace>.wotmod
-  com.drizzer14.wgmod_0.1.0.wotmod
-```
+The `mods\2.3.0.1\` folder then holds the OpenWG GameFace `.wotmod` and
+`com.drizzer14.wgmod_0.1.0.wotmod`.
 
 ---
 
 ## Verifying it works
 
 1. Launch the game and go to the **Garage**.
-2. Select any vehicle that still has research, field modifications, or elite levels
+2. Select a vehicle that still has research, field modifications, or elite levels
    remaining.
-3. A progress bar appears in the vehicle-parameters area of the Garage, with the
-   matching header icon and a Total-XP readout.
-4. Hover the ticks/icons to see tooltips. Switch vehicles — the bar updates.
+3. A progress bar appears in the vehicle-parameters area, with the matching header
+   icon and a Total-XP readout.
+4. Hover the ticks/icons to see tooltips. Switch vehicles and the bar updates.
 
 ---
 
 ## Troubleshooting
 
-**The bar doesn't show up at all.**
-- Confirm **OpenWG GameFace** is installed in the same `mods\<version>\` folder.
-  This mod does nothing without it.
-- Confirm the `.wotmod` is in the folder that **matches your client version**
-  (`mods\2.3.0.1\`, not `mods\` directly and not an old version folder).
-- Make sure there is **no loose copy** of the mod under
-  `res_mods\<version>\scripts\client\...` — a leftover there overrides the
-  packaged mod and can blank it out. Only the `.wotmod` in `mods\<version>\`
-  should be present.
+**The bar doesn't show up.**
+- Confirm OpenWG GameFace is installed in the same `mods\<version>\` folder.
+- Confirm the `.wotmod` is in the folder matching your client version (for example
+  `mods\2.3.0.1\`).
+- Check that no loose copy of the mod sits under `res_mods\<version>\scripts\client\`,
+  which would override the packaged mod. Keep only the `.wotmod` in `mods\<version>\`.
 - Fully restart the client after installing.
 
-**The bar shows the wrong / a previous vehicle.**
-- Make sure you're on the latest build (`0.1.0` or newer) — earlier builds had a
-  refresh bug that this build fixes.
-
-**It worked, then a game update broke it.**
+**A game update stopped it from working.**
 - Game updates change the version folder. Move the `.wotmod` from the old
-  `mods\<old-version>\` into the new `mods\<new-version>\`. A new client version
-  may also need a rebuilt mod — check for an updated release.
+  `mods\<old-version>\` into the new `mods\<new-version>\`. A new client version may
+  also need a rebuilt mod — check for an updated release.
 
 **Special "7×7" / event hangars.**
-- Some special battle-mode hangars don't expose the panel the bar attaches to, so
-  the bar won't appear there. This is expected; it returns in the normal Garage.
+- Some special battle-mode hangars don't expose the panel the bar attaches to, so the
+  bar won't appear there. It returns in the normal Garage.
 
 ---
 
 ## Uninstalling
 
-Delete `com.drizzer14.wgmod_0.1.0.wotmod` from `mods\<version>\` and restart the
-client. (Leave OpenWG GameFace in place if other mods use it.)
+Remove the mod through its Windows **Apps & features** entry, or delete
+`com.drizzer14.wgmod_0.1.0.wotmod` from `mods\<version>\`, then restart the client.
 
 ---
 

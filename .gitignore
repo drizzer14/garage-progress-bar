@@ -1,6 +1,8 @@
 # Build outputs / artifacts
 /dist/
 *.wotmod
+# ...but the installer ships a bundled OpenWG dependency that must be tracked:
+!installer/vendor/*.wotmod
 
 # Compiled Python bytecode (build output, not source)
 *.pyc
