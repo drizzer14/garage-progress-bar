@@ -10,11 +10,13 @@ ModelObserver("WGModResearch").
 ViewModel API (string/number/array, transaction, addViewModel, _addViewModelProperty)
 was verified live in the EU 2.3 client.
 """
+import BigWorld
 from frameworks.wulf import ViewModel, Array
 from debug_utils import LOG_CURRENT_EXCEPTION, LOG_NOTE
 from CurrentVehicle import g_currentVehicle
 from helpers import dependency
 from skeletons.gui.game_control import ILoadoutController
+from skeletons.gui.shared import IItemsCache
 
 from wgmod_research.adapter import engine_adapter
 from wgmod_research.domain.builder import build_model
@@ -40,6 +42,26 @@ _listener = None
 # rationale as the vehicle listener above.
 _loadout_listener = None
 
+# Our handler for items-cache syncs (free-XP conversion, research/field-mod
+# purchases, post-battle XP, prestige changes -- everything that mutates the XP
+# state without a vehicle re-selection). Same strong-ref rationale as above. The
+# items cache is a long-lived DI singleton (its event list is NOT torn down on
+# battle exit), so re-arming on mount is unnecessary but harmless -- we keep the
+# idempotent membership check for symmetry and hot-reload safety.
+_stats_listener = None
+
+# Set while a coalesced refresh is already queued for the next tick, so a burst of
+# onSyncCompleted fires (one server action often triggers several) collapses to a
+# single deferred refresh(). See _schedule_refresh.
+_refresh_pending = False
+
+# Items-cache sync reasons the bar can safely IGNORE -- pure account/economy noise
+# that never changes the XP state, fill, or ticks. Everything else (inventory,
+# vehicle, stats, init, and any unknown/future reason) refreshes the bar. Matched
+# as strings and FAIL-OPEN, so we couple to no fragile reason-constant imports and
+# only ever skip the clearly-irrelevant syncs.
+_IGNORED_SYNC_REASONS = frozenset(("shop", "clan"))
+
 
 def _on_vehicle_changed(*args, **kwargs):
     try:
@@ -52,6 +74,62 @@ def _on_vehicle_changed(*args, **kwargs):
 def _on_interactor_updated(*args, **kwargs):
     # The loadout interactor was set (tank-setup / ammo overlay opened) or cleared
     # (back to the plain garage). Re-push so the bar hides / shows accordingly.
+    try:
+        refresh()
+    except Exception:
+        LOG_CURRENT_EXCEPTION()
+
+
+def _reason_affects_bar(reason):
+    """True if this items-cache sync reason can change what the bar shows. Refreshes
+    for everything except the known-irrelevant reasons (_IGNORED_SYNC_REASONS),
+    FAIL-OPEN on unknown/empty so a new or unrecognized reason still refreshes."""
+    try:
+        if not reason:
+            return True
+        return str(reason) not in _IGNORED_SYNC_REASONS
+    except Exception:
+        return True
+
+
+def _on_sync_completed(*args, **kwargs):
+    # IItemsCache.onSyncCompleted(updateReason, invalidItems). Use *args so any
+    # live-arity drift can't raise. Skip clearly-irrelevant reasons, then coalesce.
+    try:
+        reason = args[0] if args else ""
+        if not _reason_affects_bar(reason):
+            return
+        _schedule_refresh()
+    except Exception:
+        LOG_CURRENT_EXCEPTION()
+
+
+def _schedule_refresh():
+    """Coalesce a refresh onto the next tick. A single server action often fires
+    onSyncCompleted several times; the pending flag collapses them to one push.
+    Deferring also fixes ordering: CurrentVehicle rebuilds g_currentVehicle.item
+    in its OWN onSyncCompleted handler, so reading next tick guarantees veh.xp is
+    fresh (not one event behind freeXP). BigWorld.callback runs on the main thread,
+    so the push transaction is safe -- never use a timer thread here."""
+    global _refresh_pending
+    if _refresh_pending:
+        return
+    _refresh_pending = True
+    try:
+        BigWorld.callback(0.0, _do_scheduled_refresh)
+    except Exception:
+        # Couldn't schedule -> clear the flag and refresh inline as a fallback.
+        _refresh_pending = False
+        LOG_CURRENT_EXCEPTION()
+        try:
+            refresh()
+        except Exception:
+            LOG_CURRENT_EXCEPTION()
+
+
+def _do_scheduled_refresh():
+    global _refresh_pending
+    _refresh_pending = False
     try:
         refresh()
     except Exception:
@@ -103,6 +181,23 @@ def install_loadout_listener():
         if _loadout_listener not in ctrl.onInteractorUpdated:
             ctrl.onInteractorUpdated += _loadout_listener
             LOG_NOTE("[wgmod] loadout listener (re)armed")
+    except Exception:
+        LOG_CURRENT_EXCEPTION()
+
+
+def install_stats_listener():
+    """Ensure our handler is subscribed to items-cache syncs, so the bar updates
+    when XP state changes without a vehicle re-selection (free-XP conversion,
+    research / field-mod purchases, post-battle XP, prestige changes). Self-healing
+    and idempotent, same as the other installers -- safe to call on every mount."""
+    global _stats_listener
+    if _stats_listener is None:
+        _stats_listener = _on_sync_completed
+    try:
+        cache = dependency.instance(IItemsCache)
+        if _stats_listener not in cache.onSyncCompleted:
+            cache.onSyncCompleted += _stats_listener
+            LOG_NOTE("[wgmod] stats listener (re)armed")
     except Exception:
         LOG_CURRENT_EXCEPTION()
 
