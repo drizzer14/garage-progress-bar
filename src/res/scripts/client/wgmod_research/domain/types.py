@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Engine-free data types shared by the domain layer. 2/3 compatible.
 
-EU 2.3 model (verified in docs/superpowers/research/decompiled-findings.md):
+EU 2.3 model (verified against the decompiled client source):
 the selected vehicle's research is a single XP axis with two phases — tech-tree
 research (modules + next vehicles, Tier XI included as an ordinary unlock), then
 Field Modifications ("upgrades") once the vehicle is fully researched (elite).

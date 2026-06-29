@@ -15,9 +15,8 @@ install guide).
 
 ## For developers
 
-> **Continuing this project?** Read **[`docs/superpowers/SESSION-HANDOFF.md`](./docs/superpowers/SESSION-HANDOFF.md)**
-> first (architecture, dev loop, gotchas, icon paths), then
-> [`tools/dev/README.md`](./tools/dev/README.md).
+> See [`tools/dev/README.md`](./tools/dev/README.md) for the dev loop, debug REPL,
+> and notes on re-cloning the decompiled client source.
 
 ### Layout
 

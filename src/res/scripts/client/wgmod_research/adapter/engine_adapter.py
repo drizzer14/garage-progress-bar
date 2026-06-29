@@ -5,8 +5,7 @@ This is the only module that touches game symbols. Every category read is wrappe
 in try/except so one unreadable system degrades gracefully (spec section 8): the
 category yields a safe empty default and the rest of the bar still renders.
 
-Symbols verified against the EU 2.3 decompiled source — see
-docs/superpowers/research/decompiled-findings.md.
+Symbols verified against the EU 2.3 decompiled client source.
 """
 from CurrentVehicle import g_currentVehicle
 from helpers import dependency
