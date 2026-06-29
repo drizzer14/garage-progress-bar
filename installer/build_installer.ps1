@@ -21,7 +21,7 @@ $ErrorActionPreference = 'Stop'
 $InstallerDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RepoRoot     = Split-Path -Parent $InstallerDir
 $Iss          = Join-Path $InstallerDir 'wgmod-setup.iss'
-$ModWotmod    = Join-Path $RepoRoot 'dist\com.drizzer14.wgmod_0.1.0.wotmod'
+$ModWotmod    = Join-Path $RepoRoot 'dist\com.drizzer14.wgmod_0.1.1.wotmod'
 $OpenWg       = Join-Path $InstallerDir 'vendor\net.openwg.gameface_1.1.6.wotmod'
 
 function Find-ISCC {

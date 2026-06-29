@@ -46,7 +46,7 @@ dist/                # build output (gitignored)
 ### Build a distributable package (Python 2.7.18)
 
 ```sh
-python build/build_wotmod.py        # -> dist/com.drizzer14.wgmod_0.1.0.wotmod
+python build/build_wotmod.py        # -> dist/com.drizzer14.wgmod_0.1.1.wotmod
 ```
 
 ### Build + deploy into a local WoT install (Python 2.7.18, client CLOSED)

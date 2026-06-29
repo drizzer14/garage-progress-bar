@@ -13,8 +13,8 @@
 ;         .wotmod already built into ..\dist by build\build_wotmod.py).
 
 #define ModId        "com.drizzer14.wgmod"
-#define ModVersion   "0.1.0"
-#define ModWotmod    "com.drizzer14.wgmod_0.1.0.wotmod"
+#define ModVersion   "0.1.1"
+#define ModWotmod    "com.drizzer14.wgmod_0.1.1.wotmod"
 #define OpenWgWotmod "net.openwg.gameface_1.1.6.wotmod"
 
 [Setup]

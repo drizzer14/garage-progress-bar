@@ -27,7 +27,7 @@ This build targets the Wargaming EU/global client (version 2.3.0.1).
 ## Install with the installer (recommended)
 
 1. Close World of Tanks completely (exit the Game Center launcher too).
-2. Run **`ResearchProgressBar-Setup-0.1.0.exe`**.
+2. Run **`ResearchProgressBar-Setup-0.1.1.exe`**.
 3. Confirm your World of Tanks folder when the installer shows it — the folder that
    contains `version.xml`. The installer detects it automatically in most cases.
 4. The installer adds OpenWG GameFace when your client doesn't already have it, then
@@ -53,12 +53,12 @@ installer. OpenWG GameFace stays in place for other mods that use it.
    The folder name matches your installed client version. After a game update the
    version changes and you move the mod into the new version folder.
 
-3. Copy **`com.drizzer14.wgmod_0.1.0.wotmod`** into that folder.
+3. Copy **`com.drizzer14.wgmod_0.1.1.wotmod`** into that folder.
 4. Delete any older version of this mod from the same folder first.
 5. Fully restart the game client: exit completely and relaunch.
 
 The `mods\2.3.0.1\` folder then holds the OpenWG GameFace `.wotmod` and
-`com.drizzer14.wgmod_0.1.0.wotmod`.
+`com.drizzer14.wgmod_0.1.1.wotmod`.
 
 ---
 
@@ -97,7 +97,7 @@ The `mods\2.3.0.1\` folder then holds the OpenWG GameFace `.wotmod` and
 ## Uninstalling
 
 Remove the mod through its Windows **Apps & features** entry, or delete
-`com.drizzer14.wgmod_0.1.0.wotmod` from `mods\<version>\`, then restart the client.
+`com.drizzer14.wgmod_0.1.1.wotmod` from `mods\<version>\`, then restart the client.
 
 ---
 
