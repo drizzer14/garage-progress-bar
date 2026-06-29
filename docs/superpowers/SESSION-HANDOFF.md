@@ -1,5 +1,21 @@
 # Session Handoff — Research-Progress Bar (Phase 2, in-game working)
 
+> **RESUME NOTE (session reopened after accidental close):** two commits landed
+> after the body of this doc was written and the client closed before they were
+> deployed:
+> - `cb34f10` — **elite tick-state contrast reworked off grayscale** (addresses
+>   OPEN #1 below: brightness/opacity/drop-shadow instead of `grayscale()`, which
+>   the owner reported doesn't render). **CSS-only.**
+> - `dc004a3` — **hide the bar outside the plain garage** (ammo/tank-setup overlay).
+>   **Python (`gameface_bridge.py`, `mod_wgmod.py`) + JS.**
+>
+> **Now redeployed:** rebuilt + deployed the fresh `.wotmod` (2026-06-29 19:11) so
+> both commits' Python is live. 54 pytest green, working tree clean, `main` 2 ahead
+> of origin (unpushed). **PENDING: live visual sign-off** of (1) the new tick-state
+> contrast and (2) the garage-only visibility — launch the client and verify. The
+> skill-tree mode still can't be seen (owner owns no tier-XI). The OPEN/REMAINING
+> sections below are otherwise current.
+
 _Updated 2026-06-29 (tier-XI skill-tree DEPLOY+VERIFY session). Read tools/dev/README.md
 for the dev loop. **THIS SESSION deployed the prior session's `Mode.SKILL_TREE`, REPL-
 verified it live, found+fixed a DAG-dedup bug, and reframed the bar to a cumulative
