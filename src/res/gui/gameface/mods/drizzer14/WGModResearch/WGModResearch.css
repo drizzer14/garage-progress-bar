@@ -290,11 +290,14 @@
     box-shadow: 0 0 2rem rgba(0, 0, 0, 0.8);   /* dark halo so it reads on light fill too */
 }
 
-/* the locked tick's glyph: keep it visible but visibly "not yet" -- a partial
-   desaturate (chained before the drop-shadow so the shadow is preserved). */
+/* the locked tick's glyph: clearly "not yet" but still legible. grayscale() does
+   NOT render in the live client (owner: "looks perfectly normal"), so the muting
+   is carried by a hard BRIGHTNESS cut + dim opacity -- both confirmed to render --
+   not by desaturation. */
 #wgmod-root .wg-tick.wg-locked .wg-tick-img {
-    filter: grayscale(0.7) brightness(0.85)
+    filter: brightness(0.45)
             drop-shadow(0 1rem 2rem rgba(0, 0, 0, 0.85));
+    opacity: 0.75;
 }
 
 /* Category icon (real in-game art) hangs centered below each tick. Rendered via
@@ -483,8 +486,9 @@
    an earned dark-bronze badge read as "faded" while the not-yet-earned brighter
    next-grade badge read as "lit". So the state signal must be carried by HARD
    darkening of the not-yet badges (kills the metal's own brightness) while earned
-   badges keep full color + a gold halo. grayscale()/brightness() are confirmed to
-   render in Gameface (see .wg-locked .wg-tick-img above). */
+   badges keep full color + a gold halo. NB: grayscale() does NOT render in the live
+   client (owner-observed) -- only brightness + opacity + drop-shadow glows do, so
+   the not-yet states below rely on those and never on desaturation. */
 #wgmod-root .wg-state-achieved .wg-tick-reward,
 #wgmod-root .wg-state-achieved .wg-tick-emblem {
     /* earned -> the solid badge keeps its full color (bronze/silver/gold) + a warm
@@ -501,21 +505,23 @@
     opacity: 1;
 }
 #wgmod-root .wg-state-upcoming .wg-tick-emblem {
-    /* not yet -> grey out the solid badge + dim it, so it clearly reads as locked
-       next to the colored earned badges. (The badge is solid now, so grayscale
-       reads as a clean grey hexagon rather than a see-through one.) */
-    filter: grayscale(1) brightness(0.7)
+    /* not yet -> a hard brightness cut turns any metal-tier badge into a dark, dim
+       shape that clearly reads "locked" beside the full-brightness earned/next
+       badges. grayscale() is NOT used -- it does not render in the live client, so
+       the whole contrast must come from brightness + opacity (both confirmed). */
+    filter: brightness(0.32)
             drop-shadow(0 1rem 2rem rgba(0, 0, 0, 0.85));
-    opacity: 0.7;
+    opacity: 0.5;
 }
-/* upcoming reward: still reads "not yet" via desaturation, but keep a LIGHT glow
-   (no plate) so the dark, realistic art separates from the dark background instead
-   of blending into it. */
+/* upcoming reward: clearly "not yet" via a brightness cut + dim opacity (NOT
+   grayscale -- it doesn't render live). Keep a FAINT light glow (no plate, dimmer
+   than the next/earned glows) so the dark realistic art still separates from the
+   dark background instead of blending into it. */
 #wgmod-root .wg-state-upcoming .wg-tick-reward {
-    filter: grayscale(0.85) brightness(0.9)
-            drop-shadow(0 0 2.5rem rgba(245, 240, 232, 0.7))
+    filter: brightness(0.5)
+            drop-shadow(0 0 1.5rem rgba(245, 240, 232, 0.4))
             drop-shadow(0 1rem 2rem rgba(0, 0, 0, 0.5));
-    opacity: 0.9;
+    opacity: 0.6;
 }
 
 /* Hover tooltip (name + XP), shown above the track at the hovered tick's x.
