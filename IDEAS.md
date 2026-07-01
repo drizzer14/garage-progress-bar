@@ -15,11 +15,6 @@ Let the user drag the bar to reposition it, to avoid overlap/conflicts with othe
 mods' UI. Persist the dragged position (ties into the settings system / "bar position"
 candidate). Feasibility under Gameface is unconfirmed — needs investigation.
 
-### Color-blind mode support
-When the game's color-blind mode is enabled, render the bar with proper colors —
-ideally reusing WoT's own in-game color-blind palette/system rather than inventing
-one. Relates to the "fill colors" candidate setting above.
-
 ### Installer update check
 Installer fetches the latest mod version (initially from GitHub releases; later from
 the official WG mods portal) and, if a newer version than the installed one is found,
