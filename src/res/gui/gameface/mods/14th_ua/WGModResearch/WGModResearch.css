@@ -133,7 +133,8 @@
     display: flex;
     align-items: center;
 }
-#wgmod-root .wg-xp-val {
+#wgmod-root .wg-xp-val,
+#wgmod-root .wg-xp2-val {
     font-size: 13rem;
     font-weight: 700;
     letter-spacing: 1rem;      /* match the label + upgrades counter rhythm */
@@ -142,7 +143,8 @@
 }
 /* currency glyph -- a div-style background (Gameface clips <img>); the source is
    24x24, contain-scaled into a 16rem box. Sits to the RIGHT of the figure. */
-#wgmod-root .wg-xp-ico {
+#wgmod-root .wg-xp-ico,
+#wgmod-root .wg-xp2-ico {
     display: inline-block;
     width: 16rem;
     height: 16rem;
@@ -151,6 +153,16 @@
     background-position: center;
     background-size: contain;
     filter: drop-shadow(0 1rem 2rem rgba(0, 0, 0, 0.8));
+}
+/* skill_tree's SECOND right-side readout: total spendable XP after the node counter.
+   The gap separates it from the counter's glyph; hidden by default (only skill_tree
+   shows the pair, via JS). */
+#wgmod-root .wg-xp2-val {
+    margin-left: 10rem;
+    display: none;
+}
+#wgmod-root .wg-xp2-ico {
+    display: none;
 }
 /* The elite modes use the combat-XP star (xpIcon_23x22.png), whose art carries
    more transparent padding than the Total-XP glyph -- contain-scaling into the
@@ -254,6 +266,34 @@
 #wgmod-root .wg-fill-free {
     background: #ecca9d;
     opacity: 0.95;
+}
+
+/* Current-position marker: a bright vertical sliver riding the fill's leading edge
+   (the player's current level), modeled on WoT's Battle Pass in-chapter leading
+   edge. The soft white bloom simulates the "blurred tick" -- filter: blur() is
+   unproven in this Gameface build, so a box-shadow glow does the job (and box-shadow
+   only renders on a FILLED box, hence the solid white background). z-index 2 keeps it
+   above the notch overlay (::after, z1) and below the hover overlay (.wg-hot, z3).
+   Glides with the fills via the same 0.3s ease. JS positions .left per render. */
+#wgmod-root .wg-cur {
+    position: absolute;
+    top: 0;                     /* span the full track content height, matching the fills */
+    bottom: 0;
+    width: 2.5rem;
+    margin-left: -1.25rem;
+    /* Faint translucent core (blends into the fill like the Battle Pass leading
+       edge) + a strong wide bloom -- NOT a hard opaque bar. Kept partly filled so
+       the box-shadow still renders (a fully transparent box drops it here). The
+       vertically-offset shadow pair pushes the bloom above and below the track. */
+    background: rgba(255, 255, 255, 0.6);
+    box-shadow:
+        0 0 14rem rgba(255, 255, 255, 0.9),
+        0 -7rem 12rem rgba(255, 255, 255, 0.7),
+        0 7rem 12rem rgba(255, 255, 255, 0.7);
+    transition: left 0.3s ease;
+    z-index: 2;
+    pointer-events: none;
+    display: none;
 }
 
 /* skill_tree ("Upgrades"): its own steel-blue fill, distinct from the tech-tree

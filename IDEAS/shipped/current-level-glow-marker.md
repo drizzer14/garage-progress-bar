@@ -1,6 +1,6 @@
 # Research: Brighter, glowing marker at the current progress position
 
-_Submitted: "On current progress level show brighter blurred tick. Consult battlepass progress bar inside the selected chapter." · Status: open_
+_Submitted: "On current progress level show brighter blurred tick. Consult battlepass progress bar inside the selected chapter." · Status: shipped_
 
 ## Summary
 Add a brighter, blurred/glowing marker at the bar's **current progress position**

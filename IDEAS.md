@@ -5,20 +5,22 @@ to a deeper research note under `IDEAS/` for the implementer.
 
 ## Open
 
-### Brighter glowing marker at the current progress position
-Add a bright, blurred/glowing marker at the bar's current fill edge (the player's
-current level), modeled on WoT's Battle Pass in-chapter progress bar. Position is
-the existing fill-edge percentage `pct(sMin + fv + ff)` — no data changes; a new
-`.wg-cur` element + CSS glow, added in both `render()` and `renderElite()`. Reuse
-the confirmed `box-shadow`/`drop-shadow` glow (as in `wg-aff`); `filter: blur()` is
-unsafe in this Gameface build — simulate the blur with a soft glow.
-→ Research: IDEAS/current-level-glow-marker.md
+### Max-width cap for tooltips
+Some tooltips grow too wide instead of wrapping (seen in a screenshot). The tick
+tooltip `.wg-tooltip` is already capped at `max-width: 300rem`, but the **chip**
+tooltip `.wg-chip-tip` has `white-space: nowrap` and no cap, so long content
+stretches it — likely culprit. Also no `overflow-wrap` anywhere, so a long
+unbreakable token can overflow even the tick cap. CSS-only fix; keep any cap under
+the bar width so the edge-aware `clampTip` invariant holds.
+→ Research: IDEAS/tooltip-max-width.md
 
-### Show total XP near the Tier-XI upgrades counter
-Skill_tree mode shows only the count-based "N/M upgrades" readout, not the total-XP
-figure every other mode shows. Add total spendable XP next to the counter. Pure
-frontend — `data.spendableXp` (= vehicle_xp + free_xp) is already plumbed to the
-skill_tree branch; just render it (format with `fmtXp` + `XP_ICON`, don't reuse
-`setXp()` which sums the node-count fields). A spare hidden `.wg-upgrades` slot can
-host the second figure. No Python/i18n changes.
-→ Research: IDEAS/skill-tree-total-xp-readout.md
+### Open Field Mods screen after researching a field mod via the bar
+After a field modification is researched by clicking a bar tick, open the Field
+Modifications (post-progression) screen so the player can select/configure the
+variant. The nav helper already exists — `_open_field_mods_screen(veh)` in
+`actions.py` (`showVehPostProgressionView`), currently used only as an error
+fallback. Challenge: the purchase is an async confirm→research chain with no
+synchronous success hook, so success must be caught via the action's completion
+callback or a pending-open flag consumed on the next `onSyncCompleted`. Must gate on
+vehicle kind — tier-XI chips also emit `unlockFieldMod` and would 404 on that view.
+→ Research: IDEAS/open-field-mods-after-research.md

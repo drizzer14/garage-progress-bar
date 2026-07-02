@@ -468,6 +468,14 @@ function setXp(root, vehXp, freeXp) {
         fmtXp((vehXp || 0) + (freeXp || 0), ",");
 }
 
+// The second right-side readout pair (.wg-xp2-*) is used ONLY by skill_tree mode to
+// show total spendable XP alongside the node counter; every other mode has a single
+// figure, so hide the extra pair there (it persists across renders/modes).
+function hideXp2(root) {
+    root.querySelector(".wg-xp2-val").style.display = "none";
+    root.querySelector(".wg-xp2-ico").style.display = "none";
+}
+
 // wulf exposes nested viewmodels / array elements wrapped as { value: ... }.
 function unwrap(x) {
     return x && x.value !== undefined ? x.value : x;
@@ -532,12 +540,15 @@ function ensureRoot() {
             '<div class="wg-xp">' +
             '<span class="wg-xp-val"></span>' +
             '<span class="wg-xp-ico"></span>' +
+            '<span class="wg-xp2-val"></span>' +
+            '<span class="wg-xp2-ico"></span>' +
             "</div>" +
             "</div>" +
             '<div class="wg-track">' +
             '<div class="wg-fill wg-fill-veh"></div>' +
             '<div class="wg-fill wg-fill-free"></div>' +
             '<div class="wg-ticks"></div>' +
+            '<div class="wg-cur"></div>' +
             '<div class="wg-hot"></div>' +
             '<div class="wg-tooltip"></div>' +
             "</div>" +
@@ -884,8 +895,21 @@ function render(model) {
             "url('" + SKILL_COUNTER_ICON + "')";
         root.querySelector(".wg-xp-val").textContent =
             (data.fieldModsDone || 0) + "/" + (data.fieldModsTotal || 0);
+        // ...and, beside the counter, the total spendable XP (vehicle + free) that
+        // every other mode shows. NOT setXp(): its fillVehicle/fillFree args are a
+        // node COUNT / 0 here, so use the already-plumbed spendableXp total instead.
+        const xp2Val = root.querySelector(".wg-xp2-val");
+        const xp2Ico = root.querySelector(".wg-xp2-ico");
+        xp2Val.textContent = fmtXp(spendableXp, ",");
+        xp2Ico.style.backgroundImage = "url('" + XP_ICON + "')";
+        // NB: Gameface rejects `display:inline-block` set imperatively (the stylesheet
+        // value is fine, the CSSOM setter is not) -- use "block". As flex items they
+        // stay in the header row regardless.
+        xp2Val.style.display = "block";
+        xp2Ico.style.display = "block";
     } else {
         setXp(root, data.fillVehicle, data.fillFree);
+        hideXp2(root);
     }
 
     const vehEl = root.querySelector(".wg-fill-veh");
@@ -968,6 +992,13 @@ function render(model) {
     vehEl.style.width = vehW + "%";
     freeEl.style.left = vehW + "%";
     freeEl.style.width = freeW + "%";
+
+    // Glowing current-position marker riding the fill's leading edge (the player's
+    // current level). Same combined edge as the fill end -- vehW + freeW == the
+    // clamped pct(sMin + fv + ff); skill_tree has ff=0 so it lands on the fill front.
+    const curEl = root.querySelector(".wg-cur");
+    curEl.style.left = (vehW + freeW) + "%";
+    curEl.style.display = "block";
 
     ticksEl.innerHTML = "";
     const ticks = data.ticks;
@@ -1193,6 +1224,7 @@ function renderElite(root, data, isRewards) {
     xpEl.style.display = "flex";
     root.querySelector(".wg-xp-ico").style.backgroundImage = "url('" + COMBAT_XP_ICON + "')";
     root.querySelector(".wg-xp-val").textContent = fmtXp(data.combatXp || 0, ",");
+    hideXp2(root);   // elite shows a single combat-XP figure -- no skill_tree XP pair
 
     // Single-segment fill across the band/roadmap axis.
     const sMin = data.scaleMin || 0;
@@ -1202,6 +1234,12 @@ function renderElite(root, data, isRewards) {
     const fillPos = sMin + (data.fillVehicle || 0);
     vehEl.style.left = "0%";
     vehEl.style.width = pct(fillPos) + "%";
+    // Glowing current-position marker at the single-segment fill edge (same white
+    // "current" language as the tech-tree/skill-tree bars; the fill itself is
+    // grade-colored, the marker stays white).
+    const curEl = root.querySelector(".wg-cur");
+    curEl.style.left = pct(fillPos) + "%";
+    curEl.style.display = "block";
     // Grade-color the fill to the current grade family (iron/bronze/silver/gold),
     // matching the tab-badge number tint. Only in the grade-band mode -- ELITE_REWARDS
     // keeps its rarity purple (it's a reward roadmap, not a grade) -- and never in

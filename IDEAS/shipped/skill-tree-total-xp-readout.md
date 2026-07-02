@@ -1,6 +1,6 @@
 # Research: Show total XP near the Tier-XI upgrades counter
 
-_Submitted: "Add total xp to tier xi skill tree progression near the upgrades counter" · Status: open_
+_Submitted: "Add total xp to tier xi skill tree progression near the upgrades counter" · Status: shipped_
 
 ## Summary
 In skill_tree (Tier-XI upgrades) mode the header shows a count-based readout
