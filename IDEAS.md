@@ -5,14 +5,6 @@ to a deeper research note under `IDEAS/` for the implementer.
 
 ## Open
 
-### Tooltip "N/M XP" — total-XP icon + XP remaining
-In the cost footer that reads `have / need XP`, replace the literal "XP" with the
-game's total-XP icon, and show how much XP is left to reach the target — plus a
-"without free XP" variant (remaining if only the vehicle's own XP counted). The
-icon (`XP_ICON`) and the vehicle/free-XP split already exist; work is mostly in one
-JS helper (`xpFracHtml`) + CSS.
-→ Research: IDEAS/tooltip-xp-icon-and-remaining.md
-
 ### Brighter glowing marker at the current progress position
 Add a bright, blurred/glowing marker at the bar's current fill edge (the player's
 current level), modeled on WoT's Battle Pass in-chapter progress bar. Position is
