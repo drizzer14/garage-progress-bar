@@ -1,50 +1,35 @@
 # Ideas Backlog
 
-Recorded ideas for the mod. Entries are deleted once implemented.
+Recorded ideas for the mod. Entries are deleted once implemented. Each entry links
+to a deeper research note under `IDEAS/` for the implementer.
 
 ## Open
 
 ### Add icons to tooltips' title block
-Show a small icon in the tooltip header/title block so each tooltip is
-identifiable at a glance — e.g. the module/component icon next to the tech-tree
-name, or a per-category glyph next to the caption. Currently the header is
-text-only (`wg-tip-caption` + `wg-tip-name`, built in `tooltipHtml()` in
-`WGModResearch.js` ~264–300; styled in `WGModResearch.css`). Which icon per
-category is TBD (tech-tree module icon vs. a generic per-mode glyph); the widget
-already resolves `img://` game-icon URLs that could be reused. Feasibility of
-inline images in the Gameface tooltip header unconfirmed.
+Show a small icon in the tooltip header so each tooltip is identifiable at a glance
+(module/vehicle icon next to the tech-tree name, field-mod glyph next to the
+caption, grade emblem next to "Elite Level N"). Feasible and front-end-only — the
+tick already carries the icon. → Research: `IDEAS/tooltip-title-icons.md`
 
 ### Bug: tier-XI "Next available" chips stop being hoverable/clickable after visiting an elite / exclusive-rewards vehicle
-The tier-XI upgrade chips go dead (no hover, no click) after switching TO and
-back FROM an elite vehicle or a tier-XI-with-exclusive-rewards vehicle. Root
-cause: the elite render path (`renderElite`, `WGModResearch.js` ~992) sets
-`hotEl._wgChips = []` but never resets `nextEl._wgSig`. So when you return to the
-same skill-tree vehicle, `render()`'s rebuild gate (~782–789) finds the cached
-`upgradesSig()` unchanged and takes the "keep chips" branch — re-showing the row
-without rebuilding — but `_wgChips` was emptied by the elite path, so `chipAt()`
-has nothing to hit-test. Likely fix: clear `nextEl._wgSig` (null it) whenever the
-elite/rewards path empties `_wgChips`, forcing a rebuild on return.
+The tier-XI upgrade chips go dead (no hover, no click) after switching to and back
+from an elite vehicle or a tier-XI-with-exclusive-rewards vehicle. Root cause
+confirmed (the elite render path clears the chip array but not its cached
+signature, so the return skips the rebuild); one-line fix.
+→ Research: `IDEAS/tier-xi-chip-hover-bug.md`
 
 ### Tier-XI upgrades show text descriptions but not exact buff numbers
-Tier-XI skill-tree node tooltips (the "final" end-tick and the "Upgrades
-Available:" chips) render a localized sentence but often omit the actual
-magnitude — e.g. "Reduces gun reload time by % in Pillbox mode." with no number.
-`_skilltree_effect()` in `adapter/engine_adapter.py` (~732) fills the template's
-`{value}` slot only when it finds a KPI of type `mul`/`add`; nodes whose KPI is
-the generic unlabeled `value` (many signature/mechanic perks) fall through with
-an empty value. Investigate reading the magnitude for those cases so the exact
-buff shows. Sibling of the field-mod missing-numbers issue. Feasibility of
-extracting the number for generic-`value` KPIs unconfirmed.
-
-### Hide the bar outside the garage
-Hide the bar on the playlists view and all other non-garage views — it should only
-show in the actual garage. Extends the existing visibility mechanism (the `visible`
-VM prop + loadout-overlay auto-hide in `gameface_bridge.py`); needs detection of
-which view is mounted.
+Tier-XI node tooltips render a localized sentence but often omit the magnitude
+(e.g. "Reduces gun reload time by % …"). The signature "mechanic" perks carry a
+generic KPI the effect formatter doesn't interpret. Isolated adapter fix; needs a
+live KPI probe first. → Research: `IDEAS/tier-xi-buff-numbers.md`
 
 ### Candidate settings (for the settings system in progress)
 Everything below is currently hardcoded and would make a useful user setting. Listed
 by likely demand; the settings framework being built is the vehicle for these.
+The recipe, per-candidate front-end-vs-domain classification, and a
+split-into-tickable-entries recommendation live in the research note.
+→ Research: `IDEAS/settings-framework.md`
 
 **High impact**
 - **Bar width / scale** (`WGModResearch.css`: `width: 520rem`). Shrink on small screens, grow on large.
