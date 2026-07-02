@@ -5,6 +5,20 @@ import { ModelObserver } from "../../libs/model.js";
 
 const observer = ModelObserver("WGModResearch");
 
+// Localized widget labels, sourced from the game's own resource strings and pushed
+// from Python as a JSON bundle on the model's `labels` field (see adapter/i18n.py).
+// Refreshed each render() so tooltip builders (which run later, on hover) read the
+// current language. L(key, fallback) returns the localized string or the English
+// fallback -- so a missing key never blanks a caption.
+let LBL = {};
+function refreshLabels(data) {
+    try { LBL = JSON.parse((data && data.labels) || "{}") || {}; }
+    catch (e) { LBL = {}; }
+}
+function L(key, fallback) {
+    return (LBL && LBL[key]) || fallback;
+}
+
 // Category icon for the bar header -- the same art the in-game "Vehicle
 // management" menu uses for each section. Keyed by bar mode.
 const CAT_ICON = {
@@ -138,6 +152,31 @@ function emblemNumber(level, family) {
     return wrap;
 }
 
+// HTML-string form of emblemNumber() (the tooltip is built as an innerHTML string,
+// not DOM): the grade-colored emblemFont digit glyphs for `level`. Each glyph is a
+// background-image span (Gameface clips <img>). "1" is flagged narrower.
+function emblemNumberHtml(level, family) {
+    const s = String(level | 0);
+    let h = "";
+    for (let i = 0; i < s.length; i++) {
+        const cls = "wg-emblem-digit" + (s[i] === "1" ? " wg-emblem-digit-one" : "");
+        h += '<span class="' + cls + '" style="background-image:url(\'' +
+            emblemFontUrl(family, s[i]) + '\')"></span>';
+    }
+    return h;
+}
+// Tooltip title-block icon for an elite GRADE tick: the grade emblem with the elite
+// level painted over it in the grade-colored emblemFont -- exactly how the vehicle
+// carousel's prestige tooltip shows it. MAX (prestige.png, no family) shows the
+// hexagon alone, no number (matches the game + the category-icon badge).
+function eliteTipIconHtml(url, level) {
+    const fam = gradeFamily(url);
+    const overlay = (fam && level > 0)
+        ? '<span class="wg-tip-icon-num">' + emblemNumberHtml(level, fam) + "</span>" : "";
+    return '<div class="wg-tip-icon wg-tip-icon-elite" style="background-image:url(\'' +
+        url + '\')">' + overlay + "</div>";
+}
+
 // The elite level number as plain WoT-font text, matching how the garage carousel
 // draws the level on its prestige "tab" badge (a PFDINMax numeral, NOT the
 // grade-colored emblemFont image glyphs the big hexagon emblems use). Styled +
@@ -200,13 +239,11 @@ function escapeHtml(s) {
 }
 
 // Display name for a tick. Field-mod names may be empty (the engine label
-// lookup can miss); fall back to "Field Modification <level>".
+// lookup can miss); fall back to the localized field-mod category label (its roman
+// numeral already rides the hexagon glyph, so it's not repeated here).
 function tickName(t) {
     if (t.name) return t.name;
-    if (t.category === "fieldmod") {
-        const r = romanize(t.level);
-        return r ? "Field Modification " + r : "Field Modification";
-    }
+    if (t.category === "fieldmod") return L("capFieldMod", "Field Modification");
     return "";
 }
 
@@ -245,12 +282,14 @@ function effectHtml(effect) {
 
 // The A/B choice block for a field-mod choice level: EACH selectable variant's
 // name (title weight) with ALL its own buffs beneath it (tertiary) -- so both
-// variants and every buff show, not just the base mod's. "or" sits between the
-// variants (CSS ::after on the container). optEffects is aligned with opts by
+// variants and every buff show, not just the base mod's. A localized "or" row sits
+// between the variants (see .wg-tip-or). optEffects is aligned with opts by
 // index (a variant with no readable KPI just omits the buff line).
 function variantsHtml(opts, optEffects) {
     let h = '<div class="wg-tip-variants">';
     for (let i = 0; i < opts.length; i++) {
+        // "pick one" separator between variants (localized; was a CSS ::after "or").
+        if (i > 0) h += '<div class="wg-tip-or">' + escapeHtml(L("sepOr", "or")) + "</div>";
         h += '<div class="wg-tip-variant">';
         h += '<div class="wg-tip-variant-name">' + escapeHtml(opts[i]) + "</div>";
         // Each variant's buffs are TAB-separated (Python); render one row each.
@@ -309,8 +348,7 @@ function tooltipHtml(t, spendableXp) {
     const optEffects = (t.optionEffects || "").split("\n");
     let text = "", foot = "";
     if (t.category === "fieldmod") {
-        const r = romanize(t.level);
-        const cap = r ? capHtml("Field Modification " + r) : "";
+        const cap = capHtml(escapeHtml(L("capFieldMod", "Field Modification")));
         if (opts.length) {
             // Choice level -> the selectable variants ARE the content (with buffs).
             text = cap + variantsHtml(opts, optEffects);
@@ -323,7 +361,7 @@ function tooltipHtml(t, spendableXp) {
         // Type caption: tech-tree kind ("Gun"/"Turret"/.../"Tier IX"), else "Upgrade"
         // for tier-XI skill-tree nodes (which carry no kindLabel).
         const cap = t.kindLabel ? capHtml(escapeHtml(t.kindLabel))
-            : t.category === "upgrade" ? capHtml("Upgrade") : "";
+            : t.category === "upgrade" ? capHtml(escapeHtml(L("headerSkillTree", "Upgrades"))) : "";
         const name = tickName(t);
         const nm = name ? '<div class="wg-tip-name">' + escapeHtml(name) + "</div>" : "";
         text = cap + nm + effectHtml(t.effect);
@@ -332,9 +370,10 @@ function tooltipHtml(t, spendableXp) {
         // Name the blocking prerequisites when known, else the generic line.
         const reqs = (t.prereqNames || "").split("\n").filter(function (s) { return s; });
         foot = reqs.length
-            ? '<div class="wg-tip-status">Requires: ' +
+            ? '<div class="wg-tip-status">' + escapeHtml(L("requires", "Required:")) + " " +
                 reqs.map(escapeHtml).join(", ") + "</div>"
-            : '<div class="wg-tip-status">Prerequisites not met</div>';
+            : '<div class="wg-tip-status">' +
+                escapeHtml(L("prereqNotMet", "Prerequisites not met")) + "</div>";
     } else {
         foot = xpFracHtml(spendableXp, t.position);
     }
@@ -449,8 +488,7 @@ function ensureRoot() {
             '<div class="wg-hot"></div>' +
             '<div class="wg-tooltip"></div>' +
             "</div>" +
-            '<div class="wg-next"></div>' +
-            '<div class="wg-final-label">Final upgrade available</div>';
+            '<div class="wg-next"></div>';
         document.body.appendChild(root);
     }
     return root;
@@ -479,10 +517,8 @@ function renderNextAvailable(nextEl, arr, hotEl, spendableXp) {
     const chips = [];
     const n = arrLen(arr);
     if (n) {
-        const cap = document.createElement("span");
-        cap.className = "wg-next-cap";
-        cap.textContent = "Next available:";
-        nextEl.appendChild(cap);
+        // (No "Next available:" caption -- the chips speak for themselves and the label
+        // had no localized game equivalent.)
         for (let i = 0; i < n; i++) {
             const u = unwrap(arr[i] !== undefined ? arr[i] : arr.get && arr.get(i));
             if (!u) continue;
@@ -500,12 +536,16 @@ function renderNextAvailable(nextEl, arr, hotEl, spendableXp) {
             chip.appendChild(ico);
             const tip = document.createElement("div");
             tip.className = "wg-chip-tip";
-            // "Upgrade" type caption (like the tech-tree "Gun" line) + name + buffs;
-            // the node's perk art (img:// URL) as the right-side icon, matching the
-            // chip glyph. Icon-less nodes fall back to text-only.
+            // Type caption = the node's own Upgrades-screen sub-heading ("Mechanic
+            // Upgrade" / "Special Upgrade", localized from Python); falls back to the
+            // generic word. Then name + buffs; the node's perk art (img:// URL) as the
+            // right-side icon, matching the chip glyph. Icon-less nodes -> text-only.
             const cName = u.name
                 ? '<div class="wg-tip-name">' + escapeHtml(u.name) + "</div>" : "";
-            const cText = capHtml("Upgrade") + cName + effectHtml(u.effect);
+            // Node sub-heading if the game gave one, else the localized "Upgrades"
+            // section label (never the bare English word).
+            const cCap = u.category || L("headerSkillTree", "Upgrades");
+            const cText = capHtml(escapeHtml(cCap)) + cName + effectHtml(u.effect);
             const cIcon = (u.icon && u.icon.indexOf("img://") === 0) ? bgIconHtml(u.icon) : "";
             const cFoot = xpFracHtml(spendableXp, xp);   // per-node cost (frontier nodes unlock independently)
             // Text block + icon as one unit (no divider between them); divider before cost.
@@ -733,11 +773,6 @@ function render(model) {
     // appeared while the cursor was moving).
     const nextEl = root.querySelector(".wg-next");
     if (nextEl) nextEl.style.display = "none";
-    // "Final upgrade available" caption (skill_tree, capstone-only state). Hidden by
-    // default here -- before every early return + the elite branch -- so it only ever
-    // shows when the skill_tree branch below explicitly turns it on.
-    const finalLabel = root.querySelector(".wg-final-label");
-    if (finalLabel) finalLabel.style.display = "none";
 
     if (!data) {
         const keys = model ? Object.keys(model).join(",") : "no-model";
@@ -747,6 +782,8 @@ function render(model) {
         xpEl.style.display = "none";
         return;
     }
+    // Localized labels for this render (also read later by the hover tooltip builders).
+    refreshLabels(data);
 
     // Show the bar ONLY in the plain garage. Python pushes visible=false while a
     // tank-setup / ammo loadout overlay is open (the params panel stays mounted to
@@ -840,10 +877,11 @@ function render(model) {
             nextEl.style.display = "flex";   // unchanged -> keep chips + tooltip, re-show
         }
     } else {
+        // No chip row (non-skill-tree, or the capstone-only state where the lone
+        // available node is already the bar's final tick -- brightened in the tick loop).
         nextEl._wgSig = null;
         hotEl._wgChips = [];
         setActiveChip(hotEl, null);
-        if (onlyFinal && finalLabel) finalLabel.style.display = "flex";
     }
     // NB: do NOT hide the tooltip here. render() runs on every model update
     // (which can fire while the cursor sits still over the bar); force-hiding it
@@ -851,17 +889,11 @@ function render(model) {
     // hover handler owns visibility -- it re-reads the (rebuilt) tick metadata
     // below, so an in-place refresh just updates the data under the cursor.
 
+    // COMPLETE (nothing left to research/upgrade/unlock) -> just hide the bar; there's
+    // no localized "Fully researched" header we want to show, and an empty bar adds no
+    // information. Same for a degenerate empty scale (sMax<=sMin).
     if (mode === "complete" || sMax <= sMin) {
-        root.className = "wg-complete" + cbClass(data);
-        label.textContent = "Fully researched";
-        setCatIcon(catIcon, eliteIcon(data.vehicleClass));  // class + elite badge
-        vehEl.style.left = "0%";
-        vehEl.style.width = "100%";
-        freeEl.style.width = "0%";
-        ticksEl.innerHTML = "";   // no ticks -> nothing to hover
-        hotEl._wgTickMeta = [];
-        hotEl._wgClickMeta = [];
-        tipEl.style.display = "none";
+        root.style.display = "none";
         return;
     }
     // Tier-XI skill-tree mode: a COUNT bar (axis = total upgrade nodes, fill =
@@ -872,8 +904,9 @@ function render(model) {
     // own steel-blue tone (.wg-skill .wg-fill-veh in CSS), distinct from tech-tree.
     root.className = (mode === "skill_tree" ? "wg-skill" : "") + cbClass(data);
 
-    label.textContent = mode === "skill_tree" ? "Upgrades"
-        : mode === "field_mods" ? "Field Modifications" : "Research";
+    label.textContent = mode === "skill_tree" ? L("headerSkillTree", "Upgrades")
+        : mode === "field_mods" ? L("headerFieldMods", "Field Modifications")
+        : L("headerResearch", "Research");
     setCatIcon(catIcon, CAT_ICON[mode] || "");
 
     const vehW = pct(sMin + fv);
@@ -1009,18 +1042,26 @@ function render(model) {
 // Tooltip body for an elite mark: the grade/reward name, (rewards) the reward
 // type, and the elite level the mark sits at.
 function eliteTooltipHtml(t, isRewards, combatXp) {
-    const name = t.name || (isRewards ? "Reward" : "");
+    const name = t.name || "";
     // Category caption at the TOP (like native tooltips put the kind line above the
-    // title): the reward TYPE (rewards) and/or the elite level the mark sits at.
-    let caption = "Elite Level " + (t.position | 0);
+    // title). Rewards: JUST the localized reward TYPE. Grade progression: the localized
+    // "Elite Levels" label + the level this mark sits at.
+    let caption;
     if (isRewards) {
         const opts = (t.options || "").split("\n").filter(function (s) { return s; });
-        if (opts.length) caption = escapeHtml(opts[0]) + " · " + caption;
+        caption = opts.length ? escapeHtml(opts[0]) : "";
+    } else {
+        // Just "Elite Levels" -- the specific level is painted over the emblem icon
+        // (below), the way the carousel's prestige tooltip shows it.
+        caption = escapeHtml(L("capEliteLevel", "Elite Levels"));
     }
-    // Elite ticks always carry an img:// emblem / reward thumbnail -> icon on the
-    // right; empty icon -> text-only.
-    const iconHtml = (t.icon && t.icon.indexOf("img://") === 0) ? bgIconHtml(t.icon) : "";
-    let text = capHtml(caption);
+    // Icon on the right: a reward thumbnail (rewards) or the grade emblem with the
+    // elite level overlaid in the grade emblemFont (grade progression). Empty -> none.
+    let iconHtml = "";
+    if (t.icon && t.icon.indexOf("img://") === 0) {
+        iconHtml = isRewards ? bgIconHtml(t.icon) : eliteTipIconHtml(t.icon, t.position | 0);
+    }
+    let text = caption ? capHtml(caption) : "";
     if (name) text += '<div class="wg-tip-name">' + escapeHtml(name) + "</div>";
     // Footer: progress to this milestone as "<earned> / <needed> combat XP" (the
     // tick's xpRequired is the cumulative combat XP to reach the level).
@@ -1056,8 +1097,8 @@ function renderElite(root, data, isRewards) {
     const grade = data.eliteGrade || "";
     const gradeName = grade ? grade.charAt(0).toUpperCase() + grade.slice(1) : "";
     label.textContent = isRewards
-        ? "EXCLUSIVE REWARDS"
-        : ("Elite System" + (gradeName ? " " + gradeName : ""));
+        ? L("headerEliteRewards", "EXCLUSIVE REWARDS")
+        : (L("headerElite", "Elite System") + (gradeName ? " " + gradeName : ""));
     const lvl = data.eliteLevel | 0;
     // The current level now rides in the category-icon arrowhead badge, so the header
     // "LVL x/y" counter is redundant -- hide it in elite modes.

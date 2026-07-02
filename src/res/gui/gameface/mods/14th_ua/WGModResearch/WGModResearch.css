@@ -88,16 +88,6 @@
             drop-shadow(0 0 2rem rgba(0, 0, 0, 0.7));
 }
 
-/* COMPLETE state shows the elite badge here, which already has a shadow baked
-   into the asset -- don't double it up. Its art carries more internal padding,
-   so shrink it a bit to better match the other category icons' proportions. */
-#wgmod-root.wg-complete .wg-cat-icon {
-    width: 30rem;
-    height: 30rem;
-    margin-top: 0;              /* elite badge is NOT nudged up */
-    filter: none;
-}
-
 /* SKILL_TREE ("Upgrades") uses the vehSkillTree.png glyph, whose art has less
    internal padding than research/fieldModification -- at the base 36rem box it
    read oversized and crowded its "Upgrades" label. Shrink the box so the glyph
@@ -274,12 +264,6 @@
     opacity: 1;
 }
 
-/* COMPLETE state: a full bar in the native "done" green. */
-#wgmod-root.wg-complete .wg-fill-veh {
-    background: #64ba21;
-    opacity: 1;
-}
-
 /* ELITE / ELITE_REWARDS: prestige-gold partial fill (progress within the current
    grade band / toward the next reward). Single segment -- free XP stays hidden. */
 #wgmod-root.wg-elite .wg-fill-veh {
@@ -310,10 +294,6 @@
 /* skill_tree fill: steel blue -> WG color-blind blue (128 192 255). */
 #wgmod-root.wg-colorblind.wg-skill .wg-fill-veh {
     background: #80c0ff;
-}
-/* COMPLETE fill: green stays green (WG keeps green); aligned to WG's ally green. */
-#wgmod-root.wg-colorblind.wg-complete .wg-fill-veh {
-    background: #61bf25;
 }
 /* ELITE grade-band fill: prestige gold -> WG color-blind orange (255 170 76). */
 #wgmod-root.wg-colorblind.wg-elite .wg-fill-veh {
@@ -795,6 +775,7 @@
     min-width: 0;
 }
 #wgmod-root .wg-tip-icon {
+    position: relative;         /* positioning context for the elite level overlay */
     flex: none;
     align-self: stretch;        /* box height == title + description block height */
     width: 52rem;
@@ -805,6 +786,34 @@
     /* drop-shadow hugs the icon's alpha (it has an image fill, so this renders);
        matches the tick glyphs' shadow so the art reads on the tooltip. */
     filter: drop-shadow(0 1rem 2rem rgba(0, 0, 0, 0.85));
+}
+/* Elite GRADE tooltip icon: a FIXED square (not stretched to the text-block height),
+   so the emblem renders at a known size and the level number centers reliably over it
+   -- the same recipe as the below-bar tick emblem, just larger. */
+#wgmod-root .wg-tip-icon-elite {
+    align-self: flex-start;     /* fixed square, top-aligned (override stretch) */
+    width: 44rem;
+    height: 44rem;
+    background-position: center;
+}
+/* Level painted over the emblem: grade-colored emblemFont digit glyphs, centered over
+   the whole (square) emblem box, exactly like the carousel prestige tooltip. */
+#wgmod-root .wg-tip-icon-num {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 2rem;                  /* top:2 + bottom:0 shifts the centered number 1rem down */
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+#wgmod-root .wg-tip-icon-num .wg-emblem-digit {
+    width: 6.5rem;
+    height: 13rem;
+}
+#wgmod-root .wg-tip-icon-num .wg-emblem-digit-one {
+    width: 4.5rem;
 }
 /* Field-mod tooltip icon: the signature dark hexagon + tan roman numeral (matching
    the bar's own field-mod badge, .wg-tick-hex), NOT a generic section glyph. Fixed
@@ -867,8 +876,10 @@
     opacity: 0.95;
     line-height: 1.1;
 }
-#wgmod-root .wg-tip-variants .wg-tip-variant:not(:last-child)::after {
-    content: "or";              /* "pick one" -- mirrors the description separator */
+#wgmod-root .wg-tip-or {
+    /* "pick one" separator between choice variants -- the text is localized and
+       injected by JS (variantsHtml), so it lives in a real element, not CSS content
+       (Gameface :not() is unreliable and CSS content can't be localized). */
     display: block;
     font-size: 11rem;
     font-weight: 700;
@@ -1055,39 +1066,4 @@
     align-items: center;
     z-index: 5;                 /* paints above .wg-hot so the chips are visible... */
     pointer-events: none;       /* ...but events pass through to .wg-hot, which hit-tests them */
-}
-#wgmod-root .wg-next-cap {
-    margin-right: 10rem;
-    font-size: 11rem;
-    font-weight: 700;
-    letter-spacing: 1rem;
-    text-transform: uppercase;
-    color: #ecca9d;             /* currency tan, like the XP figures */
-    text-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.85);
-    white-space: nowrap;
-}
-
-/* Skill-tree "Final upgrade available" caption: shown (JS sets display:flex) in
-   place of the "Next available:" chips when the capstone is the ONLY remaining
-   upgrade -- the lone available node is already the bar's rightmost (final) tick,
-   so a chip for it would just duplicate that glyph. RIGHT-anchored so it points at
-   the final tick, sitting just left of the final-upgrade glyph that pokes off the
-   bar's right end (right offset clears that ~30rem glyph). Same caption styling as
-   .wg-next-cap; pointer-events:none (visual only, like .wg-next). */
-#wgmod-root .wg-final-label {
-    position: absolute;
-    right: 26rem;               /* clear the final-upgrade glyph at the right end */
-    top: 100%;
-    margin-top: 4rem;           /* same drop as .wg-next / the glyph strip */
-    display: none;
-    align-items: center;
-    height: 30rem;              /* match the glyph box so the text centers on it */
-    font-size: 11rem;
-    font-weight: 700;
-    letter-spacing: 1rem;
-    text-transform: uppercase;
-    color: #ecca9d;             /* currency tan, like .wg-next-cap */
-    text-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.85);
-    white-space: nowrap;
-    pointer-events: none;
 }

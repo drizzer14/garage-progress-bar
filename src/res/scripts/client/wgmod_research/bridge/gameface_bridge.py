@@ -10,6 +10,8 @@ ModelObserver("WGModResearch").
 ViewModel API (string/number/array, transaction, addViewModel, _addViewModelProperty)
 was verified live in the EU 2.3 client.
 """
+import json
+
 import BigWorld
 from frameworks.wulf import ViewModel, Array
 from debug_utils import LOG_CURRENT_EXCEPTION, LOG_NOTE
@@ -20,6 +22,7 @@ from skeletons.gui.shared import IItemsCache
 
 from wgmod_research.adapter import engine_adapter
 from wgmod_research.adapter import actions
+from wgmod_research.adapter import i18n
 from wgmod_research.domain.builder import build_model, bar_visible
 from wgmod_research.bridge import mod_settings
 import openwg_gameface
@@ -495,7 +498,7 @@ class TickVM(ViewModel):
 
 class UpgradeVM(ViewModel):
     """One available tier-XI upgrade node -> a clickable 'Upgrades Available' chip."""
-    def __init__(self, properties=5, commands=0):
+    def __init__(self, properties=6, commands=0):
         super(UpgradeVM, self).__init__(properties=properties, commands=commands)
 
     def _initialize(self):
@@ -505,6 +508,7 @@ class UpgradeVM(ViewModel):
         self._addStringProperty("name", "")        # 2
         self._addNumberProperty("xpRequired", 0)   # 3
         self._addStringProperty("effect", "")      # 4 (perk KPI bonus lines, \n-joined)
+        self._addStringProperty("category", "")    # 5 (localized node sub-heading caption)
 
     def setActionId(self, v):
         self._setNumber(0, v)
@@ -521,9 +525,12 @@ class UpgradeVM(ViewModel):
     def setEffect(self, v):
         self._setString(4, v)
 
+    def setCategory(self, v):
+        self._setString(5, v)
+
 
 class ResearchVM(ViewModel):
-    def __init__(self, properties=20, commands=4):
+    def __init__(self, properties=22, commands=4):
         super(ResearchVM, self).__init__(properties=properties, commands=commands)
 
     def _initialize(self):
@@ -549,6 +556,7 @@ class ResearchVM(ViewModel):
         self._addNumberProperty("posX", 0)           # 18 (bar center-x px; 0 = auto/CSS default)
         self._addNumberProperty("posY", 0)           # 19 (bar top px; 0 = auto/CSS default)
         self._addStringProperty("eliteCurrentIcon", "")  # 20 (current-grade emblem for the category icon)
+        self._addStringProperty("labels", "")        # 21 (JSON bundle of localized widget labels; see i18n.widget_labels)
         # Reverse channel: JS click handlers invoke these commands. Each returns a
         # command object that connect_commands() wires to a Python handler. Wulf
         # delivers the JS-supplied argument(s) to those handlers.
@@ -598,6 +606,9 @@ class ResearchVM(ViewModel):
 
     def setEliteCurrentIcon(self, v):
         self._setString(20, v)
+
+    def setLabels(self, v):
+        self._setString(21, v)
 
     def setCombatXp(self, v):
         self._setNumber(13, v)
@@ -672,11 +683,22 @@ def push(rvm, host_vm=None):
         model = build_model(snap, mod_settings.enabled_modes())
         LOG_NOTE("[wgmod] push mode=%s ticks=%d fillV=%d fillF=%d" % (
             model.mode, len(model.ticks), model.fill_vehicle, model.fill_free))
+        # Resolve localized labels OUTSIDE the transaction: a bad resource id must never
+        # abort the model write (a rolled-back transaction blanks the whole bar).
+        try:
+            labels_json = json.dumps(i18n.widget_labels(), ensure_ascii=True)
+        except Exception:
+            LOG_CURRENT_EXCEPTION()
+            labels_json = "{}"
         with rvm.transaction() as tx:
             tx.setVisible(bar_visible(_bar_visible(), mod_settings.hide_always(),
                                       mod_settings.hide_when_complete(), model.mode,
                                       _in_garage()))
             tx.setColorBlind(engine_adapter.is_color_blind())
+            # Localized widget labels (client-language, sourced from WG's own strings);
+            # JSON so the whole bundle rides one field. ensure_ascii escapes non-ASCII
+            # (e.g. Cyrillic) to \uXXXX, which JS JSON.parse decodes back.
+            tx.setLabels(labels_json)
             tx.setPosX(mod_settings.pos_x())
             tx.setPosY(mod_settings.pos_y())
             tx.setMode(model.mode)
@@ -725,6 +747,7 @@ def push(rvm, host_vm=None):
                 uv.setName(getattr(up, "name", "") or "")
                 uv.setXpRequired(getattr(up, "xp_cost", 0) or 0)
                 uv.setEffect(getattr(up, "description", "") or "")
+                uv.setCategory(getattr(up, "category", "") or "")
                 ua.addViewModel(uv)
             ua.invalidate()
         # Nudge the host sub-view so its data re-syncs to JS (nested-model

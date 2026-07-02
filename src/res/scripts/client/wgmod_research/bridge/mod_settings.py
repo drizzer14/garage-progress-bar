@@ -36,6 +36,8 @@ only owns the settings storage + the live-apply on change.
 """
 from debug_utils import LOG_CURRENT_EXCEPTION, LOG_NOTE
 
+from wgmod_research.adapter import i18n
+
 # Our mod's reverse-domain id, reused as the MSA "linkage" (panel identity / storage key).
 LINKAGE = "com.14th_ua.garageprogressbar"
 
@@ -80,7 +82,7 @@ def _template():
     px steppers. The steppers show 0 until the widget seeds them from the live layout on
     the first hangar mount. Reset is the panel's own per-mod reset button (see _on_reset),
     so there is no custom reset control here."""
-    return {
+    return _mark_untranslated({
         "modDisplayName": "Garage Progress Bar",
         "enabled": True,
         # settingsVersion lets the panel preserve the user's saved values across cosmetic
@@ -197,7 +199,24 @@ def _template():
                 "varName": "posY",
             },
         ],
-    }
+    })
+
+
+def _mark_untranslated(tpl):
+    """DIAGNOSTIC: the whole settings panel is intentionally English (mod-invented
+    prose with no in-game equivalent), so -- when i18n.MARK_UNTRANSLATED is on -- prefix
+    every visible label/tooltip with an underscore, matching the widget's convention for
+    untranslated text. The brand `modDisplayName` is left as-is. No-op when the flag is
+    off; flip it (in i18n) to clear these before shipping."""
+    if not i18n.MARK_UNTRANSLATED:
+        return tpl
+    for col in ("column1", "column2"):
+        for entry in tpl.get(col, ()):
+            if entry.get("text"):
+                entry["text"] = i18n._mark(entry["text"])
+            if entry.get("tooltip"):
+                entry["tooltip"] = i18n._mark(entry["tooltip"])
+    return tpl
 
 
 def _apply(settings):
@@ -382,8 +401,9 @@ def _label_defaults(api, dx, dy):
         tmpl = (getattr(api, "state", None) or {}).get("templates", {}).get(LINKAGE)
         if not isinstance(tmpl, dict):
             return
-        wanted = {"posX": "%s — default %d" % (_POSX_LABEL, dx),
-                  "posY": "%s — default %d" % (_POSY_LABEL, dy)}
+        # Marked untranslated (underscore) to match the rest of the English-only panel.
+        wanted = {"posX": i18n._mark("%s — default %d" % (_POSX_LABEL, dx)),
+                  "posY": i18n._mark("%s — default %d" % (_POSY_LABEL, dy))}
         changed = False
         for col in ("column1", "column2"):
             for comp in tmpl.get(col, []) or []:

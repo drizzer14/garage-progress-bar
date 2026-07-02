@@ -16,6 +16,7 @@ from items import getTypeOfCompactDescr
 from gui.shared.gui_items import GUI_ITEM_TYPE
 from debug_utils import LOG_CURRENT_EXCEPTION
 
+from wgmod_research.adapter import i18n
 from wgmod_research.domain import types as t
 from wgmod_research.domain.resolvers.fieldmods import max_level
 
@@ -126,15 +127,6 @@ def _roman(n):
     return str(n) if n > 0 else ""
 
 
-# Module GUI_ITEM_TYPE -> tooltip caption. Built with getattr so a renamed/missing
-# enum member just drops out of the map rather than breaking import.
-_MODULE_KIND_LABELS = dict(
-    (getattr(GUI_ITEM_TYPE, attr), label)
-    for attr, label in (("GUN", "Gun"), ("TURRET", "Turret"), ("ENGINE", "Engine"),
-                        ("CHASSIS", "Chassis"), ("RADIO", "Radio"))
-    if getattr(GUI_ITEM_TYPE, attr, None) is not None)
-
-
 def _unlock_name(cache, int_cd):
     """Localized display name for an unlock id, or "" on any read failure (so one
     bad prerequisite never sinks the whole unlock row)."""
@@ -167,12 +159,14 @@ def _read_tech_unlocks(veh, unlocks):
                 icon = getattr(item, "icon", "") or ""
                 # Tooltip caption: a next vehicle shows its tier ("Tier IX"); a
                 # module shows its type ("Gun"/"Turret"/...). item.level on a
-                # vehicle item is its tier.
+                # vehicle item is its tier. Both are localized to the client language
+                # -- the tier word via i18n, the module type via the GUI item's own
+                # already-localized `userType` (covers wheels/dual-gun/etc. too).
                 if is_vehicle:
                     tier = int(getattr(item, "level", 0) or 0)
-                    kind_label = ("Tier " + _roman(tier)) if tier else ""
+                    kind_label = i18n.tier_label(_roman(tier))
                 else:
-                    kind_label = _MODULE_KIND_LABELS.get(item_type, "")
+                    kind_label = getattr(item, "userType", "") or ""
             except Exception:
                 LOG_CURRENT_EXCEPTION()
                 is_vehicle, name, icon, kind_label = False, "", "", ""
@@ -340,11 +334,16 @@ def _read_skill_tree(veh):
                     # isUnlocked. getImageName() is the perk basename -> full URL via
                     # _skilltree_icon; the localized name is generic, so humanize it.
                     image_name = _safe(lambda: step.action.getImageName(), "") or ""
+                    # The node's OWN category (single key from getCategories()) -> its
+                    # localized Upgrades-screen sub-heading (e.g. "Category: Firepower",
+                    # "Mechanic Upgrade", "Special Upgrade").
+                    cat_key = _safe(lambda: sorted(step.action.getCategories())[0], "") or ""
                     available.append(t.ProgressionStep(
                         step_id=step_id, name=_skilltree_name(step.action, node_type),
                         icon=_skilltree_icon(node_type, image_name),
                         xp_cost=xp_cost, unlocked=False,
-                        description=_skilltree_effect(step.action)))
+                        description=_skilltree_effect(step.action),
+                        category=i18n.skilltree_category(cat_key)))
                 # the signature 'final' upgrade -> its icon + name + cost for the end
                 # tick (which carries a tooltip like the available chips).
                 if node_type == "final" and not final_icon:
