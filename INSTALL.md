@@ -5,8 +5,8 @@ vehicle's progression at a glance:
 
 - **Tech-tree research** — modules and the next vehicle to unlock.
 - **Field Modifications** — the post-progression upgrade ladder.
-- **Elite Levels (prestige)** — current grade band and the tier-XI reward track.
-- **Tier-XI vehicle skill-tree** — upgrade progress as a "% upgraded" readout.
+- **Elite Levels (prestige)** — current grade band and the Tier XI reward track.
+- **Tier XI vehicle skill tree** — how many skill-tree upgrades are unlocked out of the total.
 
 It uses the game's own icons and hover tooltips, and refreshes live whenever you
 switch vehicles.
@@ -19,7 +19,7 @@ switch vehicles.
 |-------------|--------|
 | **Game** | World of Tanks **EU (Wargaming)** client, version **2.3.0.1**. Built and tested against this version. |
 | **Dependency** | **OpenWG GameFace** (required). The installer sets this up for you; for a manual install you add it yourself. |
-| **Optional** | **ModsSettingsAPI** — enables the in-game settings panel (Settings → Mods). The installer adds it if missing; without it the bar simply shows everywhere with no settings. |
+| **Optional** | **ModsSettingsAPI** — adds the mod's options to its in-game Modification list window. The installer adds it if missing; without it the bar simply shows everywhere with no options. |
 
 This build targets the Wargaming EU/global client (version 2.3.0.1).
 
@@ -35,8 +35,8 @@ This build targets the Wargaming EU/global client (version 2.3.0.1).
    run the latest installer for you — accept to always get the newest build.
 5. The installer adds OpenWG GameFace and ModsSettingsAPI when your client doesn't
    already have them, then installs the mod into `mods\<version>\`.
-6. Start the game and go to the Garage. Adjust the bar under **Settings → Mods →
-   Garage Progress Bar** if you like.
+6. Start the game and go to the Garage. Adjust the bar from the **Modification list**
+   window (added by ModsSettingsAPI) if you like.
 
 To remove the mod later, use its entry in Windows **Apps & features**, or re-run the
 installer. OpenWG GameFace and ModsSettingsAPI stay in place for other mods that use them.
@@ -91,12 +91,12 @@ The `mods\2.3.0.1\` folder then holds the OpenWG GameFace `.wotmod` and
   which would override the packaged mod. Keep only the `.wotmod` in `mods\<version>\`.
 - Fully restart the client after installing.
 
-**No settings appear under Settings → Mods.**
-- The settings panel needs **ModsSettingsAPI** in the same `mods\<version>\` folder
+**No settings appear for the mod.**
+- The mod's options need **ModsSettingsAPI** in the same `mods\<version>\` folder
   (the installer adds it if missing). Without it the bar still works — it just shows
   everywhere with no toggles.
-- If the bar is hidden and you want it back, open **Settings → Mods → Research
-  Progress Bar** and uncheck the hide options.
+- If the bar is hidden and you want it back, open the **Modification list** window
+  (added by ModsSettingsAPI), find **Garage Progress Bar**, and uncheck the hide options.
 
 **A game update stopped it from working.**
 - Game updates change the version folder. Move the `.wotmod` from the old

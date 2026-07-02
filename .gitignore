@@ -23,6 +23,3 @@ deploy.local.json
 
 # Dev tool staging
 tools/dev/_stage_debug/
-
-# Local scratch docs (not part of the published mod)
-/docs/
