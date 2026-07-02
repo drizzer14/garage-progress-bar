@@ -255,17 +255,60 @@ function joinSections(sections) {
         .join('<div class="wg-tip-div"></div>');
 }
 
-// Compact XP readout: "<have> / <need> XP" -- progress toward affording this item,
-// replacing the older verbose cost + "Need N more"/"Ready" pair. `need` is the
-// SAME quantity that gates the tick (cumulative bar position for ticks; the node
-// cost for chips), so the fraction reaching full == the item being affordable.
-// Tinted as a shortfall (warm red) until covered, currency-tan once it is.
-function xpFracHtml(have, need) {
+// A small inline XP-currency glyph (background-image span -- Gameface clips <img>,
+// but honors background-size:contain on a box). `url` is XP_ICON (total XP) or
+// COMBAT_XP_ICON (vehicle/combat XP). Sits right after the figure it annotates. The
+// combat-XP art carries more transparent padding, so it gets a size-bump modifier to
+// read at the same visual size as the total-XP glyph (mirrors the header's own
+// .wg-elite .wg-xp-ico override).
+function xpIco(url) {
+    const cls = url === COMBAT_XP_ICON ? "wg-tip-xp-ico wg-tip-xp-ico-combat" : "wg-tip-xp-ico";
+    return '<span class="' + cls + '" style="background-image:url(\'' + url + '\')"></span>';
+}
+
+// Compact XP readout: "<have> / <need> <glyph>" -- progress toward affording this
+// item, replacing the older verbose cost + "Need N more"/"Ready" pair. `need` is the
+// SAME quantity that gates the tick (cumulative bar position for ticks; the node cost
+// for chips), so the fraction reaching full == the item being affordable. Tinted as a
+// shortfall (warm red) until covered, currency-tan once it is.
+//
+// Headline = the item's COST (`need`) + its currency glyph, in slightly larger figures.
+// Affordability is conveyed by the remaining sub-line below (absent once covered), not
+// by the headline, so the headline stays a neutral cost readout.
+//
+// While short, that sub-line spells out the shortfall as language-neutral "-<n>"
+// figures (no translatable "left"/"more" word). Each carries its OWN currency glyph +
+// color (matching the bar's fills): the vehicle-only remaining (combat XP alone, free
+// XP ignored) comes FIRST -- combat-XP glyph, near-white -- and the total remaining
+// (free XP counts) follows in the headline's currency (total-XP + tan; combat + white
+// for elite). The vehicle-only figure shows only when free XP actually moves the
+// number. Once covered, the whole sub-line is omitted.
+function xpFracHtml(have, need, iconUrl, vehHave) {
     need = need | 0;
     if (need <= 0) return "";
-    have = have | 0;   // shown as-is, NOT capped to need (so surplus XP is visible)
-    const cls = have >= need ? "wg-tip-xp" : "wg-tip-xp wg-tip-short";
-    return '<div class="' + cls + '">' + fmtXp(have) + " / " + fmtXp(need) + " XP</div>";
+    have = have | 0;
+    const ico = xpIco(iconUrl || XP_ICON);   // headline currency (reused by total remaining)
+    // Unaffordable ("not yet reachable") -> the cost itself is tinted the shortfall red,
+    // the same signal it carried before the cost-only headline change.
+    const cls = have < need ? "wg-tip-xp wg-tip-short" : "wg-tip-xp";
+    let h = '<div class="' + cls + '">' + fmtXp(need) + ico + "</div>";
+    if (have < need) {
+        const left = need - have;
+        let sub = "";
+        // Combat XP (the vehicle's own XP alone) FIRST -- shown only when free XP
+        // actually moves the number (otherwise identical to the total remaining).
+        if (vehHave !== undefined) {
+            const vehLeft = need - (vehHave | 0);
+            if (vehLeft > left) {
+                sub += '<span class="wg-tip-rem-veh">-' + fmtXp(vehLeft) +
+                    xpIco(COMBAT_XP_ICON) + "</span>";
+            }
+        }
+        // Then the total remaining (free XP counts), in the headline's currency.
+        sub += '<span class="wg-tip-rem-tot">-' + fmtXp(left) + ico + "</span>";
+        h += '<div class="wg-tip-xp-rem">' + sub + "</div>";
+    }
+    return h;
 }
 
 // Effect/bonus lines (field-mod & skill-tree KPI text, e.g. "+1% to concealment"),
@@ -334,8 +377,18 @@ function capHtml(text) {
 // unchanged when there's no icon to show.
 function tipMain(iconHtml, text) {
     if (!iconHtml) return text;
-    return '<div class="wg-tip-main"><div class="wg-tip-text">' + text + "</div>" +
-        iconHtml + "</div>";
+    // Tag the block with the icon it carries so the CSS can reserve a right-hand
+    // column exactly as wide as that icon (see .wg-tip-main-* ). The icon is taken
+    // out of flow (absolute, top-right) so .wg-tip-main is a plain BLOCK: Coherent
+    // sized the former flex row from the text's FIRST line only, so any wrapped line
+    // overflowed the row and spilled over the divider below -- a block always grows
+    // to its full wrapped text. Order matters: the hex/elite icons also carry the
+    // base "wg-tip-icon" class, so test the specific ones first.
+    var mod = iconHtml.indexOf("wg-tip-hex") >= 0 ? " wg-tip-main-hex"
+        : iconHtml.indexOf("wg-tip-icon-elite") >= 0 ? " wg-tip-main-elite"
+        : " wg-tip-main-icon";
+    return '<div class="wg-tip-main' + mod + '"><div class="wg-tip-text">' + text +
+        "</div>" + iconHtml + "</div>";
 }
 
 // Tooltip body for a tick, built as ordered sections joined by dividers for clear
@@ -343,7 +396,7 @@ function tipMain(iconHtml, text) {
 // right-side icon) -> FOOTER ("have / need XP", or the prerequisite line when
 // locked). A field-mod choice level puts its selectable variants (each with its
 // buffs) in place of a single title.
-function tooltipHtml(t, spendableXp) {
+function tooltipHtml(t, spendableXp, fillVehicle) {
     const opts = (t.options || "").split("\n").filter(function (s) { return s; });
     const optEffects = (t.optionEffects || "").split("\n");
     let text = "", foot = "";
@@ -375,7 +428,7 @@ function tooltipHtml(t, spendableXp) {
             : '<div class="wg-tip-status">' +
                 escapeHtml(L("prereqNotMet", "Prerequisites not met")) + "</div>";
     } else {
-        foot = xpFracHtml(spendableXp, t.position);
+        foot = xpFracHtml(spendableXp, t.position, XP_ICON, fillVehicle);
     }
     // Text block + its icon are ONE unit (no divider between them); the divider only
     // separates that unit from the footer (cost / prerequisite).
@@ -512,7 +565,7 @@ function arrLen(a) {
 // proven-interactive layer, which spans this row's area): we register each chip's
 // element + command + tooltip in hotEl._wgChips, and ensureHover() hit-tests them by
 // bounding rect for hover (toggling the chip's own .wg-chip-tip) and click.
-function renderNextAvailable(nextEl, arr, hotEl, spendableXp) {
+function renderNextAvailable(nextEl, arr, hotEl, spendableXp, fillVehicle) {
     nextEl.innerHTML = "";
     const chips = [];
     const n = arrLen(arr);
@@ -547,7 +600,7 @@ function renderNextAvailable(nextEl, arr, hotEl, spendableXp) {
             const cCap = u.category || L("headerSkillTree", "Upgrades");
             const cText = capHtml(escapeHtml(cCap)) + cName + effectHtml(u.effect);
             const cIcon = (u.icon && u.icon.indexOf("img://") === 0) ? bgIconHtml(u.icon) : "";
-            const cFoot = xpFracHtml(spendableXp, xp);   // per-node cost (frontier nodes unlock independently)
+            const cFoot = xpFracHtml(spendableXp, xp, XP_ICON, fillVehicle);   // per-node cost (frontier nodes unlock independently)
             // Text block + icon as one unit (no divider between them); divider before cost.
             tip.innerHTML = joinSections([tipMain(cIcon, cText), cFoot]);
             chip.appendChild(tip);
@@ -872,7 +925,7 @@ function render(model) {
         if (nextEl._wgSig !== sig) {
             nextEl._wgSig = sig;
             setActiveChip(hotEl, null);
-            renderNextAvailable(nextEl, data.availUpgrades, hotEl, spendableXp);
+            renderNextAvailable(nextEl, data.availUpgrades, hotEl, spendableXp, fv);
         } else {
             nextEl.style.display = "flex";   // unchanged -> keep chips + tooltip, re-show
         }
@@ -958,7 +1011,7 @@ function render(model) {
         // Skill-tree count ticks carry no metadata, but the FINAL tick has a name
         // (+ cost) -> give it a hover tooltip too. Other modes: all ticks tip.
         if (!noTips || t.name) {
-            const body = tooltipHtml(t, spendableXp);
+            const body = tooltipHtml(t, spendableXp, fv);
             // Tag the tick (and, via ancestry, its glyph) so the handler can read
             // the exact tick under the cursor when Gameface deep-targets; also keep
             // a flat list for the nearest-by-x fallback when it doesn't.
@@ -1065,7 +1118,7 @@ function eliteTooltipHtml(t, isRewards, combatXp) {
     if (name) text += '<div class="wg-tip-name">' + escapeHtml(name) + "</div>";
     // Footer: progress to this milestone as "<earned> / <needed> combat XP" (the
     // tick's xpRequired is the cumulative combat XP to reach the level).
-    const foot = xpFracHtml(combatXp, t.xpRequired);
+    const foot = xpFracHtml(combatXp, t.xpRequired, COMBAT_XP_ICON);
     return joinSections([tipMain(iconHtml, text), foot]);
 }
 

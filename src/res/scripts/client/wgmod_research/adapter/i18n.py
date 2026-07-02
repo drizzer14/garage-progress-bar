@@ -95,13 +95,17 @@ def widget_labels():
         return R.strings
 
     # Bar-mode headers -> the game's OWN feature titles (all confirmed live):
-    #  tech-tree "Research"       = veh_skill_tree.footer.button.label
+    #  tech-tree "Research"       = menu.contextMenu.vehicleResearch
     #  field-mods "Field Modification" = veh_post_progression.tooltips.entry_point.header
     #  tier-XI "Upgrades"         = veh_skill_tree.intro.progression.title
     #  elite "Elite System"       = prestige.entryPoint.header
     #  elite rewards "Elite Rewards" = veh_skill_tree.intro.vanity.title
+    # The tank menu's OWN "Research" noun (the vehicle context-menu action that opens
+    # the tech tree). The old veh_skill_tree.footer.button.label was the skill-tree
+    # footer *verb* ("Research!"/UA "Дослідити") -- wrong for a category header on the
+    # UA client; this noun ("Дослідження") matches the category glyph's vehicleMenu id.
     out["headerResearch"] = _text(
-        lambda: _S().veh_skill_tree.footer.button.label(), _FALLBACK["headerResearch"])
+        lambda: _S().menu.contextMenu.vehicleResearch(), _FALLBACK["headerResearch"])
     out["headerFieldMods"] = _text(
         lambda: _S().veh_post_progression.tooltips.entry_point.header(), _FALLBACK["headerFieldMods"])
     out["headerSkillTree"] = _text(
