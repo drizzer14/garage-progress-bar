@@ -1,6 +1,25 @@
 # Research: Tier-XI upgrades show text descriptions but not exact buff numbers
 
-_Submitted: "Tier XI upgrades don't show exact buffs, just their text descriptions" · Status: open_
+_Submitted: "Tier XI upgrades don't show exact buffs, just their text descriptions" · Status: shipped_
+
+## Shipped resolution (differs from the original hypothesis below)
+A live REPL probe (Strv 107-12, EU 2.3) disproved the root cause guessed below: the
+signature "mechanic" perks (`kpi.name == "value"`) already carry a `mul`/`add` type
+and fill correctly (commit 35696e7's `add` support covers them). The *actual* gap was
+ordinary **stat perks** (engine HP, hull traverse, ammo capacity, …) that have **no
+localized sentence template**, so `_skilltree_effect()` returned `""` entirely — the
+tooltip showed the node title but no magnitude.
+
+Fix: when there's no sentence template, `_skilltree_effect()` now falls back to the
+field-mod formatter `_action_effect()` / `_kpi_lines()`, yielding lines like
+`"+10% to hull elevation speed"`. The `{value}`-scan was extracted into a pure
+`_skilltree_value()` helper, plus a defensive fallback if a template ever wants a
+magnitude the KPI loop can't classify. Verified live: the 6 previously-blank stat
+nodes now carry numbers; mechanic perks and feature/role slots are unchanged.
+(`adapter/engine_adapter.py`, `_skilltree_effect` / `_skilltree_value`.)
+
+---
+_Original research note (hypothesis, superseded by the live probe above):_
 
 ## Summary
 Tier-XI skill-tree node tooltips render a localized sentence but frequently drop

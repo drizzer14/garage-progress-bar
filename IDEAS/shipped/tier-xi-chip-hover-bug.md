@@ -1,6 +1,13 @@
 # Research: Tier-XI "Next available" chips die after visiting an elite / exclusive-rewards vehicle
 
-_Submitted: "after switching vehicles, tier XI next upgrades are not hoverable/clickable anymore" → clarified: "only after switching to and from an elite vehicle or tier XI with exclusive rewards" · Status: open_
+_Submitted: "after switching vehicles, tier XI next upgrades are not hoverable/clickable anymore" → clarified: "only after switching to and from an elite vehicle or tier XI with exclusive rewards" · Status: shipped_
+
+## Shipped resolution
+Fixed as diagnosed: `renderElite()` now nulls the `.wg-next` chip signature
+(`nextSig._wgSig = null`) alongside clearing `hotEl._wgChips`, so returning to a
+skill-tree vehicle recomputes a differing signature and rebuilds the chips instead of
+taking the stale re-show branch. In-game verified (chip hover/click survive the
+elite round-trip). (`WGModResearch.js`, `renderElite`.)
 
 ## Summary
 The tier-XI "Next available:" upgrade chips stop responding to hover and click
