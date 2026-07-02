@@ -20,6 +20,59 @@ tooltip header is built in `tooltipHtml()` (WGModResearch.js ~264), it's
 text-only today, and the widget already resolves `img://` icon URLs you can
 reuse."
 
+## On activation: mirror the backlog into the Task list
+
+Whenever this skill activates (plan-saver mode), surface the backlog as a live task
+list so the user can see everything pending at a glance:
+
+1. Read `IDEAS.md`'s `## Open` section.
+2. Create one task per `### entry` via `TaskCreate` — the task title is the entry
+   title; in its detail put the one-line blurb and the `IDEAS/<slug>.md` note path.
+   (For the settings entries, one task each — styling / visibility / advanced.)
+3. This list is a *mirror* of `IDEAS.md` (the source of truth), rebuilt from it each
+   time — not a separate store. Keep it in sync: after you capture a new idea add
+   its task; after you prune a shipped idea mark that task completed (or remove it).
+4. Don't duplicate — if the task list already reflects the current `IDEAS.md`
+   entries this session, leave it as is rather than re-creating tasks.
+5. **Register as the plan-saver session.** Run
+   `bash .claude/hooks/plan-saver-register.sh`. This records this session's id in
+   `.git/.plan-saver-session` so that when *another* session prunes a shipped idea
+   during cleanup, you (and only you) get nudged to reconcile — see
+   [Cross-session sync](#cross-session-sync) below. The most recently activated
+   plan saver owns the role; re-registering is cheap and idempotent.
+
+This is a deliberate repurposing of the Task tool (normally Claude's own
+work-tracker) as a backlog view; it's fine because the list is always regenerated
+from `IDEAS.md`.
+
+## Cross-session sync
+
+The task list lives in one session, but `IDEAS.md` gets edited from many — a
+working session that ships a feature typically cleans up the backlog itself. Two
+hooks keep the mirrored task list honest across sessions (both per-repo state under
+`.git/`, never committed):
+
+- **`.claude/hooks/sync-ideas.sh`** (`UserPromptSubmit`, runs every turn, every
+  session): stashes the current session id to `.git/.current-session`, and on any
+  content change to `IDEAS.md` appends a session-tagged **ping** to
+  `.git/.plan-saver-pings`. When the *registered* plan-saver session takes its next
+  turn and pings from other sessions are pending, it prints a reconcile nudge into
+  your context, then clears the queue.
+- **`.claude/hooks/plan-saver-register.sh`**: run on activation (step 5 above) to
+  claim the plan-saver role for this session.
+
+Consequences to rely on:
+- **You don't have to manually ping.** Any session that edits `IDEAS.md` (e.g.
+  deletes a shipped entry) auto-pings you by virtue of the change. Non-plan-saver
+  sessions never get nudged, so this is silent for them.
+- **Self-edits don't nudge.** When *you* capture or prune an idea, that's already
+  reflected in your task list, so your own pings are ignored.
+- **Pings survive an absent plan saver.** If a cleanup happens while no plan-saver
+  session is registered, the ping waits in the queue; the next session to activate
+  and register reconciles it (the register script reports the pending count).
+- Sync is turn-level ("next prompt"), not instantaneous — the task list can only be
+  mutated by the model on a turn. That is the closest achievable pattern.
+
 ## Two artifacts per submission
 
 1. **`IDEAS.md`** (repo root) — the scannable backlog. Short entries only.
@@ -91,6 +144,11 @@ keep the active research folder uncluttered, and (if quick) flip its top line to
 `Status: shipped`. Don't keep a "Done" section in `IDEAS.md` — git history plus
 the archived note are the record.
 
+Editing `IDEAS.md` here — from *any* session, not just a plan-saver one —
+automatically pings the registered plan-saver session to reconcile its task list on
+its next turn (see [Cross-session sync](#cross-session-sync)). You don't do anything
+extra; the edit itself is the ping.
+
 ## Scanning for unrecorded ideas
 
 If asked to find more ideas, sweep with an `Explore` agent for: code TODO/FIXME/
@@ -105,3 +163,7 @@ the genuine pending ones — and research each the same way before it earns a no
 - Keep `IDEAS.md` entries scannable; the depth belongs in the research note.
   Group large clusters (e.g. the settings candidates) and ask whether to split
   them so individual items can be ticked off as they land.
+- The cross-session state (session id, pings, hashes) lives under `.git/`
+  (`.plan-saver-session`, `.current-session`, `.plan-saver-pings`,
+  `.ideas-md-hash`) — the repo's internal dir, which git never tracks. **No session
+  id is ever committed.** Nothing to add to `.gitignore`; nothing to clean up.
