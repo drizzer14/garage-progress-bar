@@ -7,7 +7,7 @@ stock progress bars. It updates live as you switch vehicles or earn XP.
 
 **English** · [Українська](#garage-progress-bar--українська)
 
-![Garage Progress Bar on a partially-researched vehicle in the Garage](assets/img/research.png)
+![Garage Progress Bar on a partially-researched vehicle in the Garage](assets/img/en/research.png)
 
 ## What it shows
 
@@ -24,19 +24,19 @@ upgrades without leaving the Garage. **Hover** any tick or icon for a tooltip.
 
 **Field Modifications** — the post-progression upgrade ladder:
 
-![The bar showing Field Modifications, with a tooltip](assets/img/field-mods.png)
+![The bar showing Field Modifications, with a tooltip](assets/img/en/field-mods.png)
 
 **Elite Levels (prestige)** — the current grade-band progression:
 
-![The bar showing Elite Levels prestige grades, with a tooltip](assets/img/elite.png)
+![The bar showing Elite Levels prestige grades, with a tooltip](assets/img/en/elite.png)
 
 **Tier XI exclusive rewards** — the milestone reward roadmap:
 
-![The bar showing the Tier XI exclusive-rewards roadmap, with a tooltip](assets/img/elite-rewards.png)
+![The bar showing the Tier XI exclusive-rewards roadmap, with a tooltip](assets/img/en/elite-rewards.png)
 
 **Tier XI skill tree** — skill-tree upgrades unlocked out of the total on a Tier XI vehicle:
 
-![The bar showing Tier XI skill-tree upgrades, with a tooltip](assets/img/skill-tree.png)
+![The bar showing Tier XI skill-tree upgrades, with a tooltip](assets/img/en/skill-tree.png)
 
 ## Compatibility
 
@@ -98,7 +98,7 @@ Building, deploying, testing, and the repo layout are documented in
 
 [English](#garage-progress-bar--world-of-tanks-mod) · **Українська**
 
-![Смуга прогресу в Ангарі на частково дослідженій техніці](assets/img/research.png)
+![Смуга прогресу в Ангарі на частково дослідженій техніці](assets/img/ua/research.png)
 
 ## Що показує
 
@@ -111,6 +111,24 @@ Building, deploying, testing, and the repo layout are documented in
 **Натисніть на смугу**, щоб досліджувати модулі, відкрити наступну техніку або
 застосувати вдосконалення XI рівня прямо з Ангара. **Наведіть** курсор на позначку
 чи іконку, щоб побачити підказку.
+
+### Кожен тип прогресу
+
+**Польові модифікації** — рівні вдосконалень після завершення прокачування:
+
+![Смуга з Польовими модифікаціями та підказкою](assets/img/ua/field-mods.png)
+
+**Елітні рівні (престиж)** — поточний прогрес за грейдами:
+
+![Смуга з Елітними рівнями (престиж) та підказкою](assets/img/ua/elite.png)
+
+**Ексклюзивні нагороди XI рівня** — дорожня карта нагород:
+
+![Смуга з дорожньою картою ексклюзивних нагород XI рівня та підказкою](assets/img/ua/elite-rewards.png)
+
+**Дерево навичок XI рівня** — відкриті вдосконалення із загальної кількості на техніці XI рівня:
+
+![Смуга з вдосконаленнями дерева навичок XI рівня та підказкою](assets/img/ua/skill-tree.png)
 
 ## Сумісність
 
