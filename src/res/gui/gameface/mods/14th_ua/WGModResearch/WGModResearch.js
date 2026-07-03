@@ -54,6 +54,10 @@ const XP_ICON = "img://gui/maps/icons/vehicle_hub/research_purchase/total_experi
 // freeXpIcon_23x22 confirms it's the standard combat/free pair).
 const COMBAT_XP_ICON = "img://gui/maps/icons/library/xpIcon_23x22.png";
 
+// Credits glyph for the "done" tick footer (a researched item still costs credits to
+// buy). Matches the top-right account-balance credits icon.
+const CREDITS_ICON = "img://gui/maps/icons/library/CreditsIcon-3.png";
+
 // EXPERIMENT (A-B): which art fills the elite category-icon slot.
 //   "emblem" -> the hexagon grade emblem (current shipped default)
 //   "tab"    -> the battle team-HP arrowhead/chevron grade badge ("tab" art)
@@ -316,6 +320,16 @@ function xpFracHtml(have, need, iconUrl, vehHave) {
     return h;
 }
 
+// Credits buy-price line for a "done" tick (researched -> now costs credits to buy).
+// Reuses the XP cost-line layout with the credits glyph; a 0/absent price shows
+// nothing (matching xpFracHtml's early-return, so the done footer stays empty).
+function creditsHtml(price) {
+    price = price | 0;
+    if (price <= 0) return "";
+    return '<div class="wg-tip-xp wg-tip-credits">' + fmtXp(price) +
+        xpIco(CREDITS_ICON) + "</div>";
+}
+
 // Effect/bonus lines (field-mod & skill-tree KPI text, e.g. "+1% to concealment"),
 // one tertiary-body row per line. The Python side joins multiple KPIs with "\n".
 // Empty string -> nothing rendered (features / mechanic perks carry no KPI text).
@@ -352,8 +366,12 @@ function variantsHtml(opts, optEffects) {
 
 // A background-image icon box for the tooltip title block (module/vehicle art,
 // grade emblem, or skill-tree perk glyph -- all full img:// URLs).
-function bgIconHtml(url) {
-    return '<div class="wg-tip-icon" style="background-image:url(\'' + url + '\')"></div>';
+function bgIconHtml(url, mod) {
+    // `mod` is an optional category class (wg-tip-icon-veh / -reward) that overrides
+    // the default 52rem square box so wide vehicle art and portrait reward art keep
+    // their aspect instead of being forced square (see .wg-tip-icon-* in the CSS).
+    return '<div class="wg-tip-icon' + (mod ? " " + mod : "") +
+        '" style="background-image:url(\'' + url + '\')"></div>';
 }
 
 // Icon markup for a tick's tooltip title block. Field mods show their signature
@@ -367,7 +385,13 @@ function tickIconHtml(t) {
         return '<div class="wg-tip-icon wg-tip-hex"><span>' +
             escapeHtml(romanize(t.level)) + "</span></div>";
     }
-    if (t.icon && t.icon.indexOf("img://") === 0) return bgIconHtml(t.icon);
+    if (t.icon && t.icon.indexOf("img://") === 0) {
+        // Vehicle-node art is wide (~160x100) -> wide-short box; module glyphs are
+        // square but read too tall at the default 52 -> their own smaller box.
+        var mod = t.category === "vehicle" ? "wg-tip-icon-veh"
+            : t.category === "module" ? "wg-tip-icon-mod" : "";
+        return bgIconHtml(t.icon, mod);
+    }
     return "";
 }
 
@@ -380,17 +404,22 @@ function capHtml(text) {
 // Wrap the main text block (caption + title + description / variants) with the icon
 // on the RIGHT, sized (via CSS) to the height of that text block. Returns the text
 // unchanged when there's no icon to show.
-function tipMain(iconHtml, text) {
+function tipMain(iconHtml, titleHtml, bodyHtml) {
+    var text = titleHtml + (bodyHtml || "");
     if (!iconHtml) return text;
-    // Tag the block with the icon it carries so the CSS can reserve a right-hand
-    // column exactly as wide as that icon (see .wg-tip-main-* ). The icon is taken
-    // out of flow (absolute, top-right) so .wg-tip-main is a plain BLOCK: Coherent
-    // sized the former flex row from the text's FIRST line only, so any wrapped line
-    // overflowed the row and spilled over the divider below -- a block always grows
-    // to its full wrapped text. Order matters: the hex/elite icons also carry the
-    // base "wg-tip-icon" class, so test the specific ones first.
+    // Tag the block with the icon it carries so the CSS reserves a right-hand column
+    // exactly as wide + tall as that icon (see .wg-tip-main-*). The icon is taken OUT
+    // of flow (absolute, top-right) so .wg-tip-main is a plain BLOCK: Coherent sized a
+    // flex row from the text's FIRST line only, AND it does NOT wrap text around a CSS
+    // float (the icon just renders as a top block and the box collapses to min-width) --
+    // a plain block reserved-column always grows to its full wrapped text. Order matters:
+    // the hex/elite/category icons also carry the base "wg-tip-icon" class, so test the
+    // specific ones first.
     var mod = iconHtml.indexOf("wg-tip-hex") >= 0 ? " wg-tip-main-hex"
         : iconHtml.indexOf("wg-tip-icon-elite") >= 0 ? " wg-tip-main-elite"
+        : iconHtml.indexOf("wg-tip-icon-veh") >= 0 ? " wg-tip-main-veh"
+        : iconHtml.indexOf("wg-tip-icon-reward") >= 0 ? " wg-tip-main-reward"
+        : iconHtml.indexOf("wg-tip-icon-mod") >= 0 ? " wg-tip-main-mod"
         : " wg-tip-main-icon";
     return '<div class="wg-tip-main' + mod + '"><div class="wg-tip-text">' + text +
         "</div>" + iconHtml + "</div>";
@@ -440,16 +469,18 @@ function doneGlyph(t) {
 function tooltipHtml(t, spendableXp, fillVehicle) {
     const opts = (t.options || "").split("\n").filter(function (s) { return s; });
     const optEffects = (t.optionEffects || "").split("\n");
-    let text = "", foot = "";
+    let title = "", body = "", foot = "";
     if (t.category === "fieldmod") {
         const cap = capHtml(escapeHtml(L("capFieldMod", "Field Modification")));
         if (opts.length) {
             // Choice level -> the selectable variants ARE the content (with buffs).
-            text = cap + variantsHtml(opts, optEffects);
+            title = cap;
+            body = variantsHtml(opts, optEffects);
         } else {
             const name = tickName(t);
             const nm = name ? '<div class="wg-tip-name">' + escapeHtml(name) + "</div>" : "";
-            text = cap + nm + effectHtml(t.effect);
+            title = cap + nm;
+            body = effectHtml(t.effect);
         }
     } else {
         // Type caption: tech-tree kind ("Gun"/"Turret"/.../"Tier IX"), else "Upgrade"
@@ -458,11 +489,13 @@ function tooltipHtml(t, spendableXp, fillVehicle) {
             : t.category === "upgrade" ? capHtml(escapeHtml(L("headerSkillTree", "Upgrades"))) : "";
         const name = tickName(t);
         const nm = name ? '<div class="wg-tip-name">' + escapeHtml(name) + "</div>" : "";
-        text = cap + nm + effectHtml(t.effect);
+        title = cap + nm;
+        body = effectHtml(t.effect);
     }
     if (t.done) {
-        // Session "done" marker: already researched -> no cost/footer (just name+effect).
-        foot = "";
+        // Session "done" marker: already researched -> show the credits buy price
+        // (hidden once owned; 0 renders nothing), styled like the XP cost line.
+        foot = creditsHtml(t.price);
     } else if (t.locked) {
         // Name the blocking prerequisites when known, else the generic line.
         const reqs = (t.prereqNames || "").split("\n").filter(function (s) { return s; });
@@ -476,7 +509,7 @@ function tooltipHtml(t, spendableXp, fillVehicle) {
     }
     // Text block + its icon are ONE unit (no divider between them); the divider only
     // separates that unit from the footer (cost / prerequisite).
-    return joinSections([tipMain(tickIconHtml(t), text), foot]);
+    return joinSections([tipMain(tickIconHtml(t), title, body), foot]);
 }
 
 function setCatIcon(el, url) {
@@ -665,7 +698,8 @@ function renderNextAvailable(nextEl, arr, hotEl, spendableXp, fillVehicle) {
             // Node sub-heading if the game gave one, else the localized "Upgrades"
             // section label (never the bare English word).
             const cCap = u.category || L("headerSkillTree", "Upgrades");
-            const cText = capHtml(escapeHtml(cCap)) + cName + effectHtml(u.effect);
+            const cTitle = capHtml(escapeHtml(cCap)) + cName;
+            const cBody = effectHtml(u.effect);
             const cIcon = (u.icon && u.icon.indexOf("img://") === 0) ? bgIconHtml(u.icon) : "";
             // Done marker -> already unlocked, no cost/footer; else per-node cost
             // (frontier nodes unlock independently).
@@ -673,7 +707,7 @@ function renderNextAvailable(nextEl, arr, hotEl, spendableXp, fillVehicle) {
                 ? ""
                 : xpFracHtml(spendableXp, xp, XP_ICON, fillVehicle);
             // Text block + icon as one unit (no divider between them); divider before cost.
-            tip.innerHTML = joinSections([tipMain(cIcon, cText), cFoot]);
+            tip.innerHTML = joinSections([tipMain(cIcon, cTitle, cBody), cFoot]);
             chip.appendChild(tip);
             if (u.done) chip.appendChild(doneBadge());   // green check, bottom-right
             nextEl.appendChild(chip);
@@ -1225,7 +1259,8 @@ function eliteTooltipHtml(t, isRewards, combatXp) {
     // elite level overlaid in the grade emblemFont (grade progression). Empty -> none.
     let iconHtml = "";
     if (t.icon && t.icon.indexOf("img://") === 0) {
-        iconHtml = isRewards ? bgIconHtml(t.icon) : eliteTipIconHtml(t.icon, t.position | 0);
+        iconHtml = isRewards ? bgIconHtml(t.icon, "wg-tip-icon-reward")
+            : eliteTipIconHtml(t.icon, t.position | 0);
     }
     let text = caption ? capHtml(caption) : "";
     if (name) text += '<div class="wg-tip-name">' + escapeHtml(name) + "</div>";

@@ -138,6 +138,24 @@ def _unlock_name(cache, int_cd):
         return ""
 
 
+_MODULE_ICON_RE = re.compile(r"^(img://gui/maps/icons/modules/[A-Za-z0-9_]+)\.png$")
+
+
+def _module_big_icon(icon):
+    """The generic module-TYPE glyphs (gun/tower/chassis/engine/radio/...) ship an
+    80x80 `Big` sibling in the same directory (gun.png -> gunBig.png) -- the higher-res
+    art the tech-tree screen itself uses. Swap the plain 48x48 for `Big` so it stops
+    upscaling in the tooltip icon box. A non-module or already-`Big` path is returned
+    unchanged; guarded so a surprise path can never blank the icon."""
+    try:
+        m = _MODULE_ICON_RE.match(icon or "")
+        if m and not m.group(1).endswith("Big"):
+            return m.group(1) + "Big.png"
+    except Exception:
+        LOG_CURRENT_EXCEPTION()
+    return icon or ""
+
+
 def _read_tech_unlocks(veh, unlocks):
     """Tech-tree unlocks: modules + next vehicles (incl. Tier XI) via the
     vehicle's unlock graph. getUnlocksDescrs() yields (idx, xpCost, intCD, prereqs)."""
@@ -158,6 +176,10 @@ def _read_tech_unlocks(veh, unlocks):
                 #    iconSmall -- that's the carousel contour strip, cropped
                 #    edge-to-edge so it reads as "cut off".
                 icon = getattr(item, "icon", "") or ""
+                if not is_vehicle:
+                    # Modules only: upgrade the 48x48 type glyph to its 80x80 `Big`
+                    # sibling. Vehicle node art is a different, already-large asset.
+                    icon = _module_big_icon(icon)
                 # Tooltip caption: a next vehicle shows its tier ("Tier IX"); a
                 # module shows its type ("Gun"/"Turret"/...). item.level on a
                 # vehicle item is its tier. Both are localized to the client language
@@ -185,6 +207,70 @@ def _read_tech_unlocks(veh, unlocks):
     except Exception:
         LOG_CURRENT_EXCEPTION()
         return []
+
+
+def _credits_buy_price(item):
+    """Credits buy price of a GUI item via the client's ItemPrices chain, or 0."""
+    from gui.shared.money import Currency
+    price = _safe_int(
+        lambda: item.buyPrices.itemPrice.price.getSignValue(Currency.CREDITS), 0)
+    if price <= 0:  # some items expose a flat .buyPrice Money instead
+        price = _safe_int(lambda: item.buyPrice.getSignValue(Currency.CREDITS), 0)
+    return int(price or 0)
+
+
+def _fieldmod_selection_price(step_id):
+    """Credits cost to install a variant for a field-mod level that offers a SELECTION,
+    or 0. The leveled step is XP-paid, but its child MultiModsItem's two SimpleModItem
+    variants each carry a credits install price (both the same, e.g. 150000). We read
+    the child whose parent == step_id and return its first variant's credits price.
+    Levels without a selection slot -> 0. Current vehicle only (done ticks are per the
+    selected vehicle). Fully guarded."""
+    try:
+        if not g_currentVehicle.isPresent():
+            return 0
+        veh = g_currentVehicle.item
+        for step in veh.postProgression.iterOrderedSteps():
+            try:
+                if type(step.action).__name__ != "MultiModsItem":
+                    continue
+                if _safe(lambda: step.getParentStepID(), None) != step_id:
+                    continue
+                for mod in (getattr(step.action, "modifications", None) or []):
+                    cr = _safe_int(lambda: mod.getPrice().credits or 0, 0)
+                    if cr > 0:
+                        return cr
+            except Exception:
+                LOG_CURRENT_EXCEPTION()
+                continue
+    except Exception:
+        LOG_CURRENT_EXCEPTION()
+    return 0
+
+
+def read_purchase_price(int_cd, category, veh_int_cd=0):
+    """Current credits price for a "done" tick's item, or 0 to hide the footer.
+
+    Modules / vehicles: the credits buy price, re-read fresh every sync so it drops to
+    0 (footer hidden) once the item is OWNED. Field mods: the credits cost to install a
+    variant for a level that offers a SELECTION (0 for levels with no selection slot).
+    Fully guarded: any failure yields 0 -> no footer."""
+    try:
+        if not int_cd:
+            return 0
+        if category == "fieldmod":
+            return _fieldmod_selection_price(int_cd)  # int_cd is the leveled step_id
+        item = _safe(lambda: _items_cache().items.getItemByCD(int(int_cd)), None)
+        if item is None:
+            return 0
+        # Already owned (bought this session or earlier) -> hide the price.
+        if _safe(lambda: bool(item.isInInventory), False) \
+                or _safe_int(lambda: item.inventoryCount, 0) > 0:
+            return 0
+        return _credits_buy_price(item)
+    except Exception:
+        LOG_CURRENT_EXCEPTION()
+        return 0
 
 
 def _skilltree_icon(node_type, image_name):
@@ -600,7 +686,11 @@ def _read_reward_art(ph, veh_cd, level, milestones, is_done):
         if not candidate.startswith("img://"):
             candidate = _safe(lambda: c11n.iconUrl, "") or candidate
         if not candidate.startswith("img://"):
-            candidate = _safe(lambda: c11n.getBonusIcon("small"), "") or candidate
+            # Prefer the largest bonus-icon variant; fall back to "small" if "big"
+            # isn't a valid size arg (guards against a regressed no-icon result).
+            big = _safe(lambda: c11n.getBonusIcon("big"), "") or ""
+            candidate = big if big.startswith("img://") \
+                else (_safe(lambda: c11n.getBonusIcon("small"), "") or candidate)
         icon = candidate if candidate.startswith("img://") else ""
         item_type_id = _safe(lambda: getItemTypeID(custs[0].get("custType")), None)
         if item_type_id is not None:

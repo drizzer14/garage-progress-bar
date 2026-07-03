@@ -284,7 +284,8 @@
     top: 0;                     /* span the full track content height, matching the fills */
     bottom: 0;
     width: 2.5rem;
-    margin-left: -1.25rem;
+    margin-left: -2rem;         /* shift left of the fill edge so the bloom overlays the
+                                   progress instead of straddling onto the empty track */
     /* Faint translucent core (blends into the fill like the Battle Pass leading
        edge) + a strong wide bloom -- NOT a hard opaque bar. Kept partly filled so
        the box-shadow still renders (a fully transparent box drops it here). The
@@ -852,7 +853,7 @@
        collapse to a sliver -- which made the full-width section divider shrink with
        them. Content still grows the box up to max-width. */
     min-width: 168rem;
-    max-width: 300rem;
+    max-width: 440rem;          /* wide before wrapping; still < 520rem bar so clampTip fits it */
     white-space: normal;
     padding: 12rem 16rem 14rem;
     text-align: left;
@@ -870,24 +871,29 @@
    identifying icon pinned to the top-RIGHT (out of flow -- see below). min-width:0 lets
    a long title wrap inside the tooltip max-width instead of shoving the icon off. */
 #wgmod-root .wg-tip-main {
-    /* BLOCK, not flex. Coherent computed a flex row's height from the text's FIRST
-       line only, so any wrapped (2nd+) line overflowed the row and spilled over the
-       divider below (confirmed: the bug appears exactly when text wraps). A block box
-       always grows to its full wrapped text. The title icon is lifted OUT of flow
-       (absolute, top-right) into a reserved right-hand column so it can't overlap the
-       text; the column width + a min-height floor are set per icon by the
-       .wg-tip-main-* modifier the JS (tipMain) adds. */
+    /* BLOCK, not flex, and NOT a float. Coherent sized a flex row's height from the
+       text's FIRST line only (wrapped lines spilled over the divider below), and it does
+       NOT wrap text around a CSS float (the floated icon renders as its own top block and
+       the box collapses to min-width). So the icon is lifted OUT of flow (absolute,
+       top-right) into a reserved right-hand column; the column width + a min-height floor
+       are set per icon by the .wg-tip-main-* modifier the JS (tipMain) adds. A plain
+       block always grows to its full wrapped text. */
     display: block;
     position: relative;
 }
 /* Reserved right-hand icon column (padding-right = icon width + a 12rem gap) and a
    min-height floor = icon height, so a SHORT-text tooltip is still tall enough for the
    out-of-flow icon and the divider clears it. Taller text just grows the block. */
-#wgmod-root .wg-tip-main-icon  { padding-right: 64rem; min-height: 52rem; }  /* .wg-tip-icon 52 */
-#wgmod-root .wg-tip-main-hex   { padding-right: 42rem; min-height: 33rem; }  /* .wg-tip-hex 30 */
-#wgmod-root .wg-tip-main-elite { padding-right: 56rem; min-height: 44rem; }  /* .wg-tip-icon-elite 44 */
+#wgmod-root .wg-tip-main-icon   { padding-right: 64rem; min-height: 52rem; }  /* .wg-tip-icon 52 */
+#wgmod-root .wg-tip-main-hex    { padding-right: 42rem; min-height: 33rem; }  /* .wg-tip-hex 30 */
+#wgmod-root .wg-tip-main-elite  { padding-right: 56rem; min-height: 44rem; }  /* .wg-tip-icon-elite 44 */
+#wgmod-root .wg-tip-main-veh    { padding-right: 84rem; min-height: 40rem; }  /* .wg-tip-icon-veh 72x40 */
+#wgmod-root .wg-tip-main-reward { padding-right: 52rem; min-height: 40rem; }  /* .wg-tip-icon-reward 40 */
+#wgmod-root .wg-tip-main-mod    { padding-right: 52rem; min-height: 40rem; }  /* .wg-tip-icon-mod 40 */
 #wgmod-root .wg-tip-text {
     min-width: 0;
+    overflow-wrap: break-word;  /* break an unbreakable token so it wraps inside .wg-tooltip's max-width */
+    word-wrap: break-word;      /* old Coherent alias */
 }
 #wgmod-root .wg-tip-icon {
     position: absolute;         /* out of flow, top-right; also the positioning context
@@ -895,15 +901,31 @@
     top: 0;
     right: 0;
     width: 52rem;
-    height: 52rem;              /* fixed square (the old align-self:stretch grew it to
-                                   the flex row, which no longer exists in block layout;
-                                   .wg-tip-main-icon's min-height reserves the space) */
+    height: 52rem;              /* fixed square; .wg-tip-main-icon's min-height reserves the space */
     background-repeat: no-repeat;
     background-position: center top;  /* pin the art to the TOP -> no vertical centering on tall titles */
     background-size: contain;   /* scale the art to the box, preserving aspect */
     /* drop-shadow hugs the icon's alpha (it has an image fill, so this renders);
        matches the tick glyphs' shadow so the art reads on the tooltip. */
     filter: drop-shadow(0 1rem 2rem rgba(0, 0, 0, 0.85));
+}
+/* Vehicle-node art is wide (~160x100): a wide-short box keeps its aspect instead of
+   a small centered image in a 52rem square with dead space below it. */
+#wgmod-root .wg-tip-icon-veh {
+    width: 72rem;
+    height: 40rem;
+}
+/* Reward thumbnails are frequently portrait: cap the height so `contain` can't run
+   the art to the full 52rem and read as elongated. */
+#wgmod-root .wg-tip-icon-reward {
+    width: 40rem;
+    height: 40rem;
+}
+/* Module type glyphs are square but read too tall at 52; a smaller square sits better
+   beside the short module caption + name. */
+#wgmod-root .wg-tip-icon-mod {
+    width: 40rem;
+    height: 40rem;
 }
 /* Elite GRADE tooltip icon: a FIXED square (not stretched to the text-block height),
    so the emblem renders at a known size and the level number centers reliably over it
@@ -937,10 +959,8 @@
    the bar's own field-mod badge, .wg-tick-hex), NOT a generic section glyph. Fixed
    size + vertically centered (a stretched hexagon would distort its clip-path). */
 #wgmod-root .wg-tip-hex {
-    position: absolute;         /* out of flow, top-right (like .wg-tip-icon); still the
-                                   containing block for the ::before dark-fill hexagon */
-    top: 0;
-    right: 0;
+    /* inherits position:absolute + top/right from .wg-tip-icon (both classes on the
+       element); that absolute box is the containing block for the ::before dark-fill hex */
     width: 30rem;
     height: 33rem;
     background: #d8c39a;        /* light tan -- shows only as the border ring */
@@ -1021,6 +1041,20 @@
     font-size: 16rem;
     font-weight: 700;
     color: #ecca9d;             /* currency tan, like the XP figures */
+}
+/* Done-tick credits price: same layout as the XP cost line, but credits silver (the
+   silver currency) so it reads as distinct from the XP tan. */
+#wgmod-root .wg-tip-credits {
+    color: #e4e9ee;
+}
+/* The credits coin reads small/low next to the figure at the XP glyph's 14rem -> a
+   slightly larger box, nudged up (the client renders this icon with vspace=-3). */
+#wgmod-root .wg-tip-credits .wg-tip-xp-ico {
+    width: 17rem;
+    height: 17rem;
+    margin-left: 4rem;
+    position: relative;
+    top: -1rem;
 }
 /* Inline XP-currency glyph after a figure (background-image span -- Gameface clips
    <img>). Sized to the fraction line, sitting just right of its number. Mirrors the
@@ -1221,9 +1255,17 @@
     z-index: 10;
     pointer-events: none;
     box-sizing: border-box;
-    min-width: 168rem;          /* width floor so the section divider doesn't shrink on short perk names */
-    white-space: nowrap;        /* short perk names stay one line -> compact box */
-    padding: 8rem 12rem 9rem;
+    /* EXPLICIT fixed width. Unlike .wg-tooltip (containing block = the ~520rem bar, so
+       its auto width can grow to max-width), this tip is absolutely positioned inside a
+       30rem .wg-chip: an auto/max-content width gets shrink-to-fit CLAMPED to that 30rem
+       parent (max-content silently no-ops here), collapsing to min-width so text wrapped
+       hard and broke mid-word. A fixed width ignores the shrink-to-fit clamp entirely.
+       320rem stays < 520rem bar so clampTip still fits it inside the edges. */
+    width: 320rem;
+    white-space: normal;        /* wrap within the fixed width */
+    overflow-wrap: break-word;  /* + word-wrap: old Coherent -- break an unbreakable token rather than overflow the cap */
+    word-wrap: break-word;
+    padding: 12rem 16rem 14rem;  /* match .wg-tooltip breathing room (was tighter -> read cramped) */
     text-align: left;
     background: rgba(20, 20, 20, 0.95);
     border-style: solid;

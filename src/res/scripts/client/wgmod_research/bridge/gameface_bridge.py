@@ -491,7 +491,7 @@ def _connect_commands(rvm):
 
 
 class TickVM(ViewModel):
-    def __init__(self, properties=16, commands=0):
+    def __init__(self, properties=17, commands=0):
         super(TickVM, self).__init__(properties=properties, commands=commands)
 
     def _initialize(self):
@@ -512,6 +512,7 @@ class TickVM(ViewModel):
         self._addStringProperty("effect", "")     # 13 (field-mod KPI bonus lines, \n-joined)
         self._addStringProperty("optionEffects", "")  # 14 (per-variant buffs, \n-joined, aligned w/ options)
         self._addBoolProperty("done", False)      # 15 (session "done" marker: green check + open-screen click)
+        self._addNumberProperty("price", 0)       # 16 (done tick: credits buy price, 0 = hide footer)
 
     def setPosition(self, v):
         self._setNumber(0, v)
@@ -560,6 +561,9 @@ class TickVM(ViewModel):
 
     def setDone(self, v):
         self._setBool(15, v)
+
+    def setPrice(self, v):
+        self._setNumber(16, v)
 
 
 class UpgradeVM(ViewModel):
@@ -810,7 +814,13 @@ def push(rvm, host_vm=None):
                 tv.setPrereqNames("\n".join(getattr(t, "prereq_names", None) or []))
                 tv.setEffect(getattr(t, "effect", "") or "")
                 tv.setOptionEffects("\n".join(getattr(t, "option_effects", None) or []))
-                tv.setDone(bool(getattr(t, "done", False)))
+                is_done = bool(getattr(t, "done", False))
+                tv.setDone(is_done)
+                # Done ticks: current credits buy price for the researched item, read
+                # fresh (hides once owned). 0 for every other tick -> JS shows no footer.
+                tv.setPrice(engine_adapter.read_purchase_price(
+                    getattr(t, "int_cd", 0), t.category,
+                    getattr(snap, "vehicle_int_cd", 0)) if is_done else 0)
                 arr.addViewModel(tv)
             arr.invalidate()
             # Available tier-XI upgrade nodes -> the clickable header chips.

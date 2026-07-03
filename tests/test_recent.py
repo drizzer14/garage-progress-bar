@@ -50,6 +50,8 @@ def test_techtree_confirmed_surfaces_done_tick():
     assert tick.xp_position == 0
     assert tick.category == "module"
     assert tick.name == "Gun"
+    # The item id is carried so the bridge can look up its credits price at marshal time.
+    assert tick.int_cd == 5
 
 
 def test_cancel_leaves_no_marker():

@@ -145,6 +145,10 @@ def _make_tick(rec):
         locked=False, level=rec["level"], effect=rec["effect"],
         kind_label=rec["kind_label"])
     tick.done = True
+    # Carry the item id so the (engine-bound) bridge can look up its current credits
+    # buy price + ownership at marshal time -- kept here as a plain int so this module
+    # stays engine-free and unit-testable.
+    tick.int_cd = rec["item_id"]
     return tick
 
 
