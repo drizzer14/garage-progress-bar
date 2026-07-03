@@ -39,36 +39,16 @@ COUI = "coui://gui/gameface/mods/14th_ua/WGModResearch"
 # and the dev REPL can drive refreshes without poking module-private state.
 _active = None
 
-# Our onChanged handler. g_currentVehicle.onChanged is a list-based Event that
-# stores STRONG refs to its delegates -- but WoT tears down and rebuilds the
-# hangar space on battle entry/exit, repopulating that list with WG's own
-# presenters while dropping ours. So subscribing once is not enough; we must
-# re-arm on every mount. We keep a module-global ref to the same function object
-# so the membership check below stays stable across re-arms.
-_listener = None
-
-# Our handler for tank-setup (loadout) open/close. Same strong-ref + self-healing
-# rationale as the vehicle listener above.
-_loadout_listener = None
-
-# Our handler for lobby view changes (garage <-> playlists / other views). Same
-# strong-ref + self-healing rationale; lets us hide the bar when the vehicle-params
-# sub-view stays mounted on a non-garage view (e.g. the playlists screen).
-_lobby_state_listener = None
-
-# Our handler for items-cache syncs (free-XP conversion, research/field-mod
-# purchases, post-battle XP, prestige changes -- everything that mutates the XP
-# state without a vehicle re-selection). Same strong-ref rationale as above. The
-# items cache is a long-lived DI singleton (its event list is NOT torn down on
-# battle exit), so re-arming on mount is unnecessary but harmless -- we keep the
-# idempotent membership check for symmetry and hot-reload safety.
-_stats_listener = None
-
-# Our handler for the player toggling WoT's color-blind mode. settingsCore is a
-# long-lived DI singleton (event list not torn down on battle exit), so like the
-# stats listener re-arming on mount is unnecessary but harmless; kept for symmetry
-# and hot-reload safety.
-_colorblind_listener = None
+# Engine events we subscribe to. WoT's Events store STRONG refs to their delegates,
+# but the battle entry/exit teardown rebuilds the hangar space -- repopulating the
+# vehicle/loadout/lobby event lists with WG's own presenters while dropping ours. So
+# subscribing once is not enough: install_all_listeners() re-arms on every hangar
+# mount, membership-checked (not a 'did we subscribe' flag -- the flag stayed set
+# while the event had silently lost our handler). The stats + colorblind events are
+# long-lived DI singletons NOT torn down on battle exit, so re-arming them is
+# unnecessary but harmless; kept for symmetry and hot-reload safety. Our handlers are
+# module-level functions, so their identity is already stable across re-arms -- the
+# membership check needs no extra caching. See _LISTENERS / install_all_listeners.
 
 # Set while a coalesced refresh is already queued for the next tick, so a burst of
 # onSyncCompleted fires (one server action often triggers several) collapses to a
@@ -222,94 +202,67 @@ def _in_garage():
         return False
 
 
-def install_vehicle_listener():
-    """Ensure our handler is subscribed to vehicle-selection changes.
+# --- engine event subscriptions -------------------------------------------------
+# Each event is acquired by its own getter (returning the Event object, or None if the
+# provider isn't ready yet -- retried next mount). Handlers are the stable module-level
+# functions above. install_all_listeners() arms them all; see the block comment near
+# _active for the re-arm rationale.
 
-    Self-healing and idempotent: re-adds our handler iff it is not currently in
-    g_currentVehicle.onChanged. Safe to call on every hangar mount -- the battle
-    exit teardown drops our delegate, and this restores it. We check actual list
-    membership rather than a 'did we ever subscribe' flag, which was the bug:
-    the flag stayed set while the event had silently lost our handler.
-    """
-    global _listener
-    if _listener is None:
-        _listener = _on_vehicle_changed
+def _vehicle_event():
+    return g_currentVehicle.onChanged
+
+
+def _loadout_event():
+    return dependency.instance(ILoadoutController).onInteractorUpdated
+
+
+def _lobby_state_event():
+    from gui.Scaleform.lobby_entry import getLobbyStateMachine
+    machine = getLobbyStateMachine()
+    return machine.onVisibleRouteChanged if machine is not None else None
+
+
+def _stats_event():
+    return dependency.instance(IItemsCache).onSyncCompleted
+
+
+def _colorblind_event():
+    from skeletons.account_helpers.settings_core import ISettingsCore
+    return dependency.instance(ISettingsCore).onSettingsChanged
+
+
+# (label, event-getter, handler) -- what the bar listens to.
+#   vehicle : vehicle-selection changes
+#   loadout : tank-setup (ammo) overlay open/close -> hide/show the bar
+#   lobby   : garage <-> other lobby views -> hide off the plain garage
+#   stats   : items-cache syncs (free-XP convert, research/field-mod buys, XP, prestige)
+#   colorblind : WoT's color-blind toggle -> re-color live
+_LISTENERS = (
+    ("vehicle", _vehicle_event, _on_vehicle_changed),
+    ("loadout", _loadout_event, _on_interactor_updated),
+    ("lobby state", _lobby_state_event, _on_lobby_state_changed),
+    ("stats", _stats_event, _on_sync_completed),
+    ("colorblind", _colorblind_event, _on_settings_changed),
+)
+
+
+def _arm(label, get_event, handler):
+    """Subscribe `handler` to its event iff not already present. Self-healing +
+    idempotent; guarded so a not-yet-ready provider just skips (retried next mount)."""
     try:
-        if _listener not in g_currentVehicle.onChanged:
-            g_currentVehicle.onChanged += _listener
-            LOG_NOTE("[wgmod] vehicle listener (re)armed")
+        event = get_event()
+        if event is not None and handler not in event:
+            event += handler
+            LOG_NOTE("[wgmod] %s listener (re)armed" % label)
     except Exception:
         LOG_CURRENT_EXCEPTION()
 
 
-def install_loadout_listener():
-    """Ensure our handler is subscribed to loadout interactor changes, so the bar
-    hides/shows as the tank-setup (ammo) overlay opens/closes. Self-healing and
-    idempotent, same as install_vehicle_listener -- safe to call on every mount."""
-    global _loadout_listener
-    if _loadout_listener is None:
-        _loadout_listener = _on_interactor_updated
-    try:
-        ctrl = dependency.instance(ILoadoutController)
-        if _loadout_listener not in ctrl.onInteractorUpdated:
-            ctrl.onInteractorUpdated += _loadout_listener
-            LOG_NOTE("[wgmod] loadout listener (re)armed")
-    except Exception:
-        LOG_CURRENT_EXCEPTION()
-
-
-def install_lobby_state_listener():
-    """Ensure our handler is subscribed to lobby view changes, so the bar hides
-    when we leave the plain garage (e.g. the playlists screen) and shows again on
-    return. Self-healing and idempotent, same as install_loadout_listener -- safe
-    to call on every mount. Guarded: if the state machine isn't available yet the
-    subscribe is skipped and retried on the next mount."""
-    global _lobby_state_listener
-    if _lobby_state_listener is None:
-        _lobby_state_listener = _on_lobby_state_changed
-    try:
-        from gui.Scaleform.lobby_entry import getLobbyStateMachine
-        machine = getLobbyStateMachine()
-        if machine is not None and _lobby_state_listener not in machine.onVisibleRouteChanged:
-            machine.onVisibleRouteChanged += _lobby_state_listener
-            LOG_NOTE("[wgmod] lobby state listener (re)armed")
-    except Exception:
-        LOG_CURRENT_EXCEPTION()
-
-
-def install_stats_listener():
-    """Ensure our handler is subscribed to items-cache syncs, so the bar updates
-    when XP state changes without a vehicle re-selection (free-XP conversion,
-    research / field-mod purchases, post-battle XP, prestige changes). Self-healing
-    and idempotent, same as the other installers -- safe to call on every mount."""
-    global _stats_listener
-    if _stats_listener is None:
-        _stats_listener = _on_sync_completed
-    try:
-        cache = dependency.instance(IItemsCache)
-        if _stats_listener not in cache.onSyncCompleted:
-            cache.onSyncCompleted += _stats_listener
-            LOG_NOTE("[wgmod] stats listener (re)armed")
-    except Exception:
-        LOG_CURRENT_EXCEPTION()
-
-
-def install_colorblind_listener():
-    """Ensure our handler is subscribed to settings changes, so the bar re-colors live
-    when the player toggles WoT's color-blind mode. Self-healing and idempotent, same
-    as the other installers -- safe to call on every mount. Guarded: if settingsCore
-    isn't available yet the subscribe is skipped and retried on the next mount."""
-    global _colorblind_listener
-    if _colorblind_listener is None:
-        _colorblind_listener = _on_settings_changed
-    try:
-        from skeletons.account_helpers.settings_core import ISettingsCore
-        core = dependency.instance(ISettingsCore)
-        if _colorblind_listener not in core.onSettingsChanged:
-            core.onSettingsChanged += _colorblind_listener
-            LOG_NOTE("[wgmod] colorblind listener (re)armed")
-    except Exception:
-        LOG_CURRENT_EXCEPTION()
+def install_all_listeners():
+    """(Re)arm every engine listener. Safe to call on every hangar mount -- the battle
+    exit teardown drops the hangar-scoped delegates and this restores them."""
+    for entry in _LISTENERS:
+        _arm(*entry)
 
 
 # --- Reverse channel: handlers for JS click commands -------------------------

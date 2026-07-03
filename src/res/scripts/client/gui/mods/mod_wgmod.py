@@ -35,16 +35,10 @@ def _install():
         try:
             # Re-arm on every mount: the battle-exit hangar teardown rebuilds the
             # onChanged delegate list with WG's own presenters but drops ours, so
-            # a once-only subscription stops firing after the first battle. Same for
-            # the loadout listener (hides the bar while the ammo/setup overlay opens).
-            # The stats listener (items-cache syncs -> live XP updates) is on a
-            # long-lived singleton so it survives teardown, but re-arm it too: the
-            # installer is idempotent and this keeps it working across hot reloads.
-            bridge.install_vehicle_listener()
-            bridge.install_loadout_listener()
-            bridge.install_lobby_state_listener()
-            bridge.install_stats_listener()
-            bridge.install_colorblind_listener()
+            # a once-only subscription stops firing after the first battle. The
+            # installer is idempotent (membership-checked), so re-arming every mount is
+            # safe and also keeps things working across hot reloads.
+            bridge.install_all_listeners()
             rvm = bridge.attach(self.getViewModel())
             bridge.push(rvm, host_vm=self.getViewModel())
         except Exception:
@@ -55,11 +49,7 @@ def _install():
 
     # Arm once now (for the install that happens while already in the hangar);
     # _onLoading re-arms on every subsequent mount.
-    bridge.install_vehicle_listener()
-    bridge.install_loadout_listener()
-    bridge.install_lobby_state_listener()
-    bridge.install_stats_listener()
-    bridge.install_colorblind_listener()
+    bridge.install_all_listeners()
     LOG_NOTE("[%s] v%s installed (sub-view inject + data)" % (MOD_NAME, MOD_VERSION))
 
 
