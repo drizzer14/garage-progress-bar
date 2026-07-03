@@ -11,11 +11,7 @@ duck-typed stub is enough to test them).
 """
 import re
 
-try:
-    from debug_utils import LOG_CURRENT_EXCEPTION
-except Exception:
-    def LOG_CURRENT_EXCEPTION():
-        pass
+from wgmod_research._compat import LOG_CURRENT_EXCEPTION
 
 
 _ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI"]

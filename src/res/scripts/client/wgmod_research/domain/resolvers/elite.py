@@ -71,6 +71,22 @@ def _clamp(value, low, high):
     return max(low, min(high, value))
 
 
+def _mark_states(entries, reached):
+    """Yield (entry, state) for a milestone sequence: 'achieved' where reached(entry)
+    is true, 'next' for the first not-yet-reached entry, 'upcoming' for the rest.
+    Shared by the grade-band and reward-track tick loops."""
+    next_marked = False
+    for e in entries:
+        if reached(e):
+            state = "achieved"
+        elif not next_marked:
+            state = "next"
+            next_marked = True
+        else:
+            state = "upcoming"
+        yield e, state
+
+
 def current_grade_icon(snapshot):
     """Emblem URL for the highest grade the player has currently REACHED (the
     last (sub-)grade whose level <= the current elite level). "" below the first
@@ -137,15 +153,7 @@ def resolve_grade_band(snapshot):
     # Sub-grade milestone ticks (each carrying its grade emblem + the cumulative
     # XP to reach it). The first not-yet-reached sub-grade is "next".
     ticks = []
-    next_marked = False
-    for g in band_grades:
-        if level >= g.level:
-            state = "achieved"
-        elif not next_marked:
-            state = "next"
-            next_marked = True
-        else:
-            state = "upcoming"
+    for g, state in _mark_states(band_grades, lambda g: level >= g.level):
         ticks.append(t.Tick(
             xp_position=g.level, category=Category.ELITE,
             icon=_emblem_url(band_family, g.sub),
@@ -200,15 +208,7 @@ def resolve_reward_track(snapshot):
     level_xp = snapshot.elite_level_xp or {}
 
     ticks = []
-    next_marked = False
-    for r in rewards:
-        if r.achieved:
-            state = "achieved"
-        elif not next_marked:
-            state = "next"
-            next_marked = True
-        else:
-            state = "upcoming"
+    for r, state in _mark_states(rewards, lambda r: r.achieved):
         # type label rides along in `options` so the JS tooltip can show it.
         opts = [r.type_label] if r.type_label else []
         ticks.append(t.Tick(

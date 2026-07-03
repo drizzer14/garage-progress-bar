@@ -18,7 +18,7 @@ design: see the widget's mod-invented captions) or the id is not yet confirmed. 
 resolver never guesses: an unwired key is simply English until its id is verified via
 the debug REPL and added here.
 """
-from debug_utils import LOG_CURRENT_EXCEPTION
+from wgmod_research._compat import LOG_CURRENT_EXCEPTION
 
 # DIAGNOSTIC: prefix any text that is NOT localized (an English fallback -- because the
 # game has no equivalent, an id isn't confirmed yet, or a lookup failed) with an

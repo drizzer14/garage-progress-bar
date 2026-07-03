@@ -34,8 +34,7 @@ checkbox is poor UX for a momentary action.
 The visibility decision itself is the engine-free `builder.bar_visible`; this module
 only owns the settings storage + the live-apply on change.
 """
-from debug_utils import LOG_CURRENT_EXCEPTION, LOG_NOTE
-
+from wgmod_research._compat import LOG_CURRENT_EXCEPTION, LOG_NOTE
 from wgmod_research.adapter import i18n
 
 # Our mod's reverse-domain id, reused as the MSA "linkage" (panel identity / storage key).

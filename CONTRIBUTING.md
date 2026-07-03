@@ -17,7 +17,6 @@ src/
 build/
   build_wotmod.py    # compile (.py->.pyc) + package -> dist/<id>_<version>.wotmod   (Python 2.7!)
   deploy_wotmod.py   # clean + build + copy the .wotmod into a WoT install            (Python 2.7!)
-  deploy_dev.py      # DEPRECATED — loose res_mods scripts do NOT load in WoT 2.3; use deploy_wotmod.py
 installer/
   wgmod-setup.iss      # Inno Setup script -> dist/GarageProgressBar-Setup-<version>.exe
   build_installer.ps1  # locate ISCC + compile the installer

@@ -24,12 +24,7 @@ Engine-free: imports only domain.types, so it unit-tests on plain snapshots.
 Every entry point is guarded -- a failure here must never blank the bar.
 """
 from wgmod_research.domain import types as t
-
-try:
-    from debug_utils import LOG_CURRENT_EXCEPTION
-except Exception:
-    def LOG_CURRENT_EXCEPTION():
-        pass
+from wgmod_research._compat import LOG_CURRENT_EXCEPTION
 
 # kind values
 TECHTREE = "techtree"

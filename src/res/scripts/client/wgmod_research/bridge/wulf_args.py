@@ -9,11 +9,7 @@ Wulf-wrapped map (any object with a .get(key)), or a bare scalar are all tolerat
 
 2/3-compatible.
 """
-try:
-    from debug_utils import LOG_CURRENT_EXCEPTION
-except Exception:
-    def LOG_CURRENT_EXCEPTION():
-        pass
+from wgmod_research._compat import LOG_CURRENT_EXCEPTION
 
 
 def map_get(a, key):

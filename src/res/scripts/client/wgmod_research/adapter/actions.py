@@ -22,7 +22,8 @@ context-menu "Research" handler uses exactly this path):
     event_dispatcher.showVehPostProgressionView / showResearchView.
 """
 from CurrentVehicle import g_currentVehicle
-from debug_utils import LOG_CURRENT_EXCEPTION, LOG_NOTE
+
+from wgmod_research._compat import LOG_CURRENT_EXCEPTION, LOG_NOTE
 
 
 # --- public API (called by the bridge command handlers) ----------------------
