@@ -271,6 +271,14 @@ function joinSections(sections) {
         .join('<div class="wg-tip-div"></div>');
 }
 
+// Split a Python-joined string into its non-empty parts. Multi-value model fields
+// arrive "\n"-joined (variant buffs "\t"-joined); an empty/absent field -> []. NB
+// callers that must stay index-aligned with a sibling list (optionEffects <->
+// options) split raw instead and do NOT use this (filtering would misalign them).
+function splitLines(s, sep) {
+    return (s || "").split(sep || "\n").filter(function (x) { return x; });
+}
+
 // A small inline XP-currency glyph (background-image span -- Gameface clips <img>,
 // but honors background-size:contain on a box). `url` is XP_ICON (total XP) or
 // COMBAT_XP_ICON (vehicle/combat XP). Sits right after the figure it annotates. The
@@ -341,10 +349,10 @@ function creditsHtml(price) {
 // one tertiary-body row per line. The Python side joins multiple KPIs with "\n".
 // Empty string -> nothing rendered (features / mechanic perks carry no KPI text).
 function effectHtml(effect) {
-    const lines = (effect || "").split("\n").filter(function (s) { return s; });
+    const parts = splitLines(effect);
     let h = "";
-    for (let i = 0; i < lines.length; i++) {
-        h += '<div class="wg-tip-effect">' + escapeHtml(lines[i]) + "</div>";
+    for (let i = 0; i < parts.length; i++) {
+        h += '<div class="wg-tip-effect">' + escapeHtml(parts[i]) + "</div>";
     }
     return h;
 }
@@ -362,7 +370,7 @@ function variantsHtml(opts, optEffects) {
         h += '<div class="wg-tip-variant">';
         h += '<div class="wg-tip-variant-name">' + escapeHtml(opts[i]) + "</div>";
         // Each variant's buffs are TAB-separated (Python); render one row each.
-        const buffs = (optEffects[i] || "").split("\t").filter(function (s) { return s; });
+        const buffs = splitLines(optEffects[i], "\t");
         for (let j = 0; j < buffs.length; j++) {
             h += '<div class="wg-tip-variant-eff">' + escapeHtml(buffs[j]) + "</div>";
         }
@@ -474,8 +482,8 @@ function doneGlyph(t) {
 // locked). A field-mod choice level puts its selectable variants (each with its
 // buffs) in place of a single title.
 function tooltipHtml(t, spendableXp, fillVehicle) {
-    const opts = (t.options || "").split("\n").filter(function (s) { return s; });
-    const optEffects = (t.optionEffects || "").split("\n");
+    const opts = splitLines(t.options);
+    const optEffects = (t.optionEffects || "").split("\n");   // raw: index-aligned with opts
     let title = "", body = "", foot = "";
     if (t.category === "fieldmod") {
         const cap = capHtml(escapeHtml(L("capFieldMod", "Field Modification")));
@@ -505,7 +513,7 @@ function tooltipHtml(t, spendableXp, fillVehicle) {
         foot = creditsHtml(t.price);
     } else if (t.locked) {
         // Name the blocking prerequisites when known, else the generic line.
-        const reqs = (t.prereqNames || "").split("\n").filter(function (s) { return s; });
+        const reqs = splitLines(t.prereqNames);
         foot = reqs.length
             ? '<div class="wg-tip-status">' + escapeHtml(L("requires", "Required:")) + " " +
                 reqs.map(escapeHtml).join(", ") + "</div>"
@@ -605,9 +613,12 @@ function barRect(hotEl) {
 // proximity window so a click on the bare bar between ticks doesn't fire an action.
 // Imprecise hits are additionally backstopped by WG's confirm dialog (Python side).
 const CLICK_HIT_PCT = 4;
-function nearestClick(hotEl, clientX) {
-    const meta = hotEl._wgClickMeta;
-    if (!meta || !meta.length) return null;
+// Nearest entry in a [{left%, ...}] list to a cursor x, measured against the bar TRACK
+// (barRect), which defines the 0..100% basis. Returns {best, dist} (best null for an
+// empty list). Shared by the click resolver (clickMeta, gated by CLICK_HIT_PCT) and the
+// tick-hover fallback (tickMeta, gated per mode) so both agree on "which tick is nearest".
+function nearestByX(meta, hotEl, clientX) {
+    if (!meta || !meta.length) return { best: null, dist: 1e9 };
     const rect = barRect(hotEl);
     const w = (rect && rect.width) || hotEl.clientWidth || 1;
     const left = rect ? rect.left : 0;
@@ -617,11 +628,19 @@ function nearestClick(hotEl, clientX) {
         const d = Math.abs(meta[i].left - curPct);
         if (d < bestD) { bestD = d; best = meta[i]; }
     }
-    return best && bestD <= CLICK_HIT_PCT ? best : null;
+    return { best: best, dist: bestD };
+}
+function nearestClick(hotEl, clientX) {
+    const r = nearestByX(hotEl._wgClickMeta, hotEl, clientX);
+    return r.best && r.dist <= CLICK_HIT_PCT ? r.best : null;
+}
+
+function getRoot() {
+    return document.getElementById("wgmod-root");
 }
 
 function ensureRoot() {
-    let root = document.getElementById("wgmod-root");
+    let root = getRoot();
     if (!root) {
         root = document.createElement("div");
         root.id = "wgmod-root";
@@ -693,13 +712,7 @@ function renderNextAvailable(nextEl, arr, hotEl, spendableXp, fillVehicle) {
             const chip = document.createElement("div");
             chip.className = "wg-chip " + (xp >= 20000 ? "wg-chip-major" : "wg-chip-minor");
             if (u.done) chip.className += " wg-done";   // session marker: green check + open-screen click
-            const frame = document.createElement("div");
-            frame.className = "wg-chip-frame";
-            const ico = document.createElement("div");
-            ico.className = "wg-chip-ico";
-            if (u.icon) ico.style.backgroundImage = "url('" + u.icon + "')";
-            chip.appendChild(frame);
-            chip.appendChild(ico);
+            fillChipGlyph(chip, u.icon);
             const tip = document.createElement("div");
             tip.className = "wg-chip-tip";
             // Type caption = the node's own Upgrades-screen sub-heading ("Mechanic
@@ -737,6 +750,20 @@ function renderNextAvailable(nextEl, arr, hotEl, spendableXp, fillVehicle) {
 
 // Signature of the available-upgrade set, so render() can skip rebuilding identical
 // chips (a rebuild destroys the hovered chip's tooltip element).
+// Build the framed perk glyph (frame ring + centered perk icon) into `box`, matching
+// the Upgrades screen. Shared by the Next-available chips and the bar's skill-tree
+// final-upgrade tick. The frame shape (circle=minor / diamond=major) comes from the
+// box's own wg-chip-minor/-major class (CSS), so callers set that on `box`.
+function fillChipGlyph(box, iconUrl) {
+    const frame = document.createElement("div");
+    frame.className = "wg-chip-frame";
+    const ico = document.createElement("div");
+    ico.className = "wg-chip-ico";
+    if (iconUrl) ico.style.backgroundImage = "url('" + iconUrl + "')";
+    box.appendChild(frame);
+    box.appendChild(ico);
+}
+
 function upgradesSig(arr, spendableXp) {
     const n = arrLen(arr);
     // spendableXp is folded in so the chips rebuild when affordability flips; it's
@@ -949,6 +976,105 @@ function clampTip(tipEl) {
     }
 }
 
+// Shared tick builder for EVERY bar mode. For each data tick it creates a .wg-tick,
+// positions it at spec.leftPct%, wires the nearest-by-x hover metadata (when spec.tip),
+// registers a click command (when spec.cmd), hangs spec.glyph below it, and drops it into
+// its pre-computed de-crowding lane. All the per-mode variation lives in spec(t, i), which
+// returns { className, leftPct, tip, body, cmd, arg, glyph, lane }. The linear and elite
+// paths used to carry near-identical copies of this skeleton; now only their spec differs.
+// Returns { tickMeta, clickMeta } for the caller to stash on hotEl.
+function renderTicks(ticksEl, ticks, n, spec) {
+    ticksEl.innerHTML = "";
+    const tickMeta = [];
+    const clickMeta = [];
+    for (let i = 0; i < n; i++) {
+        const t = arrGet(ticks, i);
+        if (!t) continue;
+        const s = spec(t, i);
+        const mark = document.createElement("div");
+        mark.className = s.className;
+        mark.style.left = s.leftPct + "%";
+        if (s.tip) {
+            // Tag the tick (read by the hover handler when Gameface deep-targets a glyph,
+            // whose ancestor .wg-tick carries the body) AND keep a flat list for the
+            // nearest-by-x fallback when it targets the bare layer.
+            mark._wgBody = s.body;
+            mark._wgLeft = s.leftPct;
+            tickMeta.push({ left: s.leftPct, body: s.body });
+        }
+        if (s.cmd) {
+            mark.classList.add("wg-clickable");
+            clickMeta.push({ left: s.leftPct, cmd: s.cmd, arg: s.arg });
+        }
+        if (s.glyph) mark.appendChild(s.glyph);
+        // De-crowd: drop the glyph into its assigned lane + draw a stem back to the tick
+        // (no-op for lane 0). applyLane appends the stem to mark, so call it after the glyph.
+        applyLane(mark, s.glyph, s.lane);
+        ticksEl.appendChild(mark);
+    }
+    return { tickMeta: tickMeta, clickMeta: clickMeta };
+}
+
+// The below-bar glyph for a linear-mode (tech-tree / field-mods / skill-tree) tick, or
+// null when it carries none. Done markers -> the compact green-check glyph; field mods ->
+// the hexagon + roman numeral; the skill-tree final upgrade -> the framed perk chip;
+// tech-tree ticks -> the real module/vehicle art (background-image; Gameface clips <img>).
+function linearGlyph(t, mode) {
+    if (t.done) return doneGlyph(t);
+    if (t.category === "fieldmod") {
+        const hex = document.createElement("div");
+        hex.className = "wg-tick-hex";
+        const num = document.createElement("span");
+        num.textContent = romanize(t.level);
+        hex.appendChild(num);
+        return hex;
+    }
+    if (t.icon && mode === "skill_tree") {
+        // FINAL upgrade: a framed perk glyph (diamond -- a major 25k node), matching the
+        // Next-available chips (reuses the chip frame/glyph classes).
+        const fin = document.createElement("div");
+        fin.className = "wg-final wg-chip-major";
+        fillChipGlyph(fin, t.icon);
+        return fin;
+    }
+    if (t.icon) {
+        const img = document.createElement("div");
+        img.className = "wg-tick-img";
+        img.style.backgroundImage = "url('" + t.icon + "')";
+        return img;
+    }
+    return null;
+}
+
+// The below-bar glyph for an elite-mode tick: a reward thumbnail (elite_rewards), the
+// arrowhead "tab" grade badge (elite -- falling back to the hexagon emblem + emblemFont
+// level number when a grade has no tab art), or a state-colored diamond pip when the icon
+// URL is missing (the terminal MAX "prestige" tab has no grade family -> numberless hex).
+function eliteGlyph(t, isRewards) {
+    if (!t.icon) {
+        const pip = document.createElement("div");
+        pip.className = "wg-tick-pip";
+        return pip;
+    }
+    if (isRewards) {
+        const img = document.createElement("div");
+        img.className = "wg-tick-reward";
+        img.style.backgroundImage = "url('" + t.icon + "')";
+        return img;
+    }
+    const gradeFam = gradeFamily(t.icon);
+    const img = document.createElement("div");
+    // Per-size class drives the centering nudge (the mirrored arrowhead arts are
+    // right-anchored by different amounts, so each width sits centered under its tick).
+    img.className = "wg-tick-tab wg-tab wg-tab-" + tabBadgeSize(t.icon, t.position | 0, false);
+    if (!fillTabBadge(img, t.icon, t.position | 0, false)) {
+        img.className = "wg-tick-emblem" + (gradeFam ? " wg-grade-" + gradeFam : "");
+        img.style.backgroundImage = "url('" + t.icon + "')";
+        if (gradeFam) img.appendChild(emblemNumber(t.position | 0, gradeFam));
+    }
+    return img;
+}
+
 function render(model) {
     const root = ensureRoot();
     const label = root.querySelector(".wg-label");
@@ -1130,136 +1256,66 @@ function render(model) {
     curEl.style.left = (vehW + freeW) + "%";
     curEl.style.display = "block";
 
-    ticksEl.innerHTML = "";
     const ticks = data.ticks;
     const n = arrLen(ticks);
-    // Skill-tree ticks carry no per-node metadata (non-linear tree) -> no hover
-    // tooltips. Other modes wire each tick into the hover system.
+    // Skill-tree ticks carry no per-node metadata (non-linear tree) -> no hover tooltips
+    // (only the named FINAL tick tips). Other modes wire every tick into the hover system.
     const noTips = mode === "skill_tree";
-    // {left%, body} per tick, for the nearest-by-x hover fallback.
-    const tickMeta = [];
-    // {left%, cmd, arg} per CLICKABLE tick, for nearest-by-x click resolution.
-    const clickMeta = [];
-    // Field mods unlock linearly (one by one), so only the NEXT one -- the first
-    // remaining tick -- is ever clickable. Consumed on the first fieldmod seen.
+    // Field mods unlock linearly (one by one), so only the NEXT one -- the first remaining
+    // tick -- is ever clickable. Consumed on the first fieldmod the spec sees.
     let nextFieldMod = true;
     // Pre-pass: only glyph-bearing ticks (field mods + any icon tick) reserve a lane.
     const place = computeLanes(ticks, n, pct, mode, hotEl,
         function (t) { return t.category === "fieldmod" || !!t.icon; });
-    for (let i = 0; i < n; i++) {
-        const t = arrGet(ticks, i);
-        if (!t) continue;
-        const mark = document.createElement("div");
-        // In the capstone-only state the final tick (the only skill_tree tick with an
-        // icon) is the available node, so render it bright (wg-aff) instead of the
-        // count-axis "right of fill" wg-locked dim -- matching the "Final upgrade
-        // available" caption rather than reading as locked.
+    const res = renderTicks(ticksEl, ticks, n, function (t, i) {
+        // State class: locked -> dim, affordable -> bright. In the capstone-only state the
+        // final (icon) skill_tree tick IS the available node, so force it bright (wg-aff)
+        // instead of the count-axis "right of fill" wg-locked dim.
         let stateClass = t.locked ? " wg-locked" : t.affordable ? " wg-aff" : "";
         if (onlyFinal && mode === "skill_tree" && t.icon) stateClass = " wg-aff";
-        mark.className = "wg-tick wg-cat-" + (t.category || "x") + stateClass;
-        if (t.done) mark.classList.add("wg-done");   // session marker: green check + open-screen click
-        // Done markers sit at the bar's LEFT EDGE (0%), glyph CENTERED on it like the
-        // category icon (so it overhangs left). The .wg-hot overlay extends past the
-        // left edge (CSS) so that overhang stays hoverable/clickable -- hit-tested
-        // against the track via barRect, so curPct goes slightly negative there and
-        // still falls inside CLICK_HIT_PCT of this tick's 0%.
+        // wg-done = session marker (green check + open-screen click). Done markers ride the
+        // bar's LEFT EDGE (0%); .wg-hot extends past it (CSS) so the overhang stays hoverable
+        // (hit-tested against the track, so curPct goes slightly negative and still falls
+        // within CLICK_HIT_PCT of 0%).
+        const className = "wg-tick wg-cat-" + (t.category || "x") + stateClass +
+            (t.done ? " wg-done" : "");
         const leftPct = t.done ? 0 : pct(t.position);
-        mark.style.left = leftPct + "%";
-        // Skill-tree count ticks carry no metadata, but the FINAL tick has a name
-        // (+ cost) -> give it a hover tooltip too. Other modes: all ticks tip.
-        if (!noTips || t.name) {
-            const body = tooltipHtml(t, spendableXp, fv);
-            // Tag the tick (and, via ancestry, its glyph) so the handler can read
-            // the exact tick under the cursor when Gameface deep-targets; also keep
-            // a flat list for the nearest-by-x fallback when it doesn't.
-            mark._wgBody = body;
-            mark._wgLeft = leftPct;
-            tickMeta.push({ left: leftPct, body: body });
-        }
-
         // Clickability -> the reverse-channel command a click fires:
-        //  - skill-tree: only the final tick (the one carrying the icon) opens
-        //    WG's skill-tree screen (nodes carry no per-node identity to unlock).
-        //  - field-mod: LINEAR -> only the next (first remaining) tick is a
-        //    candidate; if affordable, unlock it (a choice-pair level opens the
-        //    screen since a click can't pick a variant).
+        //  - done marker: open the native screen (never re-research).
+        //  - skill-tree: only the final (icon) tick opens WG's skill-tree screen.
+        //  - field-mod: LINEAR -> only the next tick is a candidate; if affordable, unlock
+        //    it (a choice-pair level opens the screen since a click can't pick a variant).
         //  - tech-tree (vehicle/module): affordable + prereqs met -> research it.
         let cmd = null, arg;
         if (t.done) {
-            // Done marker -> clicking opens the native screen (never re-researches).
             cmd = t.category === "fieldmod" ? "openFieldMods" : "openResearch";
         } else if (mode === "skill_tree") {
             if (t.icon) cmd = "openSkillTree";
         } else if (t.category === "fieldmod") {
             if (nextFieldMod) {
-                nextFieldMod = false;   // only the next field mod is ever clickable
-                // WG's research dialog handles the step (incl. choice-pair levels).
+                nextFieldMod = false;
                 if (t.affordable && t.actionId) { cmd = "unlockFieldMod"; arg = t.actionId; }
             }
         } else if ((t.category === "vehicle" || t.category === "module")
                    && t.affordable && !t.locked && t.actionId) {
             cmd = "researchUnlock"; arg = t.actionId;
         }
-        if (cmd) {
-            mark.classList.add("wg-clickable");
-            clickMeta.push({ left: leftPct, cmd: cmd, arg: arg });
-        }
-
-        let glyphEl = null;
-        if (t.done) {
-            // Session "done" marker: a dedicated compact, NON-clipped glyph container
-            // (the field-mod hex clip-path would otherwise clip the corner badge, and
-            // the wide tech-tree img box would strand it far from the centered icon).
-            // Inset from the bar's left edge so the whole glyph sits inside the .wg-hot
-            // overlay and stays hoverable (it rides xp_position 0 = the left edge).
-            glyphEl = doneGlyph(t);
-            mark.appendChild(glyphEl);
-        } else if (t.category === "fieldmod") {
-            // Field-mod ticks: a hexagon glyph with the level roman numeral
-            // (mirrors the in-game field-modification level badges).
-            const hex = document.createElement("div");
-            hex.className = "wg-tick-hex";
-            const num = document.createElement("span");
-            num.textContent = romanize(t.level);
-            hex.appendChild(num);
-            mark.appendChild(hex);
-            glyphEl = hex;
-        } else if (t.icon && mode === "skill_tree") {
-            // Skill-tree FINAL upgrade: a framed perk glyph (diamond -- it's a major
-            // 25k node) hung below the rightmost tick, matching the Next-available
-            // chips. Reuses the chip frame/glyph classes.
-            const fin = document.createElement("div");
-            fin.className = "wg-final wg-chip-major";
-            const frame = document.createElement("div");
-            frame.className = "wg-chip-frame";
-            const ico = document.createElement("div");
-            ico.className = "wg-chip-ico";
-            ico.style.backgroundImage = "url('" + t.icon + "')";
-            fin.appendChild(frame);
-            fin.appendChild(ico);
-            mark.appendChild(fin);
-            glyphEl = fin;
-        } else if (t.icon) {
-            // Tech-tree ticks: the real in-game art (module-type glyph / framed
-            // vehicle icon) as an img:// URL. Rendered as a background-image (not
-            // <img>): Gameface honors background-size:contain for aspect-correct
-            // scaling, whereas it clips an <img>. A URL that fails just renders
-            // nothing (graceful).
-            const img = document.createElement("div");
-            img.className = "wg-tick-img";
-            img.style.backgroundImage = "url('" + t.icon + "')";
-            mark.appendChild(img);
-            glyphEl = img;
-        }
-        // De-crowd: if this glyph would overlap a neighbour it was assigned a lower
-        // lane in the pre-pass -- drop it a row + draw a stem back to the tick. Done
-        // markers keep lane 0: they're custom-positioned (no translateX base) and sit
-        // alone at the left, so applyLane's transform would displace them.
-        applyLane(mark, glyphEl, t.done ? 0 : (place[i] ? place[i].lane : 0));
-        ticksEl.appendChild(mark);
-    }
-    hotEl._wgTickMeta = tickMeta;
-    hotEl._wgClickMeta = clickMeta;
+        const tip = !noTips || !!t.name;
+        return {
+            className: className,
+            leftPct: leftPct,
+            tip: tip,
+            body: tip ? tooltipHtml(t, spendableXp, fv) : "",
+            cmd: cmd,
+            arg: arg,
+            glyph: linearGlyph(t, mode),
+            // Done markers keep lane 0: they're custom-positioned (no translateX base) and
+            // sit alone at the left, so applyLane's transform would displace them.
+            lane: t.done ? 0 : (place[i] ? place[i].lane : 0),
+        };
+    });
+    hotEl._wgTickMeta = res.tickMeta;
+    hotEl._wgClickMeta = res.clickMeta;
 }
 
 // Tooltip body for an elite mark: the grade/reward name, (rewards) the reward
@@ -1271,7 +1327,7 @@ function eliteTooltipHtml(t, isRewards, combatXp) {
     // "Elite Levels" label + the level this mark sits at.
     let caption;
     if (isRewards) {
-        const opts = (t.options || "").split("\n").filter(function (s) { return s; });
+        const opts = splitLines(t.options);
         caption = opts.length ? escapeHtml(opts[0]) : "";
     } else {
         // Just "Elite Levels" -- the specific level is painted over the emblem icon
@@ -1396,65 +1452,22 @@ function renderElite(root, data, isRewards) {
     freeEl.style.width = "0%";
 
     // Milestone ticks: grade sub-pips, or reward thumbnails ringed by state.
-    ticksEl.innerHTML = "";
     const ticks = data.ticks;
     const n = arrLen(ticks);
-    const tickMeta = [];
     // Pre-pass: every elite tick carries a glyph, so all reserve a lane (no predicate).
     const place = computeLanes(ticks, n, pct, data.mode, hotEl);
-    for (let i = 0; i < n; i++) {
-        const t = arrGet(ticks, i);
-        if (!t) continue;
-        const state = t.state || "upcoming";
-        const mark = document.createElement("div");
-        mark.className = "wg-tick wg-elite-tick wg-state-" + state;
-        const leftPct = pct(t.position);
-        mark.style.left = leftPct + "%";
-        const body = eliteTooltipHtml(t, isRewards, data.combatXp | 0);
-        mark._wgBody = body;
-        mark._wgLeft = leftPct;
-        tickMeta.push({ left: leftPct, body: body });
-
-        const gradeFam = isRewards ? "" : gradeFamily(t.icon);
-        if (t.icon) {
-            // ELITE_REWARDS -> reward art thumbnail (a state-treated background-image
-            // div; Gameface clips an <img>). ELITE -> the arrowhead "tab" grade badge,
-            // the same one the category icon uses: fillTabBadge draws the mirrored
-            // arrowhead + grade-tinted level numeral (the terminal MAX "prestige" tick
-            // has no grade family, so it shows the numberless hexagon-arrowhead --
-            // matching the in-game MAX badge). If a grade URL somehow has no tab art,
-            // fall back to the hexagon emblem + emblemFont number.
-            let img;
-            if (isRewards) {
-                img = document.createElement("div");
-                img.className = "wg-tick-reward";
-                img.style.backgroundImage = "url('" + t.icon + "')";
-            } else {
-                img = document.createElement("div");
-                // Per-size class drives the centering nudge: the arrowhead arts are
-                // right-anchored after the mirror by different amounts (short crammed
-                // right, long ~centered), so each width needs its own margin-left to
-                // sit centered under its tick.
-                img.className = "wg-tick-tab wg-tab wg-tab-" + tabBadgeSize(t.icon, t.position | 0, false);
-                if (!fillTabBadge(img, t.icon, t.position | 0, false)) {
-                    img.className = "wg-tick-emblem" + (gradeFam ? " wg-grade-" + gradeFam : "");
-                    img.style.backgroundImage = "url('" + t.icon + "')";
-                    if (gradeFam) img.appendChild(emblemNumber(t.position | 0, gradeFam));
-                }
-            }
-            mark.appendChild(img);
-            applyLane(mark, img, place[i] ? place[i].lane : 0);
-        } else {
-            // fallback (icon URL missing): a state-colored diamond.
-            const pip = document.createElement("div");
-            pip.className = "wg-tick-pip";
-            mark.appendChild(pip);
-            applyLane(mark, pip, place[i] ? place[i].lane : 0);
-        }
-        ticksEl.appendChild(mark);
-    }
-    hotEl._wgTickMeta = tickMeta;
-    hotEl._wgClickMeta = [];   // elite grade/reward marks aren't clickable
+    const res = renderTicks(ticksEl, ticks, n, function (t, i) {
+        return {
+            className: "wg-tick wg-elite-tick wg-state-" + (t.state || "upcoming"),
+            leftPct: pct(t.position),
+            tip: true,
+            body: eliteTooltipHtml(t, isRewards, data.combatXp | 0),
+            glyph: eliteGlyph(t, isRewards),
+            lane: place[i] ? place[i].lane : 0,
+        };
+    });
+    hotEl._wgTickMeta = res.tickMeta;
+    hotEl._wgClickMeta = res.clickMeta;   // empty -- elite grade/reward marks aren't clickable
     // Don't force-hide the tooltip here (render() re-runs on model updates); the
     // hover handler owns visibility, same as the main bar.
 }
@@ -1499,22 +1512,13 @@ function ensureHover(hotEl, tipEl) {
             node = node.parentElement;
         }
         // (2) nearest tick by cursor x.
-        const meta = hotEl._wgTickMeta;
-        if (!meta || !meta.length) { tipEl.style.display = "none"; return; }
-        const rect = barRect(hotEl);
-        const w = (rect && rect.width) || hotEl.clientWidth || 1;
-        const left = rect ? rect.left : 0;
-        const curPct = ((e.clientX - left) / w) * 100;
-        let best = null, bestD = 1e9;
-        for (let i = 0; i < meta.length; i++) {
-            const d = Math.abs(meta[i].left - curPct);
-            if (d < bestD) { bestD = d; best = meta[i]; }
-        }
+        const near = nearestByX(hotEl._wgTickMeta, hotEl, e.clientX);
+        if (!near.best) { tipEl.style.display = "none"; return; }
         // In skill_tree mode the only tooltip-tick is the final upgrade (far right);
         // gate it by proximity so it doesn't show across the whole empty bar. Other
         // modes keep nearest-anywhere (dense ticks make that the right behavior).
-        const ok = best && (hotEl._wgMode !== "skill_tree" || bestD <= 6);
-        if (ok) show(best.body, best.left); else tipEl.style.display = "none";
+        const ok = hotEl._wgMode !== "skill_tree" || near.dist <= 6;
+        if (ok) show(near.best.body, near.best.left); else tipEl.style.display = "none";
     });
     hotEl.addEventListener("mouseleave", function () {
         setActiveChip(hotEl, null);
@@ -1528,7 +1532,7 @@ function ensureHover(hotEl, tipEl) {
     // the same coords (no jump). _wgDidDrag suppresses the click that follows the drag.
     hotEl.addEventListener("mousedown", function (e) {
         if (!e.ctrlKey) return;
-        const root = document.getElementById("wgmod-root");
+        const root = getRoot();
         if (!root) return;
         e.preventDefault();
         e.stopPropagation();
@@ -1571,7 +1575,7 @@ function ensureHover(hotEl, tipEl) {
     // a Ctrl-click or the tail of a drag so repositioning never triggers research/unlock.
     hotEl.addEventListener("click", function (e) {
         if (e.ctrlKey) return;
-        const root = document.getElementById("wgmod-root");
+        const root = getRoot();
         if (root && root._wgDidDrag) return;
         const chip = chipAt(hotEl, e.clientX, e.clientY);
         if (chip) { invokeCommand(chip.cmd, chip.arg); return; }

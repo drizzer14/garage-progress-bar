@@ -562,33 +562,24 @@
             drop-shadow(0 1rem 2rem rgba(0, 0, 0, 0.55));
 }
 
-/* field-mod ticks: a hexagon glyph (clip-path) holding the level roman numeral,
-   hung below the tick like the icons. Tan fill mirrors the in-game field-mod
-   level badges; the parent tick's opacity dims not-yet-affordable levels. */
-/* Field-mod level badge -- matches the in-game field-modifications menu: a DARK
-   hexagon with a thin LIGHT-tan border ring and a light roman numeral. Gameface
-   `border` ignores clip-path, so the ring is built by layering two clipped
-   hexagons: this element is the light border color; the ::before is the dark
-   fill, uniformly shrunk via transform:scale so a constant-thickness ring shows
-   around it. */
-#wgmod-root .wg-tick-hex {
-    position: absolute;
-    left: 50%;
-    top: 100%;
-    margin-top: 4rem;
-    transform: translateX(-50%);
-    width: 18rem;
-    height: 20rem;
+/* Field-mod hexagon badge -- matches the in-game field-modifications menu: a DARK
+   hexagon with a thin LIGHT-tan border ring and a tan numeral. Gameface `border`
+   ignores clip-path, so the ring is built by layering two clipped hexagons: the
+   element is the light border color; the ::before is the dark fill, uniformly
+   shrunk via transform:scale so a constant-thickness ring shows around it.
+   These base rules are SHARED by the below-bar field-mod tick (.wg-tick-hex, hung
+   under its tick with the level roman numeral) and the field-mod tooltip icon
+   (.wg-tip-hex); each host adds only its own position + size (+ span font-size). */
+#wgmod-root .wg-tick-hex,
+#wgmod-root .wg-tip-hex {
     background: #d8c39a;        /* light tan -- shows only as the border ring */
     clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
     display: flex;
     align-items: center;
     justify-content: center;
-    /* drop shadow follows the hexagon's clipped silhouette (box-shadow ignores
-       clip-path); lifts the badge off the bar. */
-    filter: drop-shadow(0 1rem 2rem rgba(0, 0, 0, 0.85));
 }
-#wgmod-root .wg-tick-hex::before {
+#wgmod-root .wg-tick-hex::before,
+#wgmod-root .wg-tip-hex::before {
     content: "";
     position: absolute;
     top: 0;
@@ -600,13 +591,29 @@
     transform: scale(0.9);      /* uniform shrink -> even, THIN border ring */
     transform-origin: center;
 }
-#wgmod-root .wg-tick-hex span {
+#wgmod-root .wg-tick-hex span,
+#wgmod-root .wg-tip-hex span {
     position: relative;         /* sit above the ::before dark fill */
     z-index: 1;
     font-family: "PFDINMax", sans-serif;
-    font-size: 9rem;
     font-weight: 700;
     color: #ecca9d;             /* tan numeral on the dark fill */
+}
+/* Below-bar field-mod tick: hung centered under its tick like the icon glyphs. */
+#wgmod-root .wg-tick-hex {
+    position: absolute;
+    left: 50%;
+    top: 100%;
+    margin-top: 4rem;
+    transform: translateX(-50%);
+    width: 18rem;
+    height: 20rem;
+    /* drop shadow follows the hexagon's clipped silhouette (box-shadow ignores
+       clip-path); lifts the badge off the bar. */
+    filter: drop-shadow(0 1rem 2rem rgba(0, 0, 0, 0.85));
+}
+#wgmod-root .wg-tick-hex span {
+    font-size: 9rem;
 }
 
 /* --- Session "done" markers -------------------------------------------- */
@@ -955,40 +962,19 @@
 #wgmod-root .wg-tip-icon-num .wg-emblem-digit-one {
     width: 4.5rem;
 }
-/* Field-mod tooltip icon: the signature dark hexagon + tan roman numeral (matching
-   the bar's own field-mod badge, .wg-tick-hex), NOT a generic section glyph. Fixed
-   size + vertically centered (a stretched hexagon would distort its clip-path). */
+/* Field-mod tooltip icon: the signature dark hexagon + tan roman numeral (shares the
+   .wg-tick-hex base rules above), NOT a generic section glyph. Fixed size + vertically
+   centered (a stretched hexagon would distort its clip-path). Inherits position:absolute
+   + top/right from .wg-tip-icon (both classes on the element); that absolute box is the
+   containing block for the ::before dark-fill hex. background-image:none defeats any
+   inline icon URL .wg-tip-icon would otherwise carry. */
 #wgmod-root .wg-tip-hex {
-    /* inherits position:absolute + top/right from .wg-tip-icon (both classes on the
-       element); that absolute box is the containing block for the ::before dark-fill hex */
     width: 30rem;
     height: 33rem;
-    background: #d8c39a;        /* light tan -- shows only as the border ring */
     background-image: none;
-    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-#wgmod-root .wg-tip-hex::before {
-    content: "";
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: #15181a;        /* dark fill, like the menu badges */
-    clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
-    transform: scale(0.9);      /* uniform shrink -> even, THIN border ring */
-    transform-origin: center;
 }
 #wgmod-root .wg-tip-hex span {
-    position: relative;         /* sit above the ::before dark fill */
-    z-index: 1;
-    font-family: "PFDINMax", sans-serif;
     font-size: 15rem;
-    font-weight: 700;
-    color: #ecca9d;             /* tan numeral on the dark fill */
 }
 /* Title -- native `.Index_title` token (primary parchment, semibold). */
 #wgmod-root .wg-tip-name {
