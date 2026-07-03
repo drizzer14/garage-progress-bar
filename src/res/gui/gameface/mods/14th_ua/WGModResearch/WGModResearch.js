@@ -148,16 +148,21 @@ function emblemFontUrl(family, digit) {
     return "img://gui/maps/icons/prestige/emblemFont/16x33/" +
         emblemFontFamily(family) + "/" + digit + ".png";
 }
+// Per-digit class for an emblemFont glyph. The "1" glyph is narrower in the game art,
+// so flag it for a tighter width. Shared by both emblem-number builders below.
+function emblemDigitClass(ch) {
+    return "wg-emblem-digit" + (ch === "1" ? " wg-emblem-digit-one" : "");
+}
+
 // The level number centered over the hexagon emblem: a flex row of emblemFont digit
-// glyph divs (Gameface clips an <img>, so each glyph is a background-image div). The
-// "1" glyph is narrower in the game art, so flag it for a tighter width.
+// glyph divs (Gameface clips an <img>, so each glyph is a background-image div).
 function emblemNumber(level, family) {
     const wrap = document.createElement("span");
     wrap.className = "wg-tick-emblem-num";
     const s = String(level);
     for (let i = 0; i < s.length; i++) {
         const d = document.createElement("span");
-        d.className = "wg-emblem-digit" + (s[i] === "1" ? " wg-emblem-digit-one" : "");
+        d.className = emblemDigitClass(s[i]);
         d.style.backgroundImage = "url('" + emblemFontUrl(family, s[i]) + "')";
         wrap.appendChild(d);
     }
@@ -166,13 +171,12 @@ function emblemNumber(level, family) {
 
 // HTML-string form of emblemNumber() (the tooltip is built as an innerHTML string,
 // not DOM): the grade-colored emblemFont digit glyphs for `level`. Each glyph is a
-// background-image span (Gameface clips <img>). "1" is flagged narrower.
+// background-image span (Gameface clips <img>).
 function emblemNumberHtml(level, family) {
     const s = String(level | 0);
     let h = "";
     for (let i = 0; i < s.length; i++) {
-        const cls = "wg-emblem-digit" + (s[i] === "1" ? " wg-emblem-digit-one" : "");
-        h += '<span class="' + cls + '" style="background-image:url(\'' +
+        h += '<span class="' + emblemDigitClass(s[i]) + '" style="background-image:url(\'' +
             emblemFontUrl(family, s[i]) + '\')"></span>';
     }
     return h;
@@ -656,6 +660,12 @@ function arrLen(a) {
     return 0;
 }
 
+// Element i of a wulf array-or-plain-array, unwrapped. A plain JS array indexes
+// directly; a wulf Array exposes elements via .get(i). Pairs with arrLen().
+function arrGet(a, i) {
+    return unwrap(a[i] !== undefined ? a[i] : a.get && a.get(i));
+}
+
 // Tier-XI "Next available:" row below the bar: a caption + one clickable chip per
 // available frontier node (perk icon, hover tooltip with name + XP cost, click to
 // unlock). Hidden when nothing is available. The signature FINAL upgrade stays on
@@ -675,7 +685,7 @@ function renderNextAvailable(nextEl, arr, hotEl, spendableXp, fillVehicle) {
         // (No "Next available:" caption -- the chips speak for themselves and the label
         // had no localized game equivalent.)
         for (let i = 0; i < n; i++) {
-            const u = unwrap(arr[i] !== undefined ? arr[i] : arr.get && arr.get(i));
+            const u = arrGet(arr, i);
             if (!u) continue;
             const xp = u.xpRequired | 0;
             // Match the Upgrades screen: minor (10k) -> square plate; major
@@ -733,7 +743,7 @@ function upgradesSig(arr, spendableXp) {
     // stable between unlock actions, so this doesn't cause per-push rebuild flicker.
     let s = n + "@" + (spendableXp | 0) + ":";
     for (let i = 0; i < n; i++) {
-        const u = unwrap(arr[i] !== undefined ? arr[i] : arr.get && arr.get(i));
+        const u = arrGet(arr, i);
         if (u) s += (u.actionId | 0) + "," + (u.xpRequired | 0) + "," + (u.done ? 1 : 0) + ";";
     }
     return s;
@@ -1118,7 +1128,7 @@ function render(model) {
     // bar. Only glyph-bearing ticks reserve space; tickless gaps are null.
     const place = [];
     for (let i = 0; i < n; i++) {
-        const t = unwrap(ticks[i] !== undefined ? ticks[i] : ticks.get && ticks.get(i));
+        const t = arrGet(ticks, i);
         const hasGlyph = t && (t.category === "fieldmod" || !!t.icon);
         place.push(hasGlyph ? { left: pct(t.position), half: glyphHalfPct(t, mode) } : null);
     }
@@ -1127,7 +1137,7 @@ function render(model) {
     // stacked); CSS keeps the tighter default when nothing did.
     hotEl.style.bottom = maxLane > 0 ? HOT_BOTTOM_STACKED_REM + "rem" : "";
     for (let i = 0; i < n; i++) {
-        const t = unwrap(ticks[i] !== undefined ? ticks[i] : ticks.get && ticks.get(i));
+        const t = arrGet(ticks, i);
         if (!t) continue;
         const mark = document.createElement("div");
         // In the capstone-only state the final tick (the only skill_tree tick with an
@@ -1384,13 +1394,13 @@ function renderElite(root, data, isRewards) {
     // elite tick carries a glyph). Same de-crowding as the linear bar.
     const place = [];
     for (let i = 0; i < n; i++) {
-        const t = unwrap(ticks[i] !== undefined ? ticks[i] : ticks.get && ticks.get(i));
+        const t = arrGet(ticks, i);
         place.push(t ? { left: pct(t.position), half: glyphHalfPct(t, data.mode) } : null);
     }
     const maxLane = assignLanes(place);
     hotEl.style.bottom = maxLane > 0 ? HOT_BOTTOM_STACKED_REM + "rem" : "";
     for (let i = 0; i < n; i++) {
-        const t = unwrap(ticks[i] !== undefined ? ticks[i] : ticks.get && ticks.get(i));
+        const t = arrGet(ticks, i);
         if (!t) continue;
         const state = t.state || "upcoming";
         const mark = document.createElement("div");
