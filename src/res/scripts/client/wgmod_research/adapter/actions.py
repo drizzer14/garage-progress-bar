@@ -86,6 +86,24 @@ def open_skill_tree():
         _open_research_screen(veh)
 
 
+def open_research():
+    """Open WG's research (tech-tree) screen for the selected vehicle. Invoked by a
+    click on a "done" tech-tree marker -- navigation only, never a re-research."""
+    veh = _current_vehicle()
+    if veh is None:
+        return
+    _open_research_screen(veh)
+
+
+def open_field_mods():
+    """Open WG's Field Modifications (post-progression) screen for the selected
+    vehicle. Invoked by a click on a "done" field-mod marker -- navigation only."""
+    veh = _current_vehicle()
+    if veh is None:
+        return
+    _open_field_mods_screen(veh)
+
+
 # --- tech-tree unlock --------------------------------------------------------
 
 def _do_research(veh, int_cd, row):

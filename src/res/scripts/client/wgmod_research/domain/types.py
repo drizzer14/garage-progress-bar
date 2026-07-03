@@ -168,7 +168,7 @@ class VehicleSnapshot(object):
                  skilltree_spent_xp=0, skilltree_done=0, skilltree_total=0,
                  skilltree_final_icon="", skilltree_final_name="",
                  skilltree_final_xp=0, skilltree_available=None,
-                 skilltree_final_effect=""):
+                 skilltree_final_effect="", vehicle_int_cd=0):
         self.tier = tier                          # 1..11
         self.is_elite = is_elite                  # True = fully researched
         self.vehicle_xp = vehicle_xp              # unspent accumulated vehicle XP
@@ -211,6 +211,10 @@ class VehicleSnapshot(object):
         # the clickable "Upgrades Available:" chips. [ProgressionStep] (step_id,
         # name, icon, xp_cost). Empty for non-skill-tree vehicles.
         self.skilltree_available = skilltree_available or []
+        # The selected vehicle's global compact-descriptor id. Used only to scope
+        # session "done" markers (adapter/recent.py) per vehicle -- the domain
+        # itself never reads it. 0 when unavailable.
+        self.vehicle_int_cd = vehicle_int_cd
 
 
 class ResearchProgressModel(object):

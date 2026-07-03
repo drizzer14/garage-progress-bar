@@ -89,7 +89,8 @@ def build_snapshot():
         skilltree_done=st_done, skilltree_total=st_total,
         skilltree_final_icon=st_final_icon, skilltree_final_name=st_final_name,
         skilltree_final_xp=st_final_xp, skilltree_final_effect=st_final_effect,
-        skilltree_available=st_available)
+        skilltree_available=st_available,
+        vehicle_int_cd=_safe_int(lambda: veh.intCD, 0))
 
 
 # --- helpers ---------------------------------------------------------------

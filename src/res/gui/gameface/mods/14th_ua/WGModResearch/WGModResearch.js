@@ -34,6 +34,11 @@ const CAT_ICON = {
 // counter glyph (the small chevron shown beside its own node counter).
 const SKILL_COUNTER_ICON = "img://gui/maps/icons/skillTree/tree/counter.png";
 
+// The game's own green checkmark (the library "GreenCheck" asset) -- used as the
+// bottom-right badge on a session "done" marker so it reads as a native WoT glyph.
+const DONE_ICON = "img://gui/maps/icons/library/GreenCheck_1.png";
+
+
 // Total spendable XP for this vehicle's research = the vehicle's accumulated
 // combat XP + the account-global free XP -- exactly how the in-game research
 // screen totals it (techtree getVehTotalXP = freeXP + vehXP). Uses that screen's
@@ -391,6 +396,42 @@ function tipMain(iconHtml, text) {
         "</div>" + iconHtml + "</div>";
 }
 
+// Green "done" badge: the game's own GreenCheck asset as a background image, pinned
+// to the glyph's bottom-right corner (see .wg-done-badge). A real element rather than
+// a pseudo, since the field-mod hex already uses ::before.
+function doneBadge() {
+    const b = document.createElement("div");
+    b.className = "wg-done-badge";
+    b.style.backgroundImage = "url('" + DONE_ICON + "')";
+    return b;
+}
+
+// Compact glyph for a "done" tick: a fixed-size, non-clipped, left-inset container
+// holding the item's art (field-mod hexagon or tech-tree icon) plus the corner check.
+// Unlike the shared glyph branches, this container never clips the badge and keeps it
+// beside the icon regardless of the icon's aspect. Positioning lives in CSS
+// (.wg-done-glyph): inset from the left edge so it stays inside the .wg-hot overlay.
+function doneGlyph(t) {
+    const g = document.createElement("div");
+    g.className = "wg-done-glyph";
+    if (t.category === "fieldmod") {
+        g.className += " wg-done-glyph-hex";
+        const hex = document.createElement("div");
+        hex.className = "wg-tick-hex";
+        const num = document.createElement("span");
+        num.textContent = romanize(t.level);
+        hex.appendChild(num);
+        g.appendChild(hex);
+    } else if (t.icon) {
+        const ico = document.createElement("div");
+        ico.className = "wg-done-ico";
+        ico.style.backgroundImage = "url('" + t.icon + "')";
+        g.appendChild(ico);
+    }
+    g.appendChild(doneBadge());
+    return g;
+}
+
 // Tooltip body for a tick, built as ordered sections joined by dividers for clear
 // hierarchy: MAIN (text block [type caption + title + effect / choice variants] +
 // right-side icon) -> FOOTER ("have / need XP", or the prerequisite line when
@@ -419,7 +460,10 @@ function tooltipHtml(t, spendableXp, fillVehicle) {
         const nm = name ? '<div class="wg-tip-name">' + escapeHtml(name) + "</div>" : "";
         text = cap + nm + effectHtml(t.effect);
     }
-    if (t.locked) {
+    if (t.done) {
+        // Session "done" marker: already researched -> no cost/footer (just name+effect).
+        foot = "";
+    } else if (t.locked) {
         // Name the blocking prerequisites when known, else the generic line.
         const reqs = (t.prereqNames || "").split("\n").filter(function (s) { return s; });
         foot = reqs.length
@@ -506,6 +550,17 @@ function invokeCommand(name, arg) {
     }
 }
 
+// The bar's TRACK rect defines the 0..100% pct basis (a tick's .left comes from pct()
+// over the ticks layer, which is left:0/right:0 of the track). The .wg-hot overlay
+// extends PAST the bar's left edge (so a left-overhanging done marker stays hoverable),
+// so cursor->% hit-testing must measure against the ticks layer, NOT hotEl -- else
+// every tick's % would shift by the overlay's extra left width. Falls back to hotEl.
+function barRect(hotEl) {
+    const p = hotEl.parentNode;
+    const ticks = p && p.querySelector && p.querySelector(".wg-ticks");
+    return (ticks && ticks.getBoundingClientRect()) || hotEl.getBoundingClientRect();
+}
+
 // Nearest CLICKABLE tick to a cursor x (from hotEl._wgClickMeta), gated by a small
 // proximity window so a click on the bare bar between ticks doesn't fire an action.
 // Imprecise hits are additionally backstopped by WG's confirm dialog (Python side).
@@ -513,7 +568,7 @@ const CLICK_HIT_PCT = 4;
 function nearestClick(hotEl, clientX) {
     const meta = hotEl._wgClickMeta;
     if (!meta || !meta.length) return null;
-    const rect = hotEl.getBoundingClientRect();
+    const rect = barRect(hotEl);
     const w = (rect && rect.width) || hotEl.clientWidth || 1;
     const left = rect ? rect.left : 0;
     const curPct = ((clientX - left) / w) * 100;
@@ -591,6 +646,7 @@ function renderNextAvailable(nextEl, arr, hotEl, spendableXp, fillVehicle) {
             // (>=20k: 20k/25k) -> diamond. Frame + perk glyph layered.
             const chip = document.createElement("div");
             chip.className = "wg-chip " + (xp >= 20000 ? "wg-chip-major" : "wg-chip-minor");
+            if (u.done) chip.className += " wg-done";   // session marker: green check + open-screen click
             const frame = document.createElement("div");
             frame.className = "wg-chip-frame";
             const ico = document.createElement("div");
@@ -611,12 +667,19 @@ function renderNextAvailable(nextEl, arr, hotEl, spendableXp, fillVehicle) {
             const cCap = u.category || L("headerSkillTree", "Upgrades");
             const cText = capHtml(escapeHtml(cCap)) + cName + effectHtml(u.effect);
             const cIcon = (u.icon && u.icon.indexOf("img://") === 0) ? bgIconHtml(u.icon) : "";
-            const cFoot = xpFracHtml(spendableXp, xp, XP_ICON, fillVehicle);   // per-node cost (frontier nodes unlock independently)
+            // Done marker -> already unlocked, no cost/footer; else per-node cost
+            // (frontier nodes unlock independently).
+            const cFoot = u.done
+                ? ""
+                : xpFracHtml(spendableXp, xp, XP_ICON, fillVehicle);
             // Text block + icon as one unit (no divider between them); divider before cost.
             tip.innerHTML = joinSections([tipMain(cIcon, cText), cFoot]);
             chip.appendChild(tip);
+            if (u.done) chip.appendChild(doneBadge());   // green check, bottom-right
             nextEl.appendChild(chip);
-            chips.push({ el: chip, tip: tip, cmd: "unlockFieldMod", arg: u.actionId });
+            chips.push(u.done
+                ? { el: chip, tip: tip, cmd: "openSkillTree", arg: undefined }
+                : { el: chip, tip: tip, cmd: "unlockFieldMod", arg: u.actionId });
         }
         nextEl.style.display = "flex";
     } else {
@@ -634,7 +697,7 @@ function upgradesSig(arr, spendableXp) {
     let s = n + "@" + (spendableXp | 0) + ":";
     for (let i = 0; i < n; i++) {
         const u = unwrap(arr[i] !== undefined ? arr[i] : arr.get && arr.get(i));
-        if (u) s += (u.actionId | 0) + "," + (u.xpRequired | 0) + ";";
+        if (u) s += (u.actionId | 0) + "," + (u.xpRequired | 0) + "," + (u.done ? 1 : 0) + ";";
     }
     return s;
 }
@@ -1037,7 +1100,13 @@ function render(model) {
         let stateClass = t.locked ? " wg-locked" : t.affordable ? " wg-aff" : "";
         if (onlyFinal && mode === "skill_tree" && t.icon) stateClass = " wg-aff";
         mark.className = "wg-tick wg-cat-" + (t.category || "x") + stateClass;
-        const leftPct = pct(t.position);
+        if (t.done) mark.classList.add("wg-done");   // session marker: green check + open-screen click
+        // Done markers sit at the bar's LEFT EDGE (0%), glyph CENTERED on it like the
+        // category icon (so it overhangs left). The .wg-hot overlay extends past the
+        // left edge (CSS) so that overhang stays hoverable/clickable -- hit-tested
+        // against the track via barRect, so curPct goes slightly negative there and
+        // still falls inside CLICK_HIT_PCT of this tick's 0%.
+        const leftPct = t.done ? 0 : pct(t.position);
         mark.style.left = leftPct + "%";
         // Skill-tree count ticks carry no metadata, but the FINAL tick has a name
         // (+ cost) -> give it a hover tooltip too. Other modes: all ticks tip.
@@ -1059,7 +1128,10 @@ function render(model) {
         //    screen since a click can't pick a variant).
         //  - tech-tree (vehicle/module): affordable + prereqs met -> research it.
         let cmd = null, arg;
-        if (mode === "skill_tree") {
+        if (t.done) {
+            // Done marker -> clicking opens the native screen (never re-researches).
+            cmd = t.category === "fieldmod" ? "openFieldMods" : "openResearch";
+        } else if (mode === "skill_tree") {
             if (t.icon) cmd = "openSkillTree";
         } else if (t.category === "fieldmod") {
             if (nextFieldMod) {
@@ -1077,7 +1149,15 @@ function render(model) {
         }
 
         let glyphEl = null;
-        if (t.category === "fieldmod") {
+        if (t.done) {
+            // Session "done" marker: a dedicated compact, NON-clipped glyph container
+            // (the field-mod hex clip-path would otherwise clip the corner badge, and
+            // the wide tech-tree img box would strand it far from the centered icon).
+            // Inset from the bar's left edge so the whole glyph sits inside the .wg-hot
+            // overlay and stays hoverable (it rides xp_position 0 = the left edge).
+            glyphEl = doneGlyph(t);
+            mark.appendChild(glyphEl);
+        } else if (t.category === "fieldmod") {
             // Field-mod ticks: a hexagon glyph with the level roman numeral
             // (mirrors the in-game field-modification level badges).
             const hex = document.createElement("div");
@@ -1115,8 +1195,10 @@ function render(model) {
             glyphEl = img;
         }
         // De-crowd: if this glyph would overlap a neighbour it was assigned a lower
-        // lane in the pre-pass -- drop it a row + draw a stem back to the tick.
-        applyLane(mark, glyphEl, place[i] ? place[i].lane : 0);
+        // lane in the pre-pass -- drop it a row + draw a stem back to the tick. Done
+        // markers keep lane 0: they're custom-positioned (no translateX base) and sit
+        // alone at the left, so applyLane's transform would displace them.
+        applyLane(mark, glyphEl, t.done ? 0 : (place[i] ? place[i].lane : 0));
         ticksEl.appendChild(mark);
     }
     hotEl._wgTickMeta = tickMeta;
@@ -1368,7 +1450,7 @@ function ensureHover(hotEl, tipEl) {
         // (2) nearest tick by cursor x.
         const meta = hotEl._wgTickMeta;
         if (!meta || !meta.length) { tipEl.style.display = "none"; return; }
-        const rect = hotEl.getBoundingClientRect();
+        const rect = barRect(hotEl);
         const w = (rect && rect.width) || hotEl.clientWidth || 1;
         const left = rect ? rect.left : 0;
         const curPct = ((e.clientX - left) / w) * 100;

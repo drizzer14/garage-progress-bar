@@ -23,6 +23,7 @@ from skeletons.gui.shared import IItemsCache
 from wgmod_research.adapter import engine_adapter
 from wgmod_research.adapter import actions
 from wgmod_research.adapter import i18n
+from wgmod_research.adapter import recent
 from wgmod_research.domain.builder import build_model, bar_visible
 from wgmod_research.bridge import mod_settings
 import openwg_gameface
@@ -355,11 +356,53 @@ def _cmd_int_arg(args):
         return 0
 
 
+def _record_click(int_cd):
+    """Capture the item just clicked for the session "done" marker BEFORE the async
+    research fires (a researched item vanishes from the snapshot afterwards). Reads a
+    fresh snapshot, classifies by what the id actually is, and stashes display data.
+    Guarded: a failure here must never block the actual research action."""
+    try:
+        snap = engine_adapter.build_snapshot()
+        if snap is None:
+            return
+        veh = getattr(snap, "vehicle_int_cd", 0) or 0
+        # Tech-tree unlock (global int_cd)?
+        for u in (snap.tech_unlocks or []):
+            if getattr(u, "int_cd", None) == int_cd and not getattr(u, "researched", False):
+                recent.record(recent.TECHTREE, veh, int_cd,
+                              name=u.name, icon=u.icon, category=u.kind,
+                              kind_label=getattr(u, "kind_label", ""),
+                              xp_cost=getattr(u, "xp_cost", 0))
+                return
+        # Tier-XI upgrade node (frontier chip; per-vehicle step_id)?
+        if getattr(snap, "is_skill_tree", False):
+            for s in (snap.skilltree_available or []):
+                if getattr(s, "step_id", None) == int_cd:
+                    recent.record(recent.SKILLTREE, veh, int_cd,
+                                  name=s.name, icon=s.icon,
+                                  category=getattr(s, "category", ""),
+                                  effect=getattr(s, "description", ""),
+                                  xp_cost=getattr(s, "xp_cost", 0))
+                    return
+        # Field-mod step (per-vehicle step_id).
+        for s in (snap.field_mod_steps or []):
+            if getattr(s, "step_id", None) == int_cd and not getattr(s, "unlocked", False):
+                recent.record(recent.FIELDMOD, veh, int_cd,
+                              name=s.name, icon=s.icon, category="fieldmod",
+                              level=getattr(s, "level", 0),
+                              effect=getattr(s, "description", ""),
+                              xp_cost=getattr(s, "xp_cost", 0))
+                return
+    except Exception:
+        LOG_CURRENT_EXCEPTION()
+
+
 def _on_research_unlock(*args):
     try:
         int_cd = _cmd_int_arg(args)
         LOG_NOTE("[wgmod] researchUnlock intCD=%s" % int_cd)
         if int_cd:
+            _record_click(int_cd)
             actions.research_unlock(int_cd)
     except Exception:
         LOG_CURRENT_EXCEPTION()
@@ -370,6 +413,7 @@ def _on_unlock_field_mod(*args):
         step_id = _cmd_int_arg(args)
         LOG_NOTE("[wgmod] unlockFieldMod stepID=%s" % step_id)
         if step_id:
+            _record_click(step_id)
             actions.unlock_field_mod(step_id)
     except Exception:
         LOG_CURRENT_EXCEPTION()
@@ -379,6 +423,22 @@ def _on_open_skill_tree(*args):
     try:
         LOG_NOTE("[wgmod] openSkillTree")
         actions.open_skill_tree()
+    except Exception:
+        LOG_CURRENT_EXCEPTION()
+
+
+def _on_open_research(*args):
+    try:
+        LOG_NOTE("[wgmod] openResearch")
+        actions.open_research()
+    except Exception:
+        LOG_CURRENT_EXCEPTION()
+
+
+def _on_open_field_mods(*args):
+    try:
+        LOG_NOTE("[wgmod] openFieldMods")
+        actions.open_field_mods()
     except Exception:
         LOG_CURRENT_EXCEPTION()
 
@@ -423,13 +483,15 @@ def _connect_commands(rvm):
         rvm.researchUnlock += _on_research_unlock
         rvm.unlockFieldMod += _on_unlock_field_mod
         rvm.openSkillTree += _on_open_skill_tree
+        rvm.openResearch += _on_open_research
+        rvm.openFieldMods += _on_open_field_mods
         rvm.setPosition += _on_set_position
     except Exception:
         LOG_CURRENT_EXCEPTION()
 
 
 class TickVM(ViewModel):
-    def __init__(self, properties=15, commands=0):
+    def __init__(self, properties=16, commands=0):
         super(TickVM, self).__init__(properties=properties, commands=commands)
 
     def _initialize(self):
@@ -449,6 +511,7 @@ class TickVM(ViewModel):
         self._addStringProperty("prereqNames", "")  # 12 (locked tech-tree: blockers, \n-joined)
         self._addStringProperty("effect", "")     # 13 (field-mod KPI bonus lines, \n-joined)
         self._addStringProperty("optionEffects", "")  # 14 (per-variant buffs, \n-joined, aligned w/ options)
+        self._addBoolProperty("done", False)      # 15 (session "done" marker: green check + open-screen click)
 
     def setPosition(self, v):
         self._setNumber(0, v)
@@ -495,10 +558,13 @@ class TickVM(ViewModel):
     def setOptionEffects(self, v):
         self._setString(14, v)
 
+    def setDone(self, v):
+        self._setBool(15, v)
+
 
 class UpgradeVM(ViewModel):
     """One available tier-XI upgrade node -> a clickable 'Upgrades Available' chip."""
-    def __init__(self, properties=6, commands=0):
+    def __init__(self, properties=7, commands=0):
         super(UpgradeVM, self).__init__(properties=properties, commands=commands)
 
     def _initialize(self):
@@ -509,6 +575,7 @@ class UpgradeVM(ViewModel):
         self._addNumberProperty("xpRequired", 0)   # 3
         self._addStringProperty("effect", "")      # 4 (perk KPI bonus lines, \n-joined)
         self._addStringProperty("category", "")    # 5 (localized node sub-heading caption)
+        self._addBoolProperty("done", False)       # 6 (session "done" marker: green check + open-screen click)
 
     def setActionId(self, v):
         self._setNumber(0, v)
@@ -528,9 +595,12 @@ class UpgradeVM(ViewModel):
     def setCategory(self, v):
         self._setString(5, v)
 
+    def setDone(self, v):
+        self._setBool(6, v)
+
 
 class ResearchVM(ViewModel):
-    def __init__(self, properties=22, commands=4):
+    def __init__(self, properties=22, commands=6):
         super(ResearchVM, self).__init__(properties=properties, commands=commands)
 
     def _initialize(self):
@@ -563,6 +633,8 @@ class ResearchVM(ViewModel):
         self.researchUnlock = self._addCommand("researchUnlock")    # arg: tech-tree int_cd
         self.unlockFieldMod = self._addCommand("unlockFieldMod")    # arg: field-mod step_id
         self.openSkillTree = self._addCommand("openSkillTree")      # no arg
+        self.openResearch = self._addCommand("openResearch")        # no arg (done tech-tree marker click)
+        self.openFieldMods = self._addCommand("openFieldMods")      # no arg (done field-mod marker click)
         self.setPosition = self._addCommand("setPosition")          # arg: {x, y} px (drag / seed)
 
     def setMode(self, v):
@@ -681,6 +753,9 @@ def push(rvm, host_vm=None):
         if snap is None:
             return
         model = build_model(snap, mod_settings.enabled_modes())
+        # Session "done" markers: promote a confirmed click and inject the current
+        # vehicle's marker (a first tick / first chip). Engine-free + guarded.
+        recent.decorate(model, snap)
         LOG_NOTE("[wgmod] push mode=%s ticks=%d fillV=%d fillF=%d" % (
             model.mode, len(model.ticks), model.fill_vehicle, model.fill_free))
         # Resolve localized labels OUTSIDE the transaction: a bad resource id must never
@@ -735,6 +810,7 @@ def push(rvm, host_vm=None):
                 tv.setPrereqNames("\n".join(getattr(t, "prereq_names", None) or []))
                 tv.setEffect(getattr(t, "effect", "") or "")
                 tv.setOptionEffects("\n".join(getattr(t, "option_effects", None) or []))
+                tv.setDone(bool(getattr(t, "done", False)))
                 arr.addViewModel(tv)
             arr.invalidate()
             # Available tier-XI upgrade nodes -> the clickable header chips.
@@ -748,6 +824,7 @@ def push(rvm, host_vm=None):
                 uv.setXpRequired(getattr(up, "xp_cost", 0) or 0)
                 uv.setEffect(getattr(up, "description", "") or "")
                 uv.setCategory(getattr(up, "category", "") or "")
+                uv.setDone(bool(getattr(up, "done", False)))
                 ua.addViewModel(uv)
             ua.invalidate()
         # Nudge the host sub-view so its data re-syncs to JS (nested-model

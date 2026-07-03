@@ -200,7 +200,11 @@
    top:100% of each tick, so growing the ticks layer would push the icons down. */
 #wgmod-root .wg-hot {
     position: absolute;
-    left: 0;
+    /* Extends PAST the bar's left edge so a done marker (centered on the edge, like the
+       category icon) stays hoverable/clickable across its left overhang. Cursor->% is
+       measured against the ticks layer (JS barRect), NOT this overlay, so the extra
+       left width doesn't shift any tick's hit position. */
+    left: -18rem;
     right: 0;
     top: -3rem;
     bottom: -39rem;
@@ -602,6 +606,65 @@
     font-size: 9rem;
     font-weight: 700;
     color: #ecca9d;             /* tan numeral on the dark fill */
+}
+
+/* --- Session "done" markers -------------------------------------------- */
+/* The game's own GreenCheck glyph, pinned to the bottom-right corner of a researched
+   item's glyph (tech-tree icon / field-mod hex) or its tier-XI chip. Those hosts are
+   already position:absolute/relative, so the badge rides their box. background-image
+   set in JS (DONE_ICON). A dark drop-shadow keeps it readable over any art. */
+#wgmod-root .wg-done-badge {
+    position: absolute;
+    right: -3rem;
+    bottom: -3rem;
+    width: 12rem;
+    height: 12rem;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    filter: drop-shadow(0 0 1.5rem rgba(0, 0, 0, 0.95));
+    z-index: 3;                           /* above the glyph */
+}
+/* Done-marker glyph: a compact, NON-clipped container CENTERED on the bar's left edge
+   -- exactly like the category icon (.wg-cat-icon: left:0 + translate(-50%)), so it
+   overhangs left and reads as the "start" marker. The .wg-hot overlay extends left to
+   keep the overhang hoverable/clickable. */
+#wgmod-root .wg-done-glyph {
+    position: absolute;
+    left: 0;
+    top: 100%;
+    margin-top: 4rem;
+    transform: translateX(-50%);
+    width: 26rem;
+    height: 26rem;
+}
+/* The done tick carries no visible line (its glyph + check IS the marker) and its
+   anchor must sit exactly at the bar's left edge, so drop the line's paint and the
+   negative centering margin. id + 3 classes beats the .wg-aff / .wg-clickable rules. */
+#wgmod-root .wg-ticks .wg-tick.wg-done {
+    background: transparent;
+    box-shadow: none;
+    margin-left: 0;
+    width: 0;
+}
+#wgmod-root .wg-done-glyph .wg-done-ico {
+    position: absolute;
+    left: 0;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    filter: drop-shadow(0 1rem 2rem rgba(0, 0, 0, 0.85));
+}
+/* center the (clipped) hexagon inside the non-clipped container -- the badge is a
+   sibling of the hex here, so the hex clip-path no longer eats it. */
+#wgmod-root .wg-done-glyph-hex .wg-tick-hex {
+    left: 50%;
+    top: 50%;
+    margin: 0;
+    transform: translate(-50%, -50%);
 }
 
 /* --- Elite Levels (prestige) marks ------------------------------------- */
