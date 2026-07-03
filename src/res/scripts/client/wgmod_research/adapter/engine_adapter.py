@@ -17,6 +17,11 @@ from gui.shared.gui_items import GUI_ITEM_TYPE
 from debug_utils import LOG_CURRENT_EXCEPTION
 
 from wgmod_research.adapter import i18n
+from wgmod_research.adapter.format import (
+    roman as _roman, module_big_icon as _module_big_icon,
+    skilltree_icon as _skilltree_icon, humanize as _humanize,
+    kpi_objs as _kpi_objs, kpi_prefix as _kpi_prefix,
+    skilltree_value as _skilltree_value)
 from wgmod_research.domain import types as t
 from wgmod_research.domain.resolvers.fieldmods import max_level
 
@@ -118,16 +123,6 @@ def _safe_stats():
 
 # Roman numerals for vehicle tiers (1..11). Used for the next-vehicle tooltip
 # caption ("Tier IX"), matching the in-game tier notation.
-_ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI"]
-
-
-def _roman(n):
-    n = int(n or 0)
-    if 0 < n < len(_ROMAN):
-        return _ROMAN[n]
-    return str(n) if n > 0 else ""
-
-
 def _unlock_name(cache, int_cd):
     """Localized display name for an unlock id, or "" on any read failure (so one
     bad prerequisite never sinks the whole unlock row)."""
@@ -136,24 +131,6 @@ def _unlock_name(cache, int_cd):
     except Exception:
         LOG_CURRENT_EXCEPTION()
         return ""
-
-
-_MODULE_ICON_RE = re.compile(r"^(img://gui/maps/icons/modules/[A-Za-z0-9_]+)\.png$")
-
-
-def _module_big_icon(icon):
-    """The generic module-TYPE glyphs (gun/tower/chassis/engine/radio/...) ship an
-    80x80 `Big` sibling in the same directory (gun.png -> gunBig.png) -- the higher-res
-    art the tech-tree screen itself uses. Swap the plain 48x48 for `Big` so it stops
-    upscaling in the tooltip icon box. A non-module or already-`Big` path is returned
-    unchanged; guarded so a surprise path can never blank the icon."""
-    try:
-        m = _MODULE_ICON_RE.match(icon or "")
-        if m and not m.group(1).endswith("Big"):
-            return m.group(1) + "Big.png"
-    except Exception:
-        LOG_CURRENT_EXCEPTION()
-    return icon or ""
 
 
 def _read_tech_unlocks(veh, unlocks):
@@ -271,29 +248,6 @@ def read_purchase_price(int_cd, category, veh_int_cd=0):
     except Exception:
         LOG_CURRENT_EXCEPTION()
         return 0
-
-
-def _skilltree_icon(node_type, image_name):
-    """Full img:// URL for a skill-tree node's perk icon. The client stores them at
-    skillTree/tree/perks/<type>/skills/<size>/<imageName>.png (type = getType():
-    common|major|special|final) -- verified live. We use the `large` (40x40) variant
-    over `small` (32x32) for a sharper glyph in the enlarged tooltip; every `small`
-    icon has a matching `large` (verified against res/packages gui-part*.pkg: 178/178
-    pairs, zero orphans). Bare getImageName() (e.g. 'invisibilityWhenShooting') is
-    just the basename. Empty name -> "" (no icon)."""
-    if not image_name:
-        return ""
-    return ("img://gui/maps/icons/skillTree/tree/perks/%s/skills/large/%s.png"
-            % (node_type or "common", image_name))
-
-
-def _humanize(name):
-    """camelCase action id -> spaced Title-ish label, e.g. 'invisibilityWhenShooting'
-    -> 'Invisibility When Shooting'. Empty -> ""."""
-    if not name:
-        return ""
-    spaced = re.sub(r"(?<=[a-z0-9])([A-Z])", r" \1", name)
-    return spaced[:1].upper() + spaced[1:]
 
 
 # Localized names a skill-tree node may carry that are too generic to show, and the
@@ -730,58 +684,20 @@ def _pair_options(action):
     return out
 
 
-def _fmt_pct(pct):
-    """A KPI 'mul' delta rendered as a signed percent ("+10%", "-1%"). "" if it
-    rounds to zero (no meaningful change)."""
-    r = round(pct)
-    if abs(pct - r) < 0.05:
-        n = int(r)
-        return "" if n == 0 else ("%+d%%" % n)
-    return "%+.1f%%" % pct
-
-
-def _fmt_signed(v):
-    """A raw additive KPI delta as a signed magnitude ("+3", "-3", "+2.5"). "" if it
-    rounds to zero. No percent/unit suffix -- 'add' KPIs are absolute quantities
-    (e.g. +3 km/h top reverse speed) and the phrase carries the stat name."""
-    r = round(v)
-    if abs(v - r) < 0.05:
-        n = int(r)
-        return "" if n == 0 else ("%+d" % n)
-    return "%+.1f" % v
-
-
-def _kpi_prefix(k):
-    """The signed numeric prefix for a KPI, or "" when it carries no usable number.
-
-    'mul' -> percent from (value-1)*100 ("+10%"); 'add' -> the raw signed delta
-    ("+3", absolute units, no %). Any other numeric type falls back to the raw signed
-    delta (the realistic non-'mul' shape is 'add'; dropping the number is the bug this
-    replaces). "" when the value is missing/non-numeric or rounds to a negligible
-    ~zero. bool is excluded up front (it's an int subclass). KPI types verified live
-    (EU 2.3): 'mul' (Strv 103B et al.) and 'add' (Kranvagn L7 "top reverse speed")."""
-    val = getattr(k, "value", None)
-    if isinstance(val, bool) or not isinstance(val, (int, float)):
-        return ""
-    val = float(val)
-    if (getattr(k, "type", "") or "") == "mul":
-        return _fmt_pct((val - 1.0) * 100.0)
-    return _fmt_signed(val)
-
-
-def _kpi_objs(action):
-    """The raw KPI objects on an action's descriptor (action._descriptor.kpi), or []."""
-    d = getattr(action, "_descriptor", None)
-    return getattr(d, "kpi", None) or []
-
-
-def _kpi_lines(action):
+def _kpi_lines(action, numbers_only=False):
     """The effect/bonus lines for a post-progression action, from its KPI list:
     one "<signed %> <stat phrase>" string per KPI that carries a description (e.g.
     "+10% to concealment after firing"). Empty list for actions with no KPI
     (features / role slots) or only the generic unlabeled 'value' KPI (signature
     mechanic perks -- effect not exposed as text). The signed numeric prefix comes
     from _kpi_prefix ('mul' -> percent, 'add' -> raw delta). Best-effort, never raises.
+
+    With numbers_only=True, keep ONLY KPIs that carry a real signed magnitude
+    (_kpi_prefix non-empty) -- used to append a figure to a tier-XI skill-tree
+    sentence: a KPI whose delta rounds to a negligible ~zero (e.g. an 'add' of -0.01)
+    has no prefix, and the default mode would emit its bare phrase ("to the aiming
+    circle size") -- an orphaned, numberless fragment. numbers_only drops those (and
+    keeps a bare prefix when the KPI has no description).
 
     KPI shape verified live (EU 2.3): action._descriptor.kpi -> [KPI], each with
     getDescriptionR() (DynAccessor -> backport.text -> phrase), .type, .value.
@@ -793,15 +709,18 @@ def _kpi_lines(action):
     try:
         from gui.impl import backport
         for k in _kpi_objs(action):
+            prefix = _kpi_prefix(k)
+            if numbers_only and not prefix:
+                continue
             try:
                 acc = k.getDescriptionR()
                 desc = backport.text(acc() if callable(acc) else acc) or ""
             except Exception:
                 desc = ""
-            if not desc:
-                continue  # generic unlabeled 'value' KPI -> no displayable stat
-            prefix = _kpi_prefix(k)
-            lines.append((prefix + " " + desc) if prefix else desc)
+            if numbers_only:
+                lines.append((prefix + " " + desc).strip() if desc else prefix)
+            elif desc:  # default mode skips the generic unlabeled 'value' KPI
+                lines.append((prefix + " " + desc) if prefix else desc)
     except Exception:
         LOG_CURRENT_EXCEPTION()
     return lines
@@ -813,57 +732,9 @@ def _action_effect(action):
 
 
 def _kpi_number_lines(action):
-    """Like _kpi_lines, but ONLY KPIs that carry a real signed magnitude
-    (_kpi_prefix non-empty). Used to append a figure to a tier-XI skill-tree
-    sentence: a KPI whose delta rounds to a negligible ~zero (e.g. an 'add' of
-    -0.01) has no prefix, and _kpi_lines would emit its bare phrase ("to the aiming
-    circle size") -- an orphaned, numberless fragment. Here we drop those."""
-    lines = []
-    try:
-        from gui.impl import backport
-        for k in _kpi_objs(action):
-            prefix = _kpi_prefix(k)
-            if not prefix:
-                continue
-            try:
-                acc = k.getDescriptionR()
-                desc = backport.text(acc() if callable(acc) else acc) or ""
-            except Exception:
-                desc = ""
-            lines.append((prefix + " " + desc).strip() if desc else prefix)
-    except Exception:
-        LOG_CURRENT_EXCEPTION()
-    return lines
-
-
-def _fmt_num(pct):
-    """A bare magnitude for a tier-XI description template's {value} slot: an int
-    when it rounds clean, else one decimal (no sign -- the template's wording
-    carries the direction, e.g. 'Reduces ... by {value}%')."""
-    r = round(pct)
-    if abs(pct - r) < 0.05:
-        return str(int(r))
-    return "%.1f" % pct
-
-
-def _skilltree_value(action):
-    """The bare {value} magnitude for a tier-XI sentence template, scanned from the
-    node's KPI objects: 'mul' -> percent (|value-1|*100), 'add' -> raw magnitude.
-    "" when no KPI carries a usable number. Unsigned -- the template's own wording
-    carries the direction (e.g. 'Reduces ... by {value}%'). Verified live (EU 2.3):
-    the signature 'mechanic' perks' generic 'value' KPI is itself typed 'mul'/'add',
-    so it fills here; an unclassifiable type leaves "" for the caller to fall back."""
-    for k in _kpi_objs(action):
-        v = getattr(k, "value", None)
-        if isinstance(v, bool) or not isinstance(v, (int, float)):
-            continue
-        v = float(v)
-        ktype = getattr(k, "type", "") or ""
-        if ktype == "mul":
-            return _fmt_num(abs((v - 1.0) * 100.0))
-        if ktype == "add":
-            return _fmt_num(abs(v))
-    return ""
+    """_kpi_lines restricted to KPIs carrying a real signed magnitude (see the
+    numbers_only path)."""
+    return _kpi_lines(action, numbers_only=True)
 
 
 def _skilltree_effect(action):

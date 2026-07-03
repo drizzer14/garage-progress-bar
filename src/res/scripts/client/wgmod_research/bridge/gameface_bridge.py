@@ -26,6 +26,8 @@ from wgmod_research.adapter import i18n
 from wgmod_research.adapter import recent
 from wgmod_research.domain.builder import build_model, bar_visible
 from wgmod_research.bridge import mod_settings
+from wgmod_research.bridge.wulf_args import (
+    map_get as _map_get, cmd_int_arg as _cmd_int_arg, cmd_xy_arg as _cmd_xy_arg)
 import openwg_gameface
 
 WIDGET_NAME = "WGModResearch"
@@ -316,46 +318,6 @@ def install_colorblind_listener():
 # After a successful action the game fires onSyncCompleted, which the stats
 # listener already turns into a bar refresh -- so handlers do not refresh here.
 
-def _map_get(a, key):
-    """Read `key` from a JS-supplied argument that may be a plain dict or a Wulf-wrapped
-    map. Returns None if unreadable."""
-    if isinstance(a, dict):
-        return a.get(key)
-    getter = getattr(a, "get", None)
-    if callable(getter):
-        try:
-            return a.get(key)
-        except Exception:
-            return None
-    return None
-
-
-def _cmd_int_arg(args):
-    """Extract the int id a JS command invocation carried. Wulf delivers a single
-    MAP argument (the JS side wraps the id as {value: id}); pull our key out of it,
-    tolerating a plain dict, a wrapped map, or a bare scalar. 0 = nothing usable."""
-    try:
-        if not args:
-            return 0
-        a = args[0]
-        if isinstance(a, dict):
-            a = a.get("value", a.get("id"))
-        else:
-            getter = getattr(a, "get", None)
-            if callable(getter):
-                try:
-                    a = a.get("value")
-                except Exception:
-                    pass
-        try:
-            return int(a)
-        except (TypeError, ValueError):
-            return 0
-    except Exception:
-        LOG_CURRENT_EXCEPTION()
-        return 0
-
-
 def _record_click(int_cd):
     """Capture the item just clicked for the session "done" marker BEFORE the async
     research fires (a researched item vanishes from the snapshot afterwards). Reads a
@@ -441,25 +403,6 @@ def _on_open_field_mods(*args):
         actions.open_field_mods()
     except Exception:
         LOG_CURRENT_EXCEPTION()
-
-
-def _cmd_xy_arg(args):
-    """Extract the (x, y) pixel pair a JS `setPosition` invocation carried. Wulf
-    delivers a single MAP argument ({x, y}); pull both keys, tolerating a plain dict
-    or a wrapped map. Missing/invalid -> 0 (auto)."""
-    def as_int(v):
-        try:
-            return int(v)
-        except (TypeError, ValueError):
-            return 0
-    try:
-        if not args:
-            return 0, 0
-        a = args[0]
-        return as_int(_map_get(a, "x")), as_int(_map_get(a, "y"))
-    except Exception:
-        LOG_CURRENT_EXCEPTION()
-        return 0, 0
 
 
 def _on_set_position(*args):
