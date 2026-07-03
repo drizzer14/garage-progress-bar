@@ -848,6 +848,26 @@ function applyLane(mark, glyphEl, lane) {
     mark.appendChild(stem);
 }
 
+// Lane pre-pass shared by the linear and elite tick loops: reserve a footprint for each
+// glyph-bearing tick so overlapping glyphs stagger into vertical lanes (de-crowding).
+// `reserves(t)` picks which ticks carry a glyph -- omit it (elite: every tick has one)
+// or pass a predicate (linear: only fieldmod / icon ticks). Grows the hover overlay
+// down to cover any dropped row, then returns the per-tick placement array (null for
+// gaps; assignLanes sets .lane on the rest, read via place[i].lane).
+function computeLanes(ticks, n, pct, mode, hotEl, reserves) {
+    const place = [];
+    for (let i = 0; i < n; i++) {
+        const t = arrGet(ticks, i);
+        const on = t && (reserves ? reserves(t) : true);
+        place.push(on ? { left: pct(t.position), half: glyphHalfPct(t, mode) } : null);
+    }
+    const maxLane = assignLanes(place);
+    // Grow the hover overlay down to cover a dropped row's glyphs (only when something
+    // stacked); CSS keeps the tighter default when nothing did.
+    hotEl.style.bottom = maxLane > 0 ? HOT_BOTTOM_STACKED_REM + "rem" : "";
+    return place;
+}
+
 // Root modifier class that mirrors WoT's color-blind mode. Appended to every root
 // className assignment (all render branches) so the CSS .wg-colorblind overrides swap
 // the meaning-carrying fills/pips to a color-blind-safe palette. Fail-open: absent flag
@@ -1123,19 +1143,9 @@ function render(model) {
     // Field mods unlock linearly (one by one), so only the NEXT one -- the first
     // remaining tick -- is ever clickable. Consumed on the first fieldmod seen.
     let nextFieldMod = true;
-    // Pre-pass: glyph positions + footprints, so overlapping glyphs can be
-    // staggered into vertical lanes (de-crowding) before they're hung below the
-    // bar. Only glyph-bearing ticks reserve space; tickless gaps are null.
-    const place = [];
-    for (let i = 0; i < n; i++) {
-        const t = arrGet(ticks, i);
-        const hasGlyph = t && (t.category === "fieldmod" || !!t.icon);
-        place.push(hasGlyph ? { left: pct(t.position), half: glyphHalfPct(t, mode) } : null);
-    }
-    const maxLane = assignLanes(place);
-    // Grow the hover overlay down to cover a dropped row's glyphs (only when something
-    // stacked); CSS keeps the tighter default when nothing did.
-    hotEl.style.bottom = maxLane > 0 ? HOT_BOTTOM_STACKED_REM + "rem" : "";
+    // Pre-pass: only glyph-bearing ticks (field mods + any icon tick) reserve a lane.
+    const place = computeLanes(ticks, n, pct, mode, hotEl,
+        function (t) { return t.category === "fieldmod" || !!t.icon; });
     for (let i = 0; i < n; i++) {
         const t = arrGet(ticks, i);
         if (!t) continue;
@@ -1390,15 +1400,8 @@ function renderElite(root, data, isRewards) {
     const ticks = data.ticks;
     const n = arrLen(ticks);
     const tickMeta = [];
-    // Pre-pass: stagger overlapping emblem/reward glyphs into vertical lanes (every
-    // elite tick carries a glyph). Same de-crowding as the linear bar.
-    const place = [];
-    for (let i = 0; i < n; i++) {
-        const t = arrGet(ticks, i);
-        place.push(t ? { left: pct(t.position), half: glyphHalfPct(t, data.mode) } : null);
-    }
-    const maxLane = assignLanes(place);
-    hotEl.style.bottom = maxLane > 0 ? HOT_BOTTOM_STACKED_REM + "rem" : "";
+    // Pre-pass: every elite tick carries a glyph, so all reserve a lane (no predicate).
+    const place = computeLanes(ticks, n, pct, data.mode, hotEl);
     for (let i = 0; i < n; i++) {
         const t = arrGet(ticks, i);
         if (!t) continue;
