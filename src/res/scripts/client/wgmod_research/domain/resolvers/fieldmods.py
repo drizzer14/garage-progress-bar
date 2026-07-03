@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 from wgmod_research.domain import types as t
+from wgmod_research.domain.constants import Category
 
 
 def max_level(tier):
@@ -37,7 +38,7 @@ def resolve(snapshot, start_position=0):
         # stays at its default (False); only tech-tree ticks can be locked.
         # level -> the roman numeral the view shows in the hexagon glyph.
         ticks.append(t.Tick(
-            xp_position=running, category="fieldmod", icon=step.icon, name=step.name,
+            xp_position=running, category=Category.FIELDMOD, icon=step.icon, name=step.name,
             xp_gained=0, xp_required=step.xp_cost,
             affordable=(running <= spendable), completed=False,
             level=step.level, options=step.options, action_id=step.step_id,

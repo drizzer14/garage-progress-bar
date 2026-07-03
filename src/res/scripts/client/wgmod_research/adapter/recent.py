@@ -139,25 +139,20 @@ def _make_tick(rec):
     """A done tech-tree / field-mod tick: pinned to xp_position 0, marked done,
     always shown bright (it's completed). The `.done` attribute drives the JS
     checkmark + open-screen click; it is read via getattr in the marshal."""
-    tick = t.Tick(
+    # done drives the JS checkmark + open-screen click; int_cd lets the (engine-bound)
+    # bridge look up the item's live credits buy price + ownership at marshal time
+    # (kept a plain int so this module stays engine-free and unit-testable).
+    return t.Tick(
         xp_position=0, category=rec["category"], icon=rec["icon"], name=rec["name"],
         xp_gained=0, xp_required=0, affordable=True, completed=True,
         locked=False, level=rec["level"], effect=rec["effect"],
-        kind_label=rec["kind_label"])
-    tick.done = True
-    # Carry the item id so the (engine-bound) bridge can look up its current credits
-    # buy price + ownership at marshal time -- kept here as a plain int so this module
-    # stays engine-free and unit-testable.
-    tick.int_cd = rec["item_id"]
-    return tick
+        kind_label=rec["kind_label"], done=True, int_cd=rec["item_id"])
 
 
 def _make_chip(rec):
     """A done tier-XI chip: a ProgressionStep marked done, prepended so it sorts
     first in the next-available row."""
-    step = t.ProgressionStep(
+    return t.ProgressionStep(
         step_id=rec["item_id"], name=rec["name"], icon=rec["icon"],
         xp_cost=rec["xp_cost"], unlocked=True, description=rec["effect"],
-        category=rec["category"])
-    step.done = True
-    return step
+        category=rec["category"], done=True)

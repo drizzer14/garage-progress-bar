@@ -33,7 +33,8 @@ class Tick(object):
     def __init__(self, xp_position, category, icon, name,
                  xp_gained, xp_required, affordable, completed, locked=False,
                  level=0, options=None, state="", action_id=0,
-                 kind_label="", prereq_names=None, effect="", option_effects=None):
+                 kind_label="", prereq_names=None, effect="", option_effects=None,
+                 done=False, int_cd=0):
         self.xp_position = xp_position
         # vehicle | module (tech-tree unlock kind) | fieldmod. Drives the
         # per-tick glyph in the view (a bar is all-tech-tree or all-field-mods,
@@ -80,6 +81,14 @@ class Tick(object):
         # Per-variant effect summaries for an A/B choice level, aligned with
         # `options` by index (each variant's buffs joined inline). Empty otherwise.
         self.option_effects = option_effects or []
+        # Session "done" marker (adapter/recent.py): True on the synthetic first tick
+        # for an item just researched via the bar -> the JS green-check + open-screen
+        # click. False for every ordinary tick.
+        self.done = done
+        # The researched item's id, carried ONLY on a done marker so the (engine-bound)
+        # bridge can look up its live credits buy price + ownership at marshal time.
+        # 0 for ordinary ticks (they use action_id for the actionable id instead).
+        self.int_cd = int_cd
 
 
 class UnlockItem(object):
@@ -104,7 +113,8 @@ class UnlockItem(object):
 class ProgressionStep(object):
     """A field-modification step (post-progression tree node, paid with XP)."""
     def __init__(self, step_id, name, icon, xp_cost, unlocked, level=0,
-                 options=None, description="", option_effects=None, category=""):
+                 options=None, description="", option_effects=None, category="",
+                 done=False):
         self.step_id = step_id
         self.name = name
         self.icon = icon
@@ -123,6 +133,10 @@ class ProgressionStep(object):
         # that variant's own buffs joined inline (" · "). Empty for non-choice
         # steps. e.g. ["+5% to aiming speed · +3% to aiming circle size", ...].
         self.option_effects = option_effects or []
+        # Session "done" marker (adapter/recent.py): True on the synthetic tier-XI
+        # chip for a node just unlocked via the bar -> sorted first + open-screen
+        # click. False for ordinary available-upgrade chips.
+        self.done = done
 
 
 class EliteGrade(object):

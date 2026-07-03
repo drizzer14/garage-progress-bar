@@ -23,6 +23,7 @@ from wgmod_research.adapter.format import (
     kpi_objs as _kpi_objs, kpi_prefix as _kpi_prefix,
     skilltree_value as _skilltree_value)
 from wgmod_research.domain import types as t
+from wgmod_research.domain.constants import Category
 from wgmod_research.domain.resolvers.fieldmods import max_level
 
 
@@ -176,7 +177,7 @@ def _read_tech_unlocks(veh, unlocks):
             prereq_names = [nm for nm in (_unlock_name(cache, p) for p in missing) if nm]
             out.append(t.UnlockItem(
                 int_cd=int_cd, name=name, icon=icon, xp_cost=int(xp_cost),
-                kind=("vehicle" if is_vehicle else "module"),
+                kind=(Category.VEHICLE if is_vehicle else Category.MODULE),
                 researched=(int_cd in unlocks),
                 prereqs_met=(not missing),
                 kind_label=kind_label, prereq_names=prereq_names))
@@ -235,7 +236,7 @@ def read_purchase_price(int_cd, category, veh_int_cd=0):
     try:
         if not int_cd:
             return 0
-        if category == "fieldmod":
+        if category == Category.FIELDMOD:
             return _fieldmod_selection_price(int_cd)  # int_cd is the leveled step_id
         item = _safe(lambda: _items_cache().items.getItemByCD(int(int_cd)), None)
         if item is None:

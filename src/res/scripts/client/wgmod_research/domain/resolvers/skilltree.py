@@ -15,6 +15,7 @@ same contract as elite.py), or None when this isn't a skill-tree vehicle or the
 tree is already fully upgraded (so the builder falls through to ELITE / COMPLETE).
 """
 from wgmod_research.domain import types as t
+from wgmod_research.domain.constants import Category
 
 
 def resolve(snapshot):
@@ -41,7 +42,7 @@ def resolve(snapshot):
         # Only the final tick carries an icon + name + cost (-> its end-tick tooltip,
         # reusing the Tick name/xp_required fields). The plain count ticks stay bare.
         ticks.append(t.Tick(
-            xp_position=i, category="upgrade",
+            xp_position=i, category=Category.UPGRADE,
             icon=(snapshot.skilltree_final_icon if is_final else ""),
             name=(snapshot.skilltree_final_name if is_final else ""),
             xp_gained=0,

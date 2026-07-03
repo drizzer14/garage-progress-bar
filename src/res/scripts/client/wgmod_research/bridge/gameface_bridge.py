@@ -25,6 +25,7 @@ from wgmod_research.adapter import actions
 from wgmod_research.adapter import i18n
 from wgmod_research.adapter import recent
 from wgmod_research.domain.builder import build_model, bar_visible
+from wgmod_research.domain.constants import Category
 from wgmod_research.bridge import mod_settings
 from wgmod_research.bridge.wulf_args import (
     map_get as _map_get, cmd_int_arg as _cmd_int_arg, cmd_xy_arg as _cmd_xy_arg)
@@ -350,7 +351,7 @@ def _record_click(int_cd):
         for s in (snap.field_mod_steps or []):
             if getattr(s, "step_id", None) == int_cd and not getattr(s, "unlocked", False):
                 recent.record(recent.FIELDMOD, veh, int_cd,
-                              name=s.name, icon=s.icon, category="fieldmod",
+                              name=s.name, icon=s.icon, category=Category.FIELDMOD,
                               level=getattr(s, "level", 0),
                               effect=getattr(s, "description", ""),
                               xp_cost=getattr(s, "xp_cost", 0))

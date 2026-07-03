@@ -15,6 +15,7 @@ Each returns a plain dict the builder maps onto ResearchProgressModel. `fill` is
 the position OFFSET from scale_min (scale_min + fill == current position).
 """
 from wgmod_research.domain import types as t
+from wgmod_research.domain.constants import Category, GradeFamily
 
 # The in-game elite-level grade emblems -- the same hexagonal badges the battle
 # team-HP bars show next to a player's vehicle. 48x48 set; families iron/bronze/
@@ -29,7 +30,7 @@ _EMBLEM_BASE = "img://gui/maps/icons/prestige/emblem/72x72/"
 
 
 def _emblem_url(family, sub):
-    if family == "prestige":
+    if family == GradeFamily.PRESTIGE:
         return _EMBLEM_BASE + "prestige.png"
     if family and 1 <= sub <= 4:
         return _EMBLEM_BASE + "%s/%d.png" % (family, sub)
@@ -112,8 +113,8 @@ def resolve_grade_band(snapshot):
 
     # At MAX ("prestige", a single synthetic entry at max_level): show the last
     # real complex band, full, badged as the max grade.
-    if current_family == "prestige":
-        real = [f for f in families if f != "prestige"]
+    if current_family == GradeFamily.PRESTIGE:
+        real = [f for f in families if f != GradeFamily.PRESTIGE]
         band_family = real[-1] if real else current_family
     else:
         band_family = current_family
@@ -146,7 +147,7 @@ def resolve_grade_band(snapshot):
         else:
             state = "upcoming"
         ticks.append(t.Tick(
-            xp_position=g.level, category="elite",
+            xp_position=g.level, category=Category.ELITE,
             icon=_emblem_url(band_family, g.sub),
             name=_grade_title(band_family, g.sub),
             xp_gained=0, xp_required=level_xp.get(g.level, 0), affordable=False,
@@ -160,7 +161,7 @@ def resolve_grade_band(snapshot):
         if nxt_grades:
             ng = min(nxt_grades, key=lambda g: g.level)
             ticks.append(t.Tick(
-                xp_position=ng.level, category="elite",
+                xp_position=ng.level, category=Category.ELITE,
                 icon=_emblem_url(nxt, ng.sub),
                 name=_grade_title(nxt, ng.sub),
                 xp_gained=0, xp_required=level_xp.get(ng.level, 0), affordable=False,
@@ -168,7 +169,7 @@ def resolve_grade_band(snapshot):
                 state=("achieved" if level >= ng.level else "upcoming")))
 
     frac = _fill_fraction(snapshot.elite_current_xp, snapshot.elite_next_xp)
-    if current_family == "prestige":
+    if current_family == GradeFamily.PRESTIGE:
         position = band_max  # maxed -> full bar
         sub = 0
     else:
@@ -211,7 +212,7 @@ def resolve_reward_track(snapshot):
         # type label rides along in `options` so the JS tooltip can show it.
         opts = [r.type_label] if r.type_label else []
         ticks.append(t.Tick(
-            xp_position=r.level, category="reward", icon=r.icon,
+            xp_position=r.level, category=Category.REWARD, icon=r.icon,
             name=r.label, xp_gained=0, xp_required=level_xp.get(r.level, 0),
             affordable=False, completed=r.achieved, state=state, options=opts))
 

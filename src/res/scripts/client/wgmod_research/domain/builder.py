@@ -77,6 +77,12 @@ def build_model(snapshot, enabled=None):
             fieldmods_done=fm_done, fieldmods_total=fm_total, vehicle_class=veh_class,
             spendable_xp=spendable)
 
+    def _emit(mode, model):
+        # Honor the per-mode user toggle: a mode this vehicle RESOLVED to but which the
+        # user turned off hides the bar -- there is NO fall-through to a lower-priority
+        # mode (see build_model's docstring). Otherwise emit the resolved model.
+        return model if _on(enabled, mode) else _hidden()
+
     # Research takes priority: while ANY tech unlock (module or next vehicle) is
     # still unresearched, show the tech tree -- even on a vehicle the account
     # already counts as elite. veh.isElite is merely eliteVehicles membership and
@@ -87,12 +93,10 @@ def build_model(snapshot, enabled=None):
     # the exact "nothing left to research" signal.
     ticks = techtree.resolve(snapshot)
     if ticks:
-        if not _on(enabled, t.Mode.TECH_TREE):
-            return _hidden()
-        return t.ResearchProgressModel(
+        return _emit(t.Mode.TECH_TREE, t.ResearchProgressModel(
             mode=t.Mode.TECH_TREE, scale_min=0, scale_max=_max_pos(ticks, 0),
             fill_vehicle=fill_vehicle, fill_free=fill_free, ticks=ticks,
-            vehicle_class=veh_class, spendable_xp=spendable)
+            vehicle_class=veh_class, spendable_xp=spendable))
 
     # Tier-XI "vehicle skill tree" upgrade: a branching post-progression tree, so
     # the linear FIELD_MODS reader doesn't apply. The tree is non-linear, so the bar
@@ -104,27 +108,23 @@ def build_model(snapshot, enabled=None):
     if snapshot.is_skill_tree:
         st = skilltree.resolve(snapshot)
         if st is not None:
-            if not _on(enabled, t.Mode.SKILL_TREE):
-                return _hidden()
-            return t.ResearchProgressModel(
+            return _emit(t.Mode.SKILL_TREE, t.ResearchProgressModel(
                 mode=t.Mode.SKILL_TREE, scale_min=st["scale_min"],
                 scale_max=st["scale_max"], fill_vehicle=st["fill"],
                 fill_free=0, ticks=st["ticks"],
                 fieldmods_done=st["done"], fieldmods_total=st["total"],
                 vehicle_class=veh_class, spendable_xp=spendable,
-                avail_upgrades=st.get("avail_upgrades", []))
+                avail_upgrades=st.get("avail_upgrades", [])))
 
     # Nothing left to research: show remaining Field Modifications, plus the
     # researched/total field-mod-level counter in the header.
     fm_ticks = fieldmods.resolve(snapshot)
     if fm_ticks:
-        if not _on(enabled, t.Mode.FIELD_MODS):
-            return _hidden()
-        return t.ResearchProgressModel(
+        return _emit(t.Mode.FIELD_MODS, t.ResearchProgressModel(
             mode=t.Mode.FIELD_MODS, scale_min=0, scale_max=_max_pos(fm_ticks, 0),
             fill_vehicle=fill_vehicle, fill_free=fill_free, ticks=fm_ticks,
             fieldmods_done=fm_done, fieldmods_total=fm_total, vehicle_class=veh_class,
-            spendable_xp=spendable)
+            spendable_xp=spendable))
 
     # Fully researched. If the vehicle has Elite-Levels (prestige) data, show
     # the prestige progression instead of the static "fully researched" badge.
@@ -133,14 +133,11 @@ def build_model(snapshot, enabled=None):
         # unearned; once all are earned, fall through to the grade band.
         reward = elite.resolve_reward_track(snapshot)
         if reward is not None and reward["any_unearned"]:
-            if not _on(enabled, t.Mode.ELITE_REWARDS):
-                return _hidden()
-            return _elite_model(t.Mode.ELITE_REWARDS, reward, snapshot)
+            return _emit(t.Mode.ELITE_REWARDS,
+                         _elite_model(t.Mode.ELITE_REWARDS, reward, snapshot))
         band = elite.resolve_grade_band(snapshot)
         if band is not None:
-            if not _on(enabled, t.Mode.ELITE):
-                return _hidden()
-            return _elite_model(t.Mode.ELITE, band, snapshot)
+            return _emit(t.Mode.ELITE, _elite_model(t.Mode.ELITE, band, snapshot))
 
     # nothing left to research and no prestige data: COMPLETE (elite badge).
     return t.ResearchProgressModel(
