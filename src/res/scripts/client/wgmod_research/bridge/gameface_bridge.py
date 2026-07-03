@@ -203,56 +203,65 @@ def _in_garage():
 
 
 # --- engine event subscriptions -------------------------------------------------
-# Each event is acquired by its own getter (returning the Event object, or None if the
-# provider isn't ready yet -- retried next mount). Handlers are the stable module-level
-# functions above. install_all_listeners() arms them all; see the block comment near
-# _active for the re-arm rationale.
+# Each entry names the HOLDER object that owns the Event (resolved lazily each mount,
+# so a not-yet-ready provider just skips and is retried) and the attribute the Event
+# lives on. Handlers are the stable module-level functions above. install_all_listeners
+# arms them all; see the block comment near _active for the re-arm rationale.
+#
+# We subscribe via getattr/+=/setattr (i.e. `holder.attr += handler`), NOT `event +=
+# handler` on a local: WoT's Event augmented-add does not reliably mutate the shared
+# object in place, so the result MUST be stored back onto the attribute or the
+# subscription is silently lost (the bar then never updates).
 
-def _vehicle_event():
-    return g_currentVehicle.onChanged
+def _vehicle_holder():
+    return g_currentVehicle
 
 
-def _loadout_event():
-    return dependency.instance(ILoadoutController).onInteractorUpdated
+def _loadout_holder():
+    return dependency.instance(ILoadoutController)
 
 
-def _lobby_state_event():
+def _lobby_holder():
     from gui.Scaleform.lobby_entry import getLobbyStateMachine
-    machine = getLobbyStateMachine()
-    return machine.onVisibleRouteChanged if machine is not None else None
+    return getLobbyStateMachine()  # None until the lobby state machine exists
 
 
-def _stats_event():
-    return dependency.instance(IItemsCache).onSyncCompleted
+def _stats_holder():
+    return dependency.instance(IItemsCache)
 
 
-def _colorblind_event():
+def _colorblind_holder():
     from skeletons.account_helpers.settings_core import ISettingsCore
-    return dependency.instance(ISettingsCore).onSettingsChanged
+    return dependency.instance(ISettingsCore)
 
 
-# (label, event-getter, handler) -- what the bar listens to.
+# (label, holder-getter, event-attribute, handler) -- what the bar listens to.
 #   vehicle : vehicle-selection changes
 #   loadout : tank-setup (ammo) overlay open/close -> hide/show the bar
 #   lobby   : garage <-> other lobby views -> hide off the plain garage
 #   stats   : items-cache syncs (free-XP convert, research/field-mod buys, XP, prestige)
 #   colorblind : WoT's color-blind toggle -> re-color live
 _LISTENERS = (
-    ("vehicle", _vehicle_event, _on_vehicle_changed),
-    ("loadout", _loadout_event, _on_interactor_updated),
-    ("lobby state", _lobby_state_event, _on_lobby_state_changed),
-    ("stats", _stats_event, _on_sync_completed),
-    ("colorblind", _colorblind_event, _on_settings_changed),
+    ("vehicle", _vehicle_holder, "onChanged", _on_vehicle_changed),
+    ("loadout", _loadout_holder, "onInteractorUpdated", _on_interactor_updated),
+    ("lobby state", _lobby_holder, "onVisibleRouteChanged", _on_lobby_state_changed),
+    ("stats", _stats_holder, "onSyncCompleted", _on_sync_completed),
+    ("colorblind", _colorblind_holder, "onSettingsChanged", _on_settings_changed),
 )
 
 
-def _arm(label, get_event, handler):
-    """Subscribe `handler` to its event iff not already present. Self-healing +
-    idempotent; guarded so a not-yet-ready provider just skips (retried next mount)."""
+def _arm(label, get_holder, attr, handler):
+    """Subscribe `handler` to holder.<attr> iff not already present, storing the
+    augmented Event back onto the attribute (see the note above). Self-healing +
+    idempotent; guarded so a not-yet-ready holder just skips (retried next mount)."""
     try:
-        event = get_event()
+        holder = get_holder()
+        if holder is None:
+            return
+        event = getattr(holder, attr)
         if event is not None and handler not in event:
             event += handler
+            setattr(holder, attr, event)
             LOG_NOTE("[wgmod] %s listener (re)armed" % label)
     except Exception:
         LOG_CURRENT_EXCEPTION()
