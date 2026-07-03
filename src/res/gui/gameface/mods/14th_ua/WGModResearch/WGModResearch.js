@@ -58,13 +58,14 @@ const COMBAT_XP_ICON = "img://gui/maps/icons/library/xpIcon_23x22.png";
 // buy). Matches the top-right account-balance credits icon.
 const CREDITS_ICON = "img://gui/maps/icons/library/CreditsIcon-3.png";
 
-// EXPERIMENT (A-B): which art fills the elite category-icon slot.
-//   "emblem" -> the hexagon grade emblem (current shipped default)
-//   "tab"    -> the battle team-HP arrowhead/chevron grade badge ("tab" art)
+// Which art fills the elite grade badge (category-icon slot + below-bar ticks).
+//   "tab"    -> the battle team-HP arrowhead/chevron grade badge ("tab" art) -- SHIPPED
+//   "emblem" -> the hexagon grade emblem (also the automatic fallback when tab art is
+//               unavailable for a grade, regardless of this setting)
 // The tab set is .../prestige/tab/<family>/<size>/<grade>.png (size short|medium|
 // long). NB the tab PNGs are OPAQUE in the game files -- their see-through look in
-// battle is a game-applied style, not baked into the art. See IDEAS.md.
-const ELITE_CAT_ICON_STYLE = "tab";     // "emblem" | "tab"
+// battle is a game-applied style, not baked into the art.
+const ELITE_CAT_ICON_STYLE = "tab";     // "tab" (shipped) | "emblem"
 const ELITE_TAB_SIZE = "auto";          // "auto" (by digit count) | "short" | "medium" | "long"
 const ELITE_TAB_SHOW_NUMBER = true;     // overlay the elite level number on the tab
 // The terminal grade (elite lvl 350 / MAX) uses the prestige HEXAGON emblem inside
@@ -80,13 +81,15 @@ function eliteIcon(vehClass) {
         vehClass.replace(/-/g, "_") + "_elite.png";
 }
 
-// The ELITE grade tick renders the in-game prestige HEXAGON EMBLEM -- the exact
-// badge the hangar carousel vehicle tooltip shows (game component
-// PrestigeProgressSymbol: a single emblem PNG drawn once, no backing/glow/blend).
-// The 72x72 emblem art is solid (~245/255 alpha over the shape), so one draw reads
-// opaque on the hangar -- no stacking trick needed (that was for the translucent
-// chevron `tab` art, now retired). The emblem URL arrives on the tick as t.icon
-// (.../prestige/emblem/<size>/<family>/<sub>.png, or .../prestige.png for MAX).
+// The ELITE grade badges (category icon + below-bar ticks) render the battle team-HP
+// arrowhead "tab" grade badge by default (ELITE_CAT_ICON_STYLE above; see fillTabBadge),
+// FALLING BACK to the in-game prestige HEXAGON EMBLEM when tab art doesn't resolve.
+// The emblem is the exact badge the hangar carousel vehicle tooltip shows (game
+// component PrestigeProgressSymbol: a single emblem PNG drawn once, no backing/glow/
+// blend); its 72x72 art is solid (~245/255 alpha over the shape), so one draw reads
+// opaque on the hangar -- no stacking trick needed. The grade URL arrives on the tick
+// as t.icon (.../prestige/emblem/<size>/<family>/<sub>.png, or .../prestige.png for
+// MAX); gradeTabUrl() rewrites it to the tab art. GRADE_COLOR tints the level numeral.
 const GRADE_FAMILIES = { iron: 1, bronze: 1, silver: 1, gold: 1, enamel: 1 };
 // Per-grade number tint -- the EXACT values from the game's own PrestigeProgressTab
 // component CSS (.level color per grade). enamel reuses gold, as the game does.

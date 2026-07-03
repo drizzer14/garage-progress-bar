@@ -132,11 +132,6 @@ def widget_labels():
     out["sepOr"] = _text(
         lambda: _S().tooltips.vehicle.textDelimiter.c_or(), _FALLBACK["sepOr"])
 
-    # NOT YET WIRED (left English): headerComplete, headerElite, headerEliteRewards,
-    # requires. No WG resource confirmed for these; confirm rendered text via the debug
-    # REPL, then add an accessor here. Candidate leads to probe:
-    #   veh_skill_tree.footer.description.text.allResearched  (id 59197)
-    #   prestige.profile.header / prestige.entryPoint.header / prestige.prestigeRewardView.title.*
     return out
 
 

@@ -1,0 +1,30 @@
+name: CI
+
+# The mod is packaged with Python 2.7.18 (bytecode is version-locked -- see CLAUDE.md),
+# but 2.7 is EOL and unavailable on GitHub runners. So CI does NOT build the .wotmod;
+# it runs the checks that DO work on a modern interpreter: the engine-free domain test
+# suite, the version-consistency guard, and a lenient lint. These gates alone catch the
+# kind of drift that has slipped through before (a stale version reference in the docs).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      - name: Install dev dependencies
+        run: python -m pip install -r requirements-dev.txt
+      - name: Version consistency
+        run: python build/check_version.py
+      - name: Lint
+        run: python -m ruff check .
+      - name: Tests
+        run: python -m pytest -q

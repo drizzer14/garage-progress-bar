@@ -85,8 +85,8 @@ Wargaming publishes Fair Play guidelines. Allowed: UI, info, cosmetic, QoL mods.
 ## 8. Resolved scope (this mod)
 - **Target client:** WoT EU `2.3.0.1` (`mods/2.3.0.1/`).
 - **UI:** Gameface (HTML/CSS/JS widget) driven by a Python data model; no Flash.
-- **Config UI:** none — no ModsSettings API / ModsList dependency. Hard dependency
-  on **OpenWG GameFace** only.
+- **Config UI:** in-game settings via **ModsSettingsAPI** (optional, soft dependency —
+  guarded so the mod runs without it). Hard dependency on **OpenWG GameFace**.
 - **Distribution:** packaged `.wotmod` (+ Inno Setup installer). Loose `res_mods`
   does NOT load in 2.3 and is used only as a dev hot-reload overlay.
 

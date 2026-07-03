@@ -33,9 +33,11 @@ DIST = os.path.join(ROOT, "dist")
 
 def _check_python():
     if sys.version_info[0] != 2 or sys.version_info[1] != 7:
-        print("WARNING: not running Python 2.7 (got {0}.{1}). The resulting "
-              ".pyc will NOT load in the WoT client."
-              .format(sys.version_info[0], sys.version_info[1]))
+        sys.exit("ERROR: build_wotmod must run under Python 2.7 (got {0}.{1}). "
+                 "The game executes the .pyc and bytecode is version-locked, so a "
+                 "package built under any other version will NOT load in the WoT "
+                 "client. Re-run with C:\\Python27\\python.exe."
+                 .format(sys.version_info[0], sys.version_info[1]))
 
 
 def _read_meta():
