@@ -1,6 +1,6 @@
 # Research: Purchase price (credits) on "done" tick tooltips
 
-_Submitted: "Add purchase price for 'done' ticks' tooltips. Use the same design as xp." · Status: open_
+_Submitted: "Add purchase price for 'done' ticks' tooltips. Use the same design as xp." · Status: shipped_
 
 ## Summary
 A "done" tick (an item researched via the bar this session — green check, opens the

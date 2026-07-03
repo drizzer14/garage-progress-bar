@@ -1,6 +1,6 @@
 # Research: Verify tooltip icons use the highest-quality assets
 
-_Submitted: "Verify tooltip icons use the most high quality assets possible" · Status: open_
+_Submitted: "Verify tooltip icons use the most high quality assets possible" · Status: shipped_
 
 ## Summary
 Audit of every icon rendered in a tooltip to confirm each pulls the largest
