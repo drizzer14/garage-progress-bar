@@ -13,13 +13,3 @@ the mod reads no per-battle average today, so it needs a NEW engine read (likely
 per-vehicle dossier via `IItemsCache` — API unverified, probe live first) + a new
 snapshot field + VM number. Hide the line when the tank has 0 battles.
 → Research: IDEAS/estimated-battles-remaining.md
-
-### JS mode/category/command constant sweep
-Follow-up to the Tier 3g refactor. `WGModResearch.js` switches on mode / category /
-command names as **bare string literals** scattered across ~30 sites; the Python side
-already centralized them (`domain/types.py` `Mode`, `domain/constants.py` `Category`,
-`bridge/view_models.py` commands). A value drift or typo on the JS side fails
-SILENTLY (a tick renders wrong or a click no-ops — no exception), so hoist them into a
-single source-of-truth block at the top of the JS mirroring the Python enums. Low
-priority, but verify live (no compile check on JS).
-→ Research: IDEAS/js-constant-sweep.md

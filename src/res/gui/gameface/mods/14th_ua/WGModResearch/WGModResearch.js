@@ -3,6 +3,31 @@
 // via ModelObserver, and renders a single-axis XP bar with stacked fill + ticks.
 import { ModelObserver } from "../../libs/model.js";
 
+// --- Wire contract with the Python side ------------------------------------
+// These string VALUES are the Python<->JS contract; they MUST equal the Python
+// enums verbatim. Python centralizes them (a typo there is a NameError), but the
+// widget used to hard-code the same literals at ~30 sites, where a drift fails
+// SILENTLY (a tick renders the wrong glyph, a click no-ops). Hoisted here so each
+// value has ONE definition -- keep in lockstep with the enum noted on each block.
+const MODE = {                                          // domain/types.py Mode
+    TECH_TREE: "tech_tree", FIELD_MODS: "field_mods", SKILL_TREE: "skill_tree",
+    ELITE_REWARDS: "elite_rewards", ELITE: "elite", COMPLETE: "complete",
+    HIDDEN: "hidden",   // bar isn't pushed at all for HIDDEN, so JS never sees it
+};
+const CAT = {                                           // domain/constants.py Category
+    VEHICLE: "vehicle", MODULE: "module", FIELDMOD: "fieldmod",
+    UPGRADE: "upgrade", ELITE: "elite", REWARD: "reward",
+};
+const CMD = {                                           // bridge/view_models.py commands
+    RESEARCH_UNLOCK: "researchUnlock", UNLOCK_FIELD_MOD: "unlockFieldMod",
+    OPEN_SKILL_TREE: "openSkillTree", OPEN_RESEARCH: "openResearch",
+    OPEN_FIELD_MODS: "openFieldMods", SET_POSITION: "setPosition",
+};
+const GRADE = {                                         // domain/constants.py GradeFamily
+    IRON: "iron", BRONZE: "bronze", SILVER: "silver", GOLD: "gold",
+    ENAMEL: "enamel", PRESTIGE: "prestige", UNDEFINED: "undefined",
+};
+
 const observer = ModelObserver("WGModResearch");
 
 // Localized widget labels, sourced from the game's own resource strings and pushed
@@ -22,11 +47,11 @@ function L(key, fallback) {
 // Category icon for the bar header -- the same art the in-game "Vehicle
 // management" menu uses for each section. Keyed by bar mode.
 const CAT_ICON = {
-    tech_tree: "img://gui/maps/icons/hangar/vehicleMenu/large/research.png",
-    field_mods: "img://gui/maps/icons/hangar/vehicleMenu/large/fieldModification.png",
+    [MODE.TECH_TREE]: "img://gui/maps/icons/hangar/vehicleMenu/large/research.png",
+    [MODE.FIELD_MODS]: "img://gui/maps/icons/hangar/vehicleMenu/large/fieldModification.png",
     // Tier-XI vehicle skill tree -> the dedicated "Upgrades" vehicle-management
     // section glyph (white tank + node network), matching research/fieldMod above.
-    skill_tree: "img://gui/maps/icons/hangar/vehicleMenu/large/vehSkillTree.png",
+    [MODE.SKILL_TREE]: "img://gui/maps/icons/hangar/vehicleMenu/large/vehSkillTree.png",
 };
 
 // Skill-tree (Tier-XI upgrades) mode replaces the right-side Total-XP readout with
@@ -90,15 +115,17 @@ function eliteIcon(vehClass) {
 // opaque on the hangar -- no stacking trick needed. The grade URL arrives on the tick
 // as t.icon (.../prestige/emblem/<size>/<family>/<sub>.png, or .../prestige.png for
 // MAX); gradeTabUrl() rewrites it to the tab art. GRADE_COLOR tints the level numeral.
-const GRADE_FAMILIES = { iron: 1, bronze: 1, silver: 1, gold: 1, enamel: 1 };
+const GRADE_FAMILIES = {
+    [GRADE.IRON]: 1, [GRADE.BRONZE]: 1, [GRADE.SILVER]: 1, [GRADE.GOLD]: 1, [GRADE.ENAMEL]: 1,
+};
 // Per-grade number tint -- the EXACT values from the game's own PrestigeProgressTab
 // component CSS (.level color per grade). enamel reuses gold, as the game does.
 const GRADE_COLOR = {
-    iron: "#909ba1",
-    bronze: "#f18140",
-    silver: "#87b2ca",
-    gold: "#ecbe6e",
-    enamel: "#ecbe6e",
+    [GRADE.IRON]: "#909ba1",
+    [GRADE.BRONZE]: "#f18140",
+    [GRADE.SILVER]: "#87b2ca",
+    [GRADE.GOLD]: "#ecbe6e",
+    [GRADE.ENAMEL]: "#ecbe6e",
 };
 function gradeFamily(emblemUrl) {
     // emblem URL is .../prestige/emblem/<size>/<family>/<sub>.png -- pull <family>.
@@ -142,7 +169,7 @@ function gradeTabUrl(emblemUrl, size) {
 // art is itself colored per grade, so no CSS tint is applied. emblemFont has no
 // `enamel` set -> fall back to gold (matches the amber tint enamel used previously).
 function emblemFontFamily(family) {
-    return family === "enamel" ? "gold" : (family || "gold");
+    return family === GRADE.ENAMEL ? GRADE.GOLD : (family || GRADE.GOLD);
 }
 function emblemFontUrl(family, digit) {
     return "img://gui/maps/icons/prestige/emblemFont/16x33/" +
@@ -259,7 +286,7 @@ function escapeHtml(s) {
 // numeral already rides the hexagon glyph, so it's not repeated here).
 function tickName(t) {
     if (t.name) return t.name;
-    if (t.category === "fieldmod") return L("capFieldMod", "Field Modification");
+    if (t.category === CAT.FIELDMOD) return L("capFieldMod", "Field Modification");
     return "";
 }
 
@@ -396,15 +423,15 @@ function bgIconHtml(url, mod) {
 // basename (not a URL), so it is never used as a background image. No usable art ->
 // "" (text-only tooltip, header row omitted).
 function tickIconHtml(t) {
-    if (t.category === "fieldmod") {
+    if (t.category === CAT.FIELDMOD) {
         return '<div class="wg-tip-icon wg-tip-hex"><span>' +
             escapeHtml(romanize(t.level)) + "</span></div>";
     }
     if (t.icon && t.icon.indexOf("img://") === 0) {
         // Vehicle-node art is wide (~160x100) -> wide-short box; module glyphs are
         // square but read too tall at the default 52 -> their own smaller box.
-        var mod = t.category === "vehicle" ? "wg-tip-icon-veh"
-            : t.category === "module" ? "wg-tip-icon-mod" : "";
+        var mod = t.category === CAT.VEHICLE ? "wg-tip-icon-veh"
+            : t.category === CAT.MODULE ? "wg-tip-icon-mod" : "";
         return bgIconHtml(t.icon, mod);
     }
     return "";
@@ -458,7 +485,7 @@ function doneBadge() {
 function doneGlyph(t) {
     const g = document.createElement("div");
     g.className = "wg-done-glyph";
-    if (t.category === "fieldmod") {
+    if (t.category === CAT.FIELDMOD) {
         g.className += " wg-done-glyph-hex";
         const hex = document.createElement("div");
         hex.className = "wg-tick-hex";
@@ -485,7 +512,7 @@ function tooltipHtml(t, spendableXp, fillVehicle) {
     const opts = splitLines(t.options);
     const optEffects = (t.optionEffects || "").split("\n");   // raw: index-aligned with opts
     let title = "", body = "", foot = "";
-    if (t.category === "fieldmod") {
+    if (t.category === CAT.FIELDMOD) {
         const cap = capHtml(escapeHtml(L("capFieldMod", "Field Modification")));
         if (opts.length) {
             // Choice level -> the selectable variants ARE the content (with buffs).
@@ -501,7 +528,7 @@ function tooltipHtml(t, spendableXp, fillVehicle) {
         // Type caption: tech-tree kind ("Gun"/"Turret"/.../"Tier IX"), else "Upgrade"
         // for tier-XI skill-tree nodes (which carry no kindLabel).
         const cap = t.kindLabel ? capHtml(escapeHtml(t.kindLabel))
-            : t.category === "upgrade" ? capHtml(escapeHtml(L("headerSkillTree", "Upgrades"))) : "";
+            : t.category === CAT.UPGRADE ? capHtml(escapeHtml(L("headerSkillTree", "Upgrades"))) : "";
         const name = tickName(t);
         const nm = name ? '<div class="wg-tip-name">' + escapeHtml(name) + "</div>" : "";
         title = cap + nm;
@@ -738,8 +765,8 @@ function renderNextAvailable(nextEl, arr, hotEl, spendableXp, fillVehicle) {
             if (u.done) chip.appendChild(doneBadge());   // green check, bottom-right
             nextEl.appendChild(chip);
             chips.push(u.done
-                ? { el: chip, tip: tip, cmd: "openSkillTree", arg: undefined }
-                : { el: chip, tip: tip, cmd: "unlockFieldMod", arg: u.actionId });
+                ? { el: chip, tip: tip, cmd: CMD.OPEN_SKILL_TREE, arg: undefined }
+                : { el: chip, tip: tip, cmd: CMD.UNLOCK_FIELD_MOD, arg: u.actionId });
         }
         nextEl.style.display = "flex";
     } else {
@@ -821,11 +848,11 @@ const HOT_BOTTOM_STACKED_REM = -70;
 // Visible glyph footprint (rem) hung below a tick, by mode/category. Half of it
 // (+ a small gap) is the horizontal clearance each glyph needs to not overlap.
 function glyphFootprintRem(t, mode) {
-    if (mode === "elite_rewards") return 30;                       // reward thumb
-    if (mode === "elite") return 36;                               // arrowhead tab badge (36rem wide)
-    if (t.category === "fieldmod") return 18;                      // hex badge
-    if (t.category === "vehicle") return 45;                       // framed tank contour
-    return 24;                                                     // module glyph
+    if (mode === MODE.ELITE_REWARDS) return 30;                 // reward thumb
+    if (mode === MODE.ELITE) return 36;                         // arrowhead tab badge (36rem wide)
+    if (t.category === CAT.FIELDMOD) return 18;                 // hex badge
+    if (t.category === CAT.VEHICLE) return 45;                  // framed tank contour
+    return 24;                                                  // module glyph
 }
 function glyphHalfPct(t, mode) {
     return ((glyphFootprintRem(t, mode) / 2) + 3) / TICKS_WIDTH_REM * 100;
@@ -936,7 +963,7 @@ function applyPosition(root, data) {
         // seed:1 marks this as the DEFAULT position (measured at the CSS default spot), so
         // Python records it as the reset target -> the panel's reset repaints X/Y to the
         // real default coords, not 0/0.
-        if (cx > 0 && cy > 0) invokeCommand("setPosition", { x: cx, y: cy, seed: 1 });
+        if (cx > 0 && cy > 0) invokeCommand(CMD.SET_POSITION, { x: cx, y: cy, seed: 1 });
         else root._wgSeedPending = false;
     });
 }
@@ -1021,7 +1048,7 @@ function renderTicks(ticksEl, ticks, n, spec) {
 // tech-tree ticks -> the real module/vehicle art (background-image; Gameface clips <img>).
 function linearGlyph(t, mode) {
     if (t.done) return doneGlyph(t);
-    if (t.category === "fieldmod") {
+    if (t.category === CAT.FIELDMOD) {
         const hex = document.createElement("div");
         hex.className = "wg-tick-hex";
         const num = document.createElement("span");
@@ -1029,7 +1056,7 @@ function linearGlyph(t, mode) {
         hex.appendChild(num);
         return hex;
     }
-    if (t.icon && mode === "skill_tree") {
+    if (t.icon && mode === MODE.SKILL_TREE) {
         // FINAL upgrade: a framed perk glyph (diamond -- a major 25k node), matching the
         // Next-available chips (reuses the chip frame/glyph classes).
         const fin = document.createElement("div");
@@ -1121,8 +1148,8 @@ function render(model) {
 
     // Elite Levels (prestige) modes own the whole header + bar (grade/reward
     // readout, single-segment fill, combat-XP star), so they branch out early.
-    if (data.mode === "elite" || data.mode === "elite_rewards") {
-        renderElite(root, data, data.mode === "elite_rewards");
+    if (data.mode === MODE.ELITE || data.mode === MODE.ELITE_REWARDS) {
+        renderElite(root, data, data.mode === MODE.ELITE_REWARDS);
         return;
     }
 
@@ -1146,7 +1173,7 @@ function render(model) {
     // Right-side readout: skill-tree shows the unlocked/total node COUNT fronted by
     // the Upgrades-screen counter glyph; every other mode (incl. COMPLETE below)
     // shows spendable Total XP.
-    if (mode === "skill_tree") {
+    if (mode === MODE.SKILL_TREE) {
         root.querySelector(".wg-xp-ico").style.backgroundImage =
             "url('" + SKILL_COUNTER_ICON + "')";
         root.querySelector(".wg-xp-val").textContent =
@@ -1198,9 +1225,9 @@ function render(model) {
     // caption at the right end (and brighten the final tick glyph in the loop below).
     const stDone = data.fieldModsDone || 0;
     const stTotal = data.fieldModsTotal || 0;
-    const onlyFinal = mode === "skill_tree" && stTotal > 0 &&
+    const onlyFinal = mode === MODE.SKILL_TREE && stTotal > 0 &&
         stDone === stTotal - 1 && arrLen(data.availUpgrades) >= 1;
-    if (mode === "skill_tree" && nextEl && !onlyFinal) {
+    if (mode === MODE.SKILL_TREE && nextEl && !onlyFinal) {
         const sig = upgradesSig(data.availUpgrades, spendableXp);
         if (nextEl._wgSig !== sig) {
             nextEl._wgSig = sig;
@@ -1225,7 +1252,7 @@ function render(model) {
     // COMPLETE (nothing left to research/upgrade/unlock) -> just hide the bar; there's
     // no localized "Fully researched" header we want to show, and an empty bar adds no
     // information. Same for a degenerate empty scale (sMax<=sMin).
-    if (mode === "complete" || sMax <= sMin) {
+    if (mode === MODE.COMPLETE || sMax <= sMin) {
         root.style.display = "none";
         return;
     }
@@ -1235,10 +1262,10 @@ function render(model) {
     // upgrade carrying its icon on the rightmost tick. No per-node tooltips (the
     // tick loop below skips hover wiring for this mode). wg-skill gives the fill its
     // own steel-blue tone (.wg-skill .wg-fill-veh in CSS), distinct from tech-tree.
-    root.className = (mode === "skill_tree" ? "wg-skill" : "") + cbClass(data);
+    root.className = (mode === MODE.SKILL_TREE ? "wg-skill" : "") + cbClass(data);
 
-    label.textContent = mode === "skill_tree" ? L("headerSkillTree", "Upgrades")
-        : mode === "field_mods" ? L("headerFieldMods", "Field Modifications")
+    label.textContent = mode === MODE.SKILL_TREE ? L("headerSkillTree", "Upgrades")
+        : mode === MODE.FIELD_MODS ? L("headerFieldMods", "Field Modifications")
         : L("headerResearch", "Research");
     setCatIcon(catIcon, CAT_ICON[mode] || "");
 
@@ -1260,19 +1287,19 @@ function render(model) {
     const n = arrLen(ticks);
     // Skill-tree ticks carry no per-node metadata (non-linear tree) -> no hover tooltips
     // (only the named FINAL tick tips). Other modes wire every tick into the hover system.
-    const noTips = mode === "skill_tree";
+    const noTips = mode === MODE.SKILL_TREE;
     // Field mods unlock linearly (one by one), so only the NEXT one -- the first remaining
     // tick -- is ever clickable. Consumed on the first fieldmod the spec sees.
     let nextFieldMod = true;
     // Pre-pass: only glyph-bearing ticks (field mods + any icon tick) reserve a lane.
     const place = computeLanes(ticks, n, pct, mode, hotEl,
-        function (t) { return t.category === "fieldmod" || !!t.icon; });
+        function (t) { return t.category === CAT.FIELDMOD || !!t.icon; });
     const res = renderTicks(ticksEl, ticks, n, function (t, i) {
         // State class: locked -> dim, affordable -> bright. In the capstone-only state the
         // final (icon) skill_tree tick IS the available node, so force it bright (wg-aff)
         // instead of the count-axis "right of fill" wg-locked dim.
         let stateClass = t.locked ? " wg-locked" : t.affordable ? " wg-aff" : "";
-        if (onlyFinal && mode === "skill_tree" && t.icon) stateClass = " wg-aff";
+        if (onlyFinal && mode === MODE.SKILL_TREE && t.icon) stateClass = " wg-aff";
         // wg-done = session marker (green check + open-screen click). Done markers ride the
         // bar's LEFT EDGE (0%); .wg-hot extends past it (CSS) so the overhang stays hoverable
         // (hit-tested against the track, so curPct goes slightly negative and still falls
@@ -1288,17 +1315,17 @@ function render(model) {
         //  - tech-tree (vehicle/module): affordable + prereqs met -> research it.
         let cmd = null, arg;
         if (t.done) {
-            cmd = t.category === "fieldmod" ? "openFieldMods" : "openResearch";
-        } else if (mode === "skill_tree") {
-            if (t.icon) cmd = "openSkillTree";
-        } else if (t.category === "fieldmod") {
+            cmd = t.category === CAT.FIELDMOD ? CMD.OPEN_FIELD_MODS : CMD.OPEN_RESEARCH;
+        } else if (mode === MODE.SKILL_TREE) {
+            if (t.icon) cmd = CMD.OPEN_SKILL_TREE;
+        } else if (t.category === CAT.FIELDMOD) {
             if (nextFieldMod) {
                 nextFieldMod = false;
-                if (t.affordable && t.actionId) { cmd = "unlockFieldMod"; arg = t.actionId; }
+                if (t.affordable && t.actionId) { cmd = CMD.UNLOCK_FIELD_MOD; arg = t.actionId; }
             }
-        } else if ((t.category === "vehicle" || t.category === "module")
+        } else if ((t.category === CAT.VEHICLE || t.category === CAT.MODULE)
                    && t.affordable && !t.locked && t.actionId) {
-            cmd = "researchUnlock"; arg = t.actionId;
+            cmd = CMD.RESEARCH_UNLOCK; arg = t.actionId;
         }
         const tip = !noTips || !!t.name;
         return {
@@ -1517,7 +1544,7 @@ function ensureHover(hotEl, tipEl) {
         // In skill_tree mode the only tooltip-tick is the final upgrade (far right);
         // gate it by proximity so it doesn't show across the whole empty bar. Other
         // modes keep nearest-anywhere (dense ticks make that the right behavior).
-        const ok = hotEl._wgMode !== "skill_tree" || near.dist <= 6;
+        const ok = hotEl._wgMode !== MODE.SKILL_TREE || near.dist <= 6;
         if (ok) show(near.best.body, near.best.left); else tipEl.style.display = "none";
     });
     hotEl.addEventListener("mouseleave", function () {
@@ -1559,7 +1586,7 @@ function ensureHover(hotEl, tipEl) {
             document.removeEventListener("mouseup", onUp, true);
             root._wgDragging = false;
             const r = root.getBoundingClientRect();
-            invokeCommand("setPosition", {
+            invokeCommand(CMD.SET_POSITION, {
                 x: Math.round(r.left + r.width / 2),
                 y: Math.round(r.top),
             });
