@@ -11,7 +11,7 @@ OpenWG Gameface is a hard dependency. Python 2.7 (BigWorld) runtime.
 from debug_utils import LOG_NOTE, LOG_CURRENT_EXCEPTION
 
 MOD_NAME = "Garage Progress Bar"
-MOD_VERSION = "0.5.1"
+MOD_VERSION = "0.6.0"
 
 
 def _install():

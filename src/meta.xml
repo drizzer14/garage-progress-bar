@@ -3,7 +3,7 @@
          are treated as versions/parts of the same modification. -->
     <id>com.14th_ua.garageprogressbar</id>
     <!-- Compared character-by-character (ASCII). Use zero-padded segments. -->
-    <version>0.5.1</version>
+    <version>0.6.0</version>
     <name>Garage Progress Bar</name>
     <description>Adds a progress bar to the Garage that shows the selected vehicle's progression at a glance: tech-tree research, Field Modifications, the Elite Levels (prestige) grades and tier-XI reward track, and tier-XI vehicle skill-tree upgrades. Real in-game icons and hover tooltips. Updates live when you switch vehicles or your XP changes.
 
