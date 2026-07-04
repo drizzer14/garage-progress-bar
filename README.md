@@ -53,7 +53,8 @@ upgrades without leaving the Garage. **Hover** any tick or icon for a tooltip.
 [**GitHub Releases**](https://github.com/drizzer14/garage-research-progress/releases)
 page and run it (close the game first). It finds your World of Tanks folder, installs
 the mod into `mods\<version>\`, and adds **OpenWG GameFace** and **ModsSettingsAPI**
-if you don't already have them.
+if you don't already have them. On each run it also checks GitHub and offers to
+fetch the newest installer, so a copy you keep around stays current.
 
 **Manual installation.** Grab
 `com.14th_ua.garageprogressbar_<version>.wotmod` from the same Releases page and
@@ -144,7 +145,9 @@ Building, deploying, testing, and the repo layout are documented in
 **`GarageProgressBar-Setup-<version>.exe`** зі сторінки
 [**релізів на GitHub**](https://github.com/drizzer14/garage-research-progress/releases)
 і запустіть (спершу закрийте гру). Він знаходить папку World of Tanks, встановлює мод
-у `mods\<version>\` і додає **OpenWG GameFace** та **ModsSettingsAPI**, якщо їх ще немає.
+у `mods\<version>\` і додає **OpenWG GameFace** та **ModsSettingsAPI**, якщо їх ще
+немає. Під час кожного запуску він також перевіряє GitHub і пропонує завантажити
+найновіший інсталятор, тож збережена копія залишається актуальною.
 
 **Встановлення вручну.** Візьміть `com.14th_ua.garageprogressbar_<version>.wotmod` з
 тієї ж сторінки релізів і дотримуйтесь **[`INSTALL.md`](./INSTALL.md)** — там описано
