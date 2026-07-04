@@ -19,10 +19,13 @@ installed on this machine (see paths at the bottom).
 7. `installer/README.md`
 
 Then verify: `python build\check_version.py` (either Python) — fails on any
-reference that drifted from `src/meta.xml`. It matches only the four unambiguous
-patterns (packaged filename, Setup filename, `MOD_VERSION`, `#define ModVersion`),
-so ALSO `grep -rn "<old version>"` to catch bare prose refs. Changing `<id>` would
-also change the output filename + the cleanup glob in `deploy_wotmod.py`.
+reference that drifted from `src/meta.xml`. It matches five patterns (packaged
+filename, Setup filename, `MOD_VERSION`, `#define ModVersion`, and prose `version
+<v>`), scans `dist\INSTALL.txt` explicitly (built the consumer zip yet? bump it
+first), and fails a required file that has LOST its reference. It still can't see
+arbitrary prose, so ALSO `grep -rn "<old version>"` to catch bare refs (note:
+`README.md` deliberately carries no version ref). Changing `<id>` would also change
+the output filename + the cleanup glob in `deploy_wotmod.py`.
 
 ## 2. Commit & tag
 Conventional commits, landing directly on `main` (no branch). Land fixes as their own

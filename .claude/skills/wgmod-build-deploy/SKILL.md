@@ -38,6 +38,8 @@ deploy through it, never hand-copy.
   shadows the fresh package).
 - Before a clean ship-verification, REMOVE the overlay
   (`res_mods/<ver>/gui/gameface/mods/14th_ua/`) so you test the packaged assets.
+  `deploy_wotmod.py` WARNS when the overlay is present; pass `--clean-overlay` to
+  have it removed as part of the deploy.
 - Only `WGModResearch.js`/`.css` hot-reload. Python (mount/data) changes need
   build + deploy + full client relaunch.
 

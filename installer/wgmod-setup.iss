@@ -539,7 +539,10 @@ begin
   if CurStep = ssInstall then
   begin
     modsDir := GetModsVersionDir('');
-    { remove older builds of THIS mod (keep filenames stable across versions) }
+    { remove older builds of THIS mod (keep filenames stable across versions).
+      DEV CAVEAT: this glob (and the FindFirst in ReadInstalledModVer) also match a
+      dev "{#ModId}_debug.wotmod" REPL mod. Consumers never have it; on a dev box,
+      remove the debug mod before test-running this consumer installer. }
     DelTree(modsDir + '\' + '{#ModId}' + '_*.wotmod', False, True, False);
     { one-time migration: remove the pre-rename id (com.drizzer14.wgmod_*) so an
       upgrading user doesn't end up with two bars loaded side by side }

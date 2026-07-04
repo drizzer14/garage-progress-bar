@@ -24,7 +24,18 @@ META = """<root>
 """
 
 
+def _check_python():
+    if sys.version_info[0] != 2 or sys.version_info[1] != 7:
+        sys.exit("ERROR: build_debug_wotmod must run under Python 2.7 (got {0}.{1}). "
+                 "The game executes the .pyc and bytecode is version-locked, so a "
+                 "debug mod built under any other version will NOT load (symptom: "
+                 "connection refused on the REPL port 2223). Re-run with "
+                 "C:\\Python27\\python.exe."
+                 .format(sys.version_info[0], sys.version_info[1]))
+
+
 def main():
+    _check_python()
     if len(sys.argv) < 3:
         print('Usage: python tools/dev/build_debug_wotmod.py "<wot_path>" <version>')
         sys.exit(1)
