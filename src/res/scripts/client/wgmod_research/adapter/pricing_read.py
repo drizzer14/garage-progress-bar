@@ -12,6 +12,7 @@ from CurrentVehicle import g_currentVehicle
 
 from wgmod_research._compat import LOG_CURRENT_EXCEPTION, _safe, _safe_int
 from wgmod_research.adapter._read_common import _items_cache
+from wgmod_research.adapter.tech_read import module_installed
 from wgmod_research.domain.constants import Category
 
 
@@ -69,9 +70,14 @@ def read_purchase_price(int_cd, category):
         item = _safe(lambda: _items_cache().items.getItemByCD(int(int_cd)), None)
         if item is None:
             return 0
-        # Already owned (bought this session or earlier) -> hide the price.
+        # Already owned -> hide the price. Owned == in free inventory (bought this
+        # session or earlier) OR mounted on the current vehicle (buy+mount installs it,
+        # which drops it out of inventory). Kept in step with tech_read's `owned` so the
+        # footer and the done-marker retirement agree on what "owned" means.
         if _safe(lambda: bool(item.isInInventory), False) \
                 or _safe_int(lambda: item.inventoryCount, 0) > 0:
+            return 0
+        if g_currentVehicle.isPresent() and module_installed(item, g_currentVehicle.item):
             return 0
         return _credits_buy_price(item)
     except Exception:

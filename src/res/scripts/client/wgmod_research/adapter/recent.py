@@ -210,11 +210,16 @@ def _make_tick(rec):
     # done drives the JS checkmark + open-screen click; int_cd lets the (engine-bound)
     # bridge look up the item's live credits buy price + ownership at marshal time
     # (kept a plain int so this module stays engine-free and unit-testable).
+    # action_id is the id the JS "buy + mount" click needs: only a MODULE done tick
+    # uses it (WGModResearch.js gates the buyMount branch on it); field-mod/vehicle
+    # done ticks open a screen and ignore it, so keep theirs 0.
+    is_module = rec["category"] == Category.MODULE
     return t.Tick(
         xp_position=0, category=rec["category"], icon=rec["icon"], name=rec["name"],
         xp_gained=0, xp_required=0, affordable=True, completed=True,
         locked=False, level=rec["level"], effect=rec["effect"],
-        kind_label=rec["kind_label"], done=True, int_cd=rec["item_id"])
+        kind_label=rec["kind_label"], done=True, int_cd=rec["item_id"],
+        action_id=rec["item_id"] if is_module else 0)
 
 
 def _make_chip(rec):

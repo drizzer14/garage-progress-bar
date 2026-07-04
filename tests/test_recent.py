@@ -52,6 +52,17 @@ def test_techtree_confirmed_surfaces_done_tick():
     assert tick.name == "Gun"
     # The item id is carried so the bridge can look up its credits price at marshal time.
     assert tick.int_cd == 5
+    # ...and as action_id, so the JS "buy + mount" click has an id to act on (MODULE only).
+    assert tick.action_id == 5
+
+
+def test_fieldmod_done_tick_has_no_action_id():
+    # A field-mod done tick opens the Field Mods screen (ignores action_id) -- keep it 0.
+    recent.record(recent.FIELDMOD, 100, 7, name="FM", icon="fm", category="fieldmod", level=3)
+    snap = _snap(100, field_mod_steps=[_step(7, unlocked=True)])
+    model = _model(mode=t.Mode.FIELD_MODS, ticks=[])
+    recent.decorate(model, snap)
+    assert model.ticks[0].action_id == 0
 
 
 def test_cancel_leaves_no_marker():

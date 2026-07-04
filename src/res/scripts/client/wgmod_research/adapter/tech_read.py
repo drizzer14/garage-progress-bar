@@ -19,6 +19,21 @@ from wgmod_research.domain import types as t
 from wgmod_research.domain.constants import Category
 
 
+def module_installed(item, veh):
+    """True if this module GUI item is currently mounted on the given vehicle.
+    `isInstalled(vehicle[, slotIdx])` is a method on the module GUI item (verified live
+    on EU 2.3 -- takes the GUI vehicle item, NOT its intCD). A mounted module reads
+    isInInventory=False / inventoryCount=0, so this is the only signal that a
+    bought+mounted module is owned. Degrade-safe: any failure (absent method, bad arg)
+    -> False, so a "done" marker never vanishes on a bad read."""
+    try:
+        fn = getattr(item, "isInstalled", None)
+        return bool(fn(veh)) if callable(fn) else False
+    except Exception:
+        LOG_CURRENT_EXCEPTION()
+        return False
+
+
 def _unlock_name(cache, int_cd):
     """Localized display name for an unlock id, or "" on any read failure (so one
     bad prerequisite never sinks the whole unlock row)."""
@@ -64,11 +79,15 @@ def read_tech_unlocks(veh, unlocks):
                     owned = False
                 else:
                     kind_label = getattr(item, "userType", "") or ""
-                    # Modules only: in the player's inventory (bought). Lets a "buy +
-                    # mount" done marker self-clear once the module is owned. Vehicles
-                    # have a different ownership model and never self-clear, so skip.
+                    # Modules only: owned == in free inventory (bought-but-unmounted) OR
+                    # mounted on this vehicle. Lets a "buy + mount" done marker self-clear
+                    # once the module is owned. The buy+mount action INSTALLS the module,
+                    # which drops it out of free inventory, so the isInstalled() check is
+                    # what actually retires the marker (inventory-only never would).
+                    # Vehicles have a different ownership model and never self-clear.
                     owned = bool(getattr(item, "isInInventory", False)) \
-                        or (getattr(item, "inventoryCount", 0) or 0) > 0
+                        or (getattr(item, "inventoryCount", 0) or 0) > 0 \
+                        or module_installed(item, veh)
             except Exception:
                 LOG_CURRENT_EXCEPTION()
                 is_vehicle, name, icon, kind_label, owned = False, "", "", "", False
