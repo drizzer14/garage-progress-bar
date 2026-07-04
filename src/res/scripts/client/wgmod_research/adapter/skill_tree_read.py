@@ -88,7 +88,8 @@ def is_skill_tree(veh):
 
 def read_skill_tree(veh):
     """Aggregate the branching skill tree into
-    (total_xp, spent_xp, done, total, final_icon, available). The bar stays a COUNT
+    (total_xp, spent_xp, done, total, final_icon, final_name, final_xp, final_effect,
+    available). The bar stays a COUNT
     readout (owner directive: non-linear tree), but `available` carries the frontier
     nodes (not received, prerequisites met) as [ProgressionStep] for the clickable
     "Upgrades Available:" chips. done/total

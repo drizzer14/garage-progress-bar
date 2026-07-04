@@ -812,7 +812,7 @@ function renderNextAvailable(nextEl, arr, hotEl, spendableXp, est) {
             const u = arrGet(arr, i);
             if (!u) continue;
             const xp = u.xpRequired | 0;
-            // Match the Upgrades screen: minor (10k) -> square plate; major
+            // Match the Upgrades screen: minor (10k) -> circle; major
             // (>=20k: 20k/25k) -> diamond. Frame + perk glyph layered.
             const chip = document.createElement("div");
             chip.className = "wg-chip " + (xp >= 20000 ? "wg-chip-major" : "wg-chip-minor");
@@ -860,8 +860,6 @@ function renderNextAvailable(nextEl, arr, hotEl, spendableXp, est) {
     if (hotEl) hotEl._wgChips = chips;
 }
 
-// Signature of the available-upgrade set, so render() can skip rebuilding identical
-// chips (a rebuild destroys the hovered chip's tooltip element).
 // Build the framed perk glyph (frame ring + centered perk icon) into `box`, matching
 // the Upgrades screen. Shared by the Next-available chips and the bar's skill-tree
 // final-upgrade tick. The frame shape (circle=minor / diamond=major) comes from the
@@ -876,6 +874,8 @@ function fillChipGlyph(box, iconUrl) {
     box.appendChild(ico);
 }
 
+// Signature of the available-upgrade set, so render() can skip rebuilding identical
+// chips (a rebuild destroys the hovered chip's tooltip element).
 function upgradesSig(arr, spendableXp) {
     const n = arrLen(arr);
     // spendableXp is folded in so the chips rebuild when affordability flips; it's
@@ -1191,7 +1191,7 @@ function eliteGlyph(t, isRewards) {
     // right-anchored by different amounts, so each width sits centered under its tick).
     img.className = "wg-tick-tab wg-tab wg-tab-" + tabBadgeSize(t.icon, t.position | 0, false);
     if (!fillTabBadge(img, t.icon, t.position | 0, false)) {
-        img.className = "wg-tick-emblem" + (gradeFam ? " wg-grade-" + gradeFam : "");
+        img.className = "wg-tick-emblem";
         img.style.backgroundImage = "url('" + t.icon + "')";
         if (gradeFam) img.appendChild(emblemNumber(t.position | 0, gradeFam));
     }

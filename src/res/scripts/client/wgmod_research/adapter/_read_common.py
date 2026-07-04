@@ -60,12 +60,6 @@ def vehicle_xp_stats(int_cd):
         return 0, 0, 0
 
 
-def avg_battle_xp(int_cd):
-    """This vehicle's historical average combat XP per RANDOM battle, or 0
-    (see vehicle_xp_stats). Thin wrapper kept for callers that only need the average."""
-    return vehicle_xp_stats(int_cd)[0]
-
-
 def account_avg_battle_xp():
     """The account-wide average combat XP per RANDOM battle -- the fallback divisor for
     the "battles remaining" estimate on a tank with too few battles of its own to trust.

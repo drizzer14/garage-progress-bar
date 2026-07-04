@@ -458,7 +458,7 @@ def _full_settings_for_write(g_modsSettingsApi):
     except Exception:
         LOG_CURRENT_EXCEPTION()
     data.setdefault("enabled", True)   # host-managed per-mod toggle; never drop it
-    data.update(_settings)             # our varNames (hide flags, posX/posY, resetPos)
+    data.update(_settings)             # our varNames (hide flags, per-mode toggles, posX/posY)
     return data
 
 

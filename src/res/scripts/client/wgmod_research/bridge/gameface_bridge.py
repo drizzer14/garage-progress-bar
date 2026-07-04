@@ -536,8 +536,7 @@ def push(rvm, host_vm=None):
                 # Done ticks: current credits buy price for the researched item, read
                 # fresh (hides once owned). 0 for every other tick -> JS shows no footer.
                 tv.setPrice(engine_adapter.read_purchase_price(
-                    getattr(t, "int_cd", 0), t.category,
-                    getattr(snap, "vehicle_int_cd", 0)) if is_done else 0)
+                    getattr(t, "int_cd", 0), t.category) if is_done else 0)
                 arr.addViewModel(tv)
             arr.invalidate()
             # Available tier-XI upgrade nodes -> the clickable header chips.

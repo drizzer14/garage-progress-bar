@@ -54,7 +54,7 @@ def _fieldmod_selection_price(step_id):
     return 0
 
 
-def read_purchase_price(int_cd, category, veh_int_cd=0):
+def read_purchase_price(int_cd, category):
     """Current credits price for a "done" tick's item, or 0 to hide the footer.
 
     Modules / vehicles: the credits buy price, re-read fresh every sync so it drops to
