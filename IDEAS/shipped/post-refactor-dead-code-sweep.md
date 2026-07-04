@@ -1,5 +1,5 @@
 # Research: Post-refactor dead-code & stale-comment sweep (cleanup batch)
-_Submitted: full-codebase bug sweep (2026-07-04) · Status: open_
+_Submitted: full-codebase bug sweep (2026-07-04) · Status: shipped (commit 93afafc "refactor: post-refactor dead-code & stale-comment sweep")_
 
 ## Summary
 The sweep's residue: confirmed-dead code, unread wire fields, and stale
