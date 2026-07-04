@@ -1079,6 +1079,15 @@
     width: 12rem;
     height: 12rem;
 }
+/* The combat-XP star reads small next to the total-XP glyph on this line (its art
+   carries extra transparent padding). Bump it back up a touch and re-center against
+   the 12rem text -- the box grows symmetrically so align-items:center keeps it level,
+   and the base combat rule's -1rem low-art nudge scales up to match the larger box. */
+#wgmod-root .wg-tip-xp-rem .wg-tip-xp-ico-combat {
+    width: 14rem;
+    height: 14rem;
+    top: -0.5rem;
+}
 /* Each remaining figure = its "-<n>" text + glyph kept together on the row. */
 #wgmod-root .wg-tip-rem-tot,
 #wgmod-root .wg-tip-rem-veh {
