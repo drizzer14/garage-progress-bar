@@ -1121,6 +1121,14 @@
     margin-left: 10rem;
     color: #9aa0a0;
 }
+/* When the item is affordable via free XP, the combat "-<n>" figure is the ONLY
+   remaining figure and the battles estimate follows it directly (no total-remaining
+   figure between them). The combat figure's own margin-right + this line's margin-left
+   would then stack into a double gap -- drop the leading margin so the spacing matches
+   the normal single-gap rows. */
+#wgmod-root .wg-tip-rem-veh + .wg-tip-battles {
+    margin-left: 0;
+}
 /* The battle glyph is a square (40x40 source) crossed-swords icon; a hair larger than
    the star glyphs on this row so it reads clearly, and it leads with the same 3rem gap
    after the "≈ N" figure that the base icon rule sets. */

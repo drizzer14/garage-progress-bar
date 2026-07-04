@@ -394,20 +394,28 @@ function xpFracHtml(have, need, iconUrl, vehHave, est) {
     // the same signal it carried before the cost-only headline change.
     const cls = have < need ? "wg-tip-xp wg-tip-short" : "wg-tip-xp";
     let h = '<div class="' + cls + '">' + fmtXp(need) + ico + "</div>";
-    if (have < need) {
-        const left = need - have;
+    // Two shortfalls: `left` counts free XP (drives affordability + the headline tint);
+    // `vehLeft` is the combat-XP-only gap (free XP ignored). The item can be affordable
+    // (left <= 0) while combat XP alone still falls short (vehLeft > 0) -- free XP covers
+    // the rest. In that case the headline reads as "enough" (no red), but we STILL show
+    // the combat "-<n>" figure + battles estimate, since only combat XP grows by playing.
+    const left = need - have;
+    const vehLeft = (vehHave !== undefined) ? (need - (vehHave | 0)) : left;
+    if (left > 0 || vehLeft > 0) {
         let sub = "";
         // Combat XP (the vehicle's own XP alone) FIRST -- shown only when free XP
-        // actually moves the number (otherwise identical to the total remaining).
-        if (vehHave !== undefined) {
-            const vehLeft = need - (vehHave | 0);
-            if (vehLeft > left) {
-                sub += '<span class="wg-tip-rem-veh">-' + fmtXp(vehLeft) +
-                    xpIco(COMBAT_XP_ICON) + "</span>";
-            }
+        // actually moves the number (otherwise identical to the total remaining). When
+        // the total is already covered (left <= 0) but combat is short, `vehLeft > left`
+        // holds automatically -- exactly the affordable-via-free-XP case.
+        if (vehHave !== undefined && vehLeft > 0 && vehLeft > left) {
+            sub += '<span class="wg-tip-rem-veh">-' + fmtXp(vehLeft) +
+                xpIco(COMBAT_XP_ICON) + "</span>";
         }
-        // Then the total remaining (free XP counts), in the headline's currency.
-        sub += '<span class="wg-tip-rem-tot">-' + fmtXp(left) + ico + "</span>";
+        // Then the total remaining (free XP counts), in the headline's currency -- only
+        // while the total is actually short (once covered it would read "-0"/negative).
+        if (left > 0) {
+            sub += '<span class="wg-tip-rem-tot">-' + fmtXp(left) + ico + "</span>";
+        }
         // Battles-remaining estimate ("≈ M-N"): a RANGE of battles of playing THIS tank
         // to close the COMBAT-XP shortfall. Only combat XP grows by playing (free XP is a
         // shared account pool), so use the vehicle-only gap when we have it, else `have`
@@ -419,7 +427,7 @@ function xpFracHtml(have, need, iconUrl, vehHave, est) {
         //     battle) + the daily-double x2 on the first winning battle (if still up).
         // When the tank is under-sampled, estDivisor falls back to the account-wide avg.
         // Hidden when there's no divisor (no battles / unreadable) -> never divide by zero.
-        const combatLeft = (vehHave !== undefined) ? (need - (vehHave | 0)) : left;
+        const combatLeft = vehLeft;
         const base = estDivisor(est);
         if (base > 0 && combatLeft > 0) {
             const cal = ESTIMATE_CALIBRATION;
