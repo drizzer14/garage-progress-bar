@@ -34,6 +34,12 @@ Conventional commits, landing directly on `main` (no branch). Land fixes as thei
 are NEVER committed.
 
 ## 3. Build the artifacts (into gitignored dist/)
+First tidy dist/ so it holds exactly one release's worth of files (deletes every
+artifact whose version != `src/meta.xml`; keeps the current version + `INSTALL.txt`):
+```powershell
+python build\clean_dist.py            # runs on either Python; --dry-run to preview
+```
+Then build:
 ```powershell
 & "C:\Python27\python.exe" build\build_wotmod.py        # -> dist\com.14th_ua.garageprogressbar_X.Y.Z.wotmod
 pwsh installer\build_installer.ps1                       # -> dist\GarageProgressBar-Setup-X.Y.Z.exe
