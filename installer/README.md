@@ -67,13 +67,13 @@ bump the matching `OpenWgWotmod` / `MsaWotmod` define in `wgmod-setup.iss`
 
 ```powershell
 # 1. Build the mod package (Python 2.7 — bytecode is version-locked):
-& "C:\Python27\python.exe" build\build_wotmod.py        # -> dist\com.14th_ua.garageprogressbar_0.4.0.wotmod
+& "C:\Python27\python.exe" build\build_wotmod.py        # -> dist\com.14th_ua.garageprogressbar_0.5.0.wotmod
 
 # 2. Install Inno Setup once (provides ISCC.exe):
 winget install -e --id JRSoftware.InnoSetup
 
 # 3. Compile:
-pwsh installer\build_installer.ps1                      # -> dist\GarageProgressBar-Setup-0.4.0.exe
+pwsh installer\build_installer.ps1                      # -> dist\GarageProgressBar-Setup-0.5.0.exe
 ```
 
 `build_installer.ps1` locates `ISCC.exe`, verifies the mod package and bundled
