@@ -52,7 +52,7 @@ Compress-Archive -Path dist\com.14th_ua.garageprogressbar_X.Y.Z.wotmod,dist\INST
 
 **wgmods.net bundle zip** (the extra deliverable, uploaded to wgmods.net BY HAND):
 ```powershell
-python build\build_wgmods_zip.py       # -> dist\GarageProgressBar-wgmods_X.Y.Z.zip
+python build\build_wgmods_zip.py       # -> dist\GarageProgressBar_X.Y.Z.zip
 ```
 Runs on either Python — it only zips already-built files (no bytecode). It needs
 the `.wotmod` built (step above) and both `installer\vendor\*.wotmod` deps present;
