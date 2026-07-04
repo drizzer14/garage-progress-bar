@@ -109,6 +109,26 @@ view shows the bar).
   the rest of the bar still renders. Never let a read raise into the bridge.
 - **actions.py never raises into JS** — every path falls back to opening WG's native
   screen rather than a silent spend or crash.
+- **Tech-tree ticks are priced PER ITEM, not cumulatively.** `techtree.py` places each
+  tick at its own cost (`xp_position = cost`, `affordable = cost <= spendable`) because
+  tech-tree items are independently researchable (each has its own prereqs + cost) —
+  a cumulative running sum wrongly inflates a module's position and blocks its
+  affordability. Field mods are the exception (`fieldmods.py` stays cumulative — they
+  unlock in sequence). Cost is `getattr(u, "xp_cost_effective", u.xp_cost)`:
+  `xp_cost_effective` carries the blueprint-fragment-discounted price for a
+  next-VEHICLE unlock (set in `tech_read` via `_read_common.blueprint_effective_cost`;
+  modules keep raw cost — WG's validator rejects a module unlocked at a differing
+  cost), and `actions._do_research` mirrors it into `UnlockProps` (discounted xpCost +
+  discount% + raw xpFullCost) so the click unlocks at the shown price.
+- **Done-marker reconcile uses POSITIVE evidence, and expires.** `recent._is_done`
+  confirms a click by presence + a truthy flag (tech-tree: item still in `tech_unlocks`
+  with `researched=True`), NOT by absence — because the readers deliberately degrade to
+  `[]` on failure, and an absence test would turn one bad read into a permanent false
+  green check. Skill-tree has no per-node flag so it keeps the absence test but guards
+  the empty list (`bool(avail) and item_id not in avail`). A pending that never confirms
+  (cancelled/failed click) is dropped after `_PENDING_MAX_RECONCILES` (~5) reconciles
+  (count-based, no wall clock — engine-free/testable), and `veh_int_cd == 0` is rejected
+  in both `record()` and `decorate()` so a failing vehicle can't share the sentinel key.
 - **ModsSettingsAPI replaces, doesn't merge.** `updateModSettings` swaps the WHOLE
   settings dict and doesn't persist by itself — every write (toggles, position,
   reset) must pass the full dict and call `saveState()` (see

@@ -109,7 +109,15 @@ custom-positioned at the left edge; a lane transform would displace them).
   skip rebuilding identical chips (a rebuild would destroy the hovered chip's tooltip).
   The `onlyFinal` capstone case (all nodes done except the final): the final tick is
   forced bright and the chip row is suppressed. Header shows counter + total-XP
-  (`.wg-xp2-*`).
+  (`.wg-xp2-*`). The final tick is `locked` on the COUNT axis but IS clickable, so
+  `tooltipHtml` has a dedicated branch — `t.category === CAT.UPGRADE && t.icon &&
+  t.xpRequired`, placed BEFORE the `t.locked` check — that shows its name + real XP
+  cost (`xpFracHtml(spendableXp, t.xpRequired, XP_ICON)`) in every state, instead of
+  falling into the generic "Prerequisites not met" locked branch or footering off
+  `t.position` (a node index, not a cost). Chip cost lines use
+  `xpFracHtml(spendableXp, xp, XP_ICON)` with **no** `fillVehicle` arg: `xp` is a node
+  count-cost, not a two-currency XP figure, so a vehicle-XP "-<n>" sub-line would be
+  bogus (that sub-line only makes sense when free XP moves a real combat-XP number).
 - **elite** — grade-band ticks with the tab badge (above). The vehicle fill is
   **grade-colored** via inline `GRADE_COLOR[gradeFamily(curEmblem)]`, gated
   `!isRewards && !data.colorBlind` (an inline background would beat the
@@ -139,18 +147,28 @@ a done chip fires `CMD.OPEN_SKILL_TREE`.
   column (`wg-tip-main-*`), sections joined by `joinSections` (dividers).
 - **Click** (`.wg-hot` click handler): try `chipAt()` (exact chip box) first, else
   `nearestClick()` (nearest CLICKABLE tick within `CLICK_HIT_PCT`). Then `invokeCommand()`.
+  NOTE the asymmetry: `renderTicks` only pushes a tick into `clickMeta` when it has a
+  cmd (`if (s.cmd)`), so `nearestClick` never returns a non-clickable tick — but
+  `chipAt` returns ANY chip under the cursor regardless of cmd, so the handler must
+  guard `if (chip.cmd) invokeCommand(...)` (an unaffordable chip carries `cmd: null`;
+  `invokeCommand(null)` would otherwise just log "command missing").
 - **Clickability → command** (in the linear spec): done → open-screen commands
   (above); skill_tree → only the final (icon) tick → `CMD.OPEN_SKILL_TREE`;
   field-mod → only the NEXT (first remaining) tick, if affordable →
   `CMD.UNLOCK_FIELD_MOD` (arg `actionId`; a choice-pair level opens the screen since
   a click can't pick a variant); tech-tree (`vehicle`/`module`) → affordable &&
   !locked && actionId → `CMD.RESEARCH_UNLOCK`. Chips: done → `OPEN_SKILL_TREE`, else
-  `UNLOCK_FIELD_MOD` with the node's `actionId` (skill-tree nodes share the
-  field-mod purchase path).
+  `UNLOCK_FIELD_MOD` with the node's `actionId` **only when affordable**
+  (`spendableXp >= xpRequired`), else `cmd: null` (matches the bar ticks' affordability
+  gate — skill-tree nodes share the field-mod purchase path).
 - **Ctrl+drag repositions the bar**: mousedown on `.wg-hot` with `e.ctrlKey` starts a
   drag (plain clicks with Ctrl held are suppressed from hit-testing); on release the
   new center-x/top px are sent via `CMD.SET_POSITION` `{x, y}` and persisted by
-  Python (ModsSettingsAPI). `invokeCommand(name, arg)` wraps a scalar id as
+  Python (ModsSettingsAPI). **`y` is floored at 1, never 0**: `y=0` is the
+  "auto/unseeded" sentinel that the next model push re-seeds from, so a flush-to-top
+  drag stored as 0 would be silently discarded — the `onMove` clamp and the `onUp`
+  send both use `Math.max(1, …)`, and the bridge's `_on_set_position` drops any
+  non-seed write with `x<=0 or y<=0`. `invokeCommand(name, arg)` wraps a scalar id as
   **`{value: arg}`** (a bare scalar is rejected by Gameface as "not a map"); no-arg
   commands (`openSkillTree`, `openResearch`, `openFieldMods`) are called bare.
 

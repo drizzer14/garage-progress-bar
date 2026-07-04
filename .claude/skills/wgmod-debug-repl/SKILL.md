@@ -32,7 +32,19 @@ m = build_model(engine_adapter.build_snapshot())
 # force a refresh of the mounted widget
 from wgmod_research.bridge import gameface_bridge as B
 B.refresh()
+
+# probe an unknown game API: the client is compiled .pyc, so inspect.getsource
+# raises IOError -- read arg names off the bytecode instead.
+f = obj.someMethod
+code = f.im_func.func_code if hasattr(f, "im_func") else f.func_code
+echo(list(code.co_varnames[:code.co_argcount]))   # -> ['self', 'vehicleCD', ...]
+# then just CALL it with live values to learn the return shape (namedtuples expose
+# _fields; e.g. UnlockProps._fields, BlueprintsRequester.getFragmentDiscountAndCost).
 ```
+- The deployed `wgmod_research` the REPL imports is the LAST BUILT one — a source edit
+  you haven't `deploy_wotmod`'d + relaunched is NOT reflected. To sanity-check new pure
+  logic against LIVE data without a redeploy, read inputs via the deployed adapter, then
+  apply the new formula inline in the probe (how Bug 6/7 pricing was verified pre-deploy).
 
 ## "The bar isn't loading / not updating"
 1. **Shadowing** — a loose `res_mods/<ver>/` copy outranks the `.wotmod`. Confirm you
