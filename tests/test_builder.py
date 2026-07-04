@@ -64,6 +64,26 @@ def test_spendable_xp_is_vehicle_plus_free_xp():
     assert mfm.spendable_xp == 1200
 
 
+def test_avg_battle_xp_carries_onto_model():
+    # The snapshot's avg combat XP/battle rides every model so the view can estimate
+    # "battles remaining"; 0 when unread stays 0 (view then hides the estimate).
+    snap = t.VehicleSnapshot(tier=6, is_elite=False, vehicle_xp=800, free_xp=300,
+                             tech_unlocks=[_u(1, 1000)], avg_battle_xp=740)
+    m = build_model(snap)
+    assert m.mode == t.Mode.TECH_TREE
+    assert m.avg_battle_xp == 740
+
+    fm = t.VehicleSnapshot(tier=10, is_elite=True, vehicle_xp=1000, free_xp=200,
+                           field_mod_steps=[_step(1, 2000)], avg_battle_xp=1234)
+    mfm = build_model(fm)
+    assert mfm.mode == t.Mode.FIELD_MODS
+    assert mfm.avg_battle_xp == 1234
+
+    bare = t.VehicleSnapshot(tier=6, is_elite=False, vehicle_xp=0, free_xp=0,
+                             tech_unlocks=[_u(1, 1000)])
+    assert build_model(bare).avg_battle_xp == 0
+
+
 def test_elite_with_remaining_unlocks_is_tech_tree():
     # Regression: veh.isElite can be True (eliteVehicles membership) while modules
     # are still unresearched (e.g. Leopard 1). Research must win over field mods.

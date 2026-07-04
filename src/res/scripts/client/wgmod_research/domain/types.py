@@ -193,7 +193,8 @@ class VehicleSnapshot(object):
                  skilltree_spent_xp=0, skilltree_done=0, skilltree_total=0,
                  skilltree_final_icon="", skilltree_final_name="",
                  skilltree_final_xp=0, skilltree_available=None,
-                 skilltree_final_effect="", vehicle_int_cd=0):
+                 skilltree_final_effect="", vehicle_int_cd=0,
+                 avg_battle_xp=0):
         self.tier = tier                          # 1..11
         self.is_elite = is_elite                  # True = fully researched
         self.vehicle_xp = vehicle_xp              # unspent accumulated vehicle XP
@@ -240,6 +241,11 @@ class VehicleSnapshot(object):
         # session "done" markers (adapter/recent.py) per vehicle -- the domain
         # itself never reads it. 0 when unavailable.
         self.vehicle_int_cd = vehicle_int_cd
+        # Historical average combat XP per RANDOM battle for this vehicle (the garage
+        # "avg XP" figure). 0 when the tank has no random battles / unreadable. The
+        # view divides an XP shortfall by this to estimate "battles remaining" in a
+        # tooltip; the domain only carries it through to the model.
+        self.avg_battle_xp = avg_battle_xp
 
 
 class ResearchProgressModel(object):
@@ -250,7 +256,8 @@ class ResearchProgressModel(object):
                  fieldmods_done=0, fieldmods_total=0, vehicle_class="",
                  elite_level=0, elite_max_level=0, elite_grade="", elite_sub=0,
                  elite_current_icon="",
-                 combat_xp=0, avail_upgrades=None, spendable_xp=0):
+                 combat_xp=0, avail_upgrades=None, spendable_xp=0,
+                 avg_battle_xp=0):
         self.mode = mode
         self.scale_min = scale_min
         self.scale_max = scale_max
@@ -280,3 +287,7 @@ class ResearchProgressModel(object):
         # SKILL_TREE mode: available frontier upgrade nodes (clickable chips).
         # [ProgressionStep] (step_id, name, icon, xp_cost). Empty in other modes.
         self.avail_upgrades = avail_upgrades or []
+        # Historical average combat XP per random battle (from the snapshot). Carried
+        # on every model so the view can estimate "battles remaining" beside an XP
+        # shortfall in any mode's tooltip; 0 hides that estimate (no battles / unread).
+        self.avg_battle_xp = avg_battle_xp

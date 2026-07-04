@@ -57,6 +57,11 @@ that skill).
   `.postProgression` → `.isVehSkillTree()`, `.iterOrderedSteps()` (a DAG — DEDUPE by
   stepID; visited once per parent edge).
 - `helpers.dependency.instance(IItemsCache)` → `stats.freeXP`, `stats.unlocks` (set).
+- **Avg combat XP/battle** (`_read_common.avg_battle_xp`, for the tooltip "≈ N battles"
+  estimate): `items.getVehicleDossier(intCD)` → a `VehicleDossier`
+  (`gui/shared/gui_items/dossier`, a `VehicleDossierStats`); `.getRandomStats()` →
+  `RandomStatsBlock`; `.getAvgXP()` = `getXP()/getBattlesCount()` and returns **None**
+  for 0 battles (`dossier/stats.py` `_getAvgValue`), so coerce falsy → 0 (never ÷0).
 - `items.getTypeOfCompactDescr(intCD)` + `gui.shared.gui_items.GUI_ITEM_TYPE.VEHICLE` —
   distinguish a next-vehicle unlock from a module unlock.
 - Localization: `action.getLocNameRes()` returns a Wulf `DynAccessor` — CALL it for the

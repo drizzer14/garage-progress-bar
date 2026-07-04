@@ -506,6 +506,7 @@ def push(rvm, host_vm=None):
             tx.setEliteCurrentIcon(getattr(model, "elite_current_icon", "") or "")
             tx.setCombatXp(model.combat_xp or 0)
             tx.setSpendableXp(model.spendable_xp or 0)
+            tx.setAvgBattleXp(getattr(model, "avg_battle_xp", 0) or 0)
             arr = tx.getTicks()
             arr.clear()
             for t in model.ticks:

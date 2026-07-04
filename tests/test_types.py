@@ -41,3 +41,19 @@ def test_snapshot_list_defaults_are_independent():
     # distinct instances must not share the same default list object
     a.tech_unlocks.append("x")
     assert b.tech_unlocks == []
+
+
+def test_avg_battle_xp_defaults_to_zero_and_carries():
+    # 0 default => the view suppresses the "battles remaining" estimate (never /0).
+    s = t.VehicleSnapshot(tier=6, is_elite=False, vehicle_xp=0, free_xp=0)
+    assert s.avg_battle_xp == 0
+    s2 = t.VehicleSnapshot(tier=6, is_elite=False, vehicle_xp=0, free_xp=0,
+                           avg_battle_xp=850)
+    assert s2.avg_battle_xp == 850
+    m = t.ResearchProgressModel(mode=t.Mode.TECH_TREE, scale_min=0, scale_max=0,
+                                fill_vehicle=0, fill_free=0, ticks=[])
+    assert m.avg_battle_xp == 0
+    m2 = t.ResearchProgressModel(mode=t.Mode.TECH_TREE, scale_min=0, scale_max=0,
+                                 fill_vehicle=0, fill_free=0, ticks=[],
+                                 avg_battle_xp=850)
+    assert m2.avg_battle_xp == 850

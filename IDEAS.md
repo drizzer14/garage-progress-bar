@@ -14,15 +14,6 @@ instructions in **English and Ukrainian**. Process/packaging change only (update
 `wgmod-release` skill §3 + commit a bilingual readme template).
 → Research: IDEAS/wgmods-net-release-zip.md
 
-### Estimated battles remaining alongside XP remaining in tooltips
-When a tooltip shows an XP shortfall ("-<n> XP"), also show a rough "≈ N battles" figure
-= `ceil(combat_xp_remaining / avg_combat_xp_per_battle)`. Front-end funnels through one
-function (`xpFracHtml`, WGModResearch.js), so all modes inherit it. The crux is the data:
-the mod reads no per-battle average today, so it needs a NEW engine read (likely the
-per-vehicle dossier via `IItemsCache` — API unverified, probe live first) + a new
-snapshot field + VM number. Hide the line when the tank has 0 battles.
-→ Research: IDEAS/estimated-battles-remaining.md
-
 ### Dev/release tooling gaps (shadowing + version-check coverage)
 Five confirmed small gaps: deploy leaves .pyc shadows and never warns about the
 gameface overlay; build_debug_wotmod has no Py2.7 guard; the installer's cleanup glob

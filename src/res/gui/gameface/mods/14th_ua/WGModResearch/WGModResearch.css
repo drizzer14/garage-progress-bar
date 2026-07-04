@@ -1103,6 +1103,22 @@
 #wgmod-root.wg-elite .wg-tip-rem-tot {
     color: #dce0e0;
 }
+/* "≈ N" battles-remaining estimate: trails the remaining figures on the same row, set
+   off by a leading gap, in a muted tone so it reads as a secondary estimate (not a hard
+   XP figure). No translatable word -- the ≈ prefix + battle glyph carry the meaning. */
+#wgmod-root .wg-tip-battles {
+    display: flex;
+    align-items: center;
+    margin-left: 10rem;
+    color: #9aa0a0;
+}
+/* The battle glyph is a square (40x40 source) crossed-swords icon; a hair larger than
+   the star glyphs on this row so it reads clearly, and it leads with the same 3rem gap
+   after the "≈ N" figure that the base icon rule sets. */
+#wgmod-root .wg-tip-xp-rem .wg-tip-xp-ico-battle {
+    width: 17rem;
+    height: 17rem;
+}
 #wgmod-root .wg-tip-status {
     margin-top: 4rem;
     font-size: 13rem;

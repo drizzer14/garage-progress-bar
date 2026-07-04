@@ -24,7 +24,7 @@ from CurrentVehicle import g_currentVehicle
 from helpers import dependency
 
 from wgmod_research._compat import LOG_CURRENT_EXCEPTION, _safe, _safe_int
-from wgmod_research.adapter._read_common import _safe_stats
+from wgmod_research.adapter._read_common import _safe_stats, avg_battle_xp as _avg_battle_xp
 from wgmod_research.adapter.tech_read import read_tech_unlocks as _read_tech_unlocks
 from wgmod_research.adapter.post_progression_read import (
     read_post_progression as _read_post_progression)
@@ -98,4 +98,5 @@ def build_snapshot():
         skilltree_final_icon=st_final_icon, skilltree_final_name=st_final_name,
         skilltree_final_xp=st_final_xp, skilltree_final_effect=st_final_effect,
         skilltree_available=st_available,
-        vehicle_int_cd=_safe_int(lambda: veh.intCD, 0))
+        vehicle_int_cd=_safe_int(lambda: veh.intCD, 0),
+        avg_battle_xp=_avg_battle_xp(_safe_int(lambda: veh.intCD, 0)))

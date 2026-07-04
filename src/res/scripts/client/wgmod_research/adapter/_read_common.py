@@ -34,6 +34,28 @@ def _safe_stats():
         return None
 
 
+def avg_battle_xp(int_cd):
+    """The vehicle's historical average combat XP per RANDOM battle -- the same
+    "avg XP" the garage vehicle stats show -- as an int, or 0 when the tank has no
+    random battles / the read fails. Used to estimate "battles remaining" beside an
+    XP shortfall in tooltips (a per-battle divisor the snapshot didn't previously read).
+
+    Symbols verified against the EU 2.3 decompiled client:
+    cache.items.getVehicleDossier(intCD) -> VehicleDossier (a VehicleDossierStats), whose
+    getRandomStats() is a RandomStatsBlock; getAvgXP() = getXP()/getBattlesCount() and
+    returns None for 0 battles (dossier/stats.py _getAvgValue) -> coerce falsy to 0 so we
+    never divide by zero downstream. Guarded like every other read (spec section 8)."""
+    try:
+        if not int_cd:
+            return 0
+        dossier = _items_cache().items.getVehicleDossier(int_cd)
+        avg = dossier.getRandomStats().getAvgXP()
+        return int(avg) if avg else 0
+    except Exception:
+        LOG_CURRENT_EXCEPTION()
+        return 0
+
+
 def blueprint_effective_cost(int_cd, xp_full):
     """(effective_cost, discount_pct) for the VEHICLE unlock `int_cd` given its raw
     XP cost `xp_full`, applying any blueprint-fragment discount the player holds.

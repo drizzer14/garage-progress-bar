@@ -130,7 +130,7 @@ class UpgradeVM(ViewModel):
 
 
 class ResearchVM(ViewModel):
-    def __init__(self, properties=22, commands=7):
+    def __init__(self, properties=23, commands=7):
         super(ResearchVM, self).__init__(properties=properties, commands=commands)
 
     def _initialize(self):
@@ -157,6 +157,7 @@ class ResearchVM(ViewModel):
         self._addNumberProperty("posY", 0)           # 19 (bar top px; 0 = auto/CSS default)
         self._addStringProperty("eliteCurrentIcon", "")  # 20 (current-grade emblem for the category icon)
         self._addStringProperty("labels", "")        # 21 (JSON bundle of localized widget labels; see i18n.widget_labels)
+        self._addNumberProperty("avgBattleXp", 0)    # 22 (avg combat XP/random battle; 0 hides the "battles remaining" estimate)
         # Reverse channel: JS click handlers invoke these commands. Each returns a
         # command object that connect_commands() wires to a Python handler. Wulf
         # delivers the JS-supplied argument(s) to those handlers.
@@ -212,6 +213,9 @@ class ResearchVM(ViewModel):
 
     def setLabels(self, v):
         self._setString(21, v)
+
+    def setAvgBattleXp(self, v):
+        self._setNumber(22, v)
 
     def setCombatXp(self, v):
         self._setNumber(13, v)

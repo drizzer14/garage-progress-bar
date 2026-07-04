@@ -84,6 +84,12 @@ const COMBAT_XP_ICON = "img://gui/maps/icons/library/xpIcon_23x22.png";
 // buy). Matches the top-right account-balance credits icon.
 const CREDITS_ICON = "img://gui/maps/icons/library/CreditsIcon-3.png";
 
+// Crossed-swords battle glyph for the "≈ N" battles-remaining estimate: the
+// random-battle type icon (matching our random-battle avg-XP divisor). Language-neutral,
+// like the shortfall figures. Verified against the client's gui packages (EU 2.3):
+// gui/maps/icons/battleTypes/40x40/random.png exists (40x40 sibling set).
+const BATTLE_ICON = "img://gui/maps/icons/battleTypes/40x40/random.png";
+
 // Which art fills the elite grade badge (category-icon slot + below-bar ticks).
 //   "tab"    -> the battle team-HP arrowhead/chevron grade badge ("tab" art) -- SHIPPED
 //   "emblem" -> the hexagon grade emblem (also the automatic fallback when tab art is
@@ -314,7 +320,9 @@ function splitLines(s, sep) {
 // read at the same visual size as the total-XP glyph (mirrors the header's own
 // .wg-elite .wg-xp-ico override).
 function xpIco(url) {
-    const cls = url === COMBAT_XP_ICON ? "wg-tip-xp-ico wg-tip-xp-ico-combat" : "wg-tip-xp-ico";
+    const cls = url === COMBAT_XP_ICON ? "wg-tip-xp-ico wg-tip-xp-ico-combat"
+        : url === BATTLE_ICON ? "wg-tip-xp-ico wg-tip-xp-ico-battle"
+        : "wg-tip-xp-ico";
     return '<span class="' + cls + '" style="background-image:url(\'' + url + '\')"></span>';
 }
 
@@ -335,7 +343,7 @@ function xpIco(url) {
 // (free XP counts) follows in the headline's currency (total-XP + tan; combat + white
 // for elite). The vehicle-only figure shows only when free XP actually moves the
 // number. Once covered, the whole sub-line is omitted.
-function xpFracHtml(have, need, iconUrl, vehHave) {
+function xpFracHtml(have, need, iconUrl, vehHave, avg) {
     need = need | 0;
     if (need <= 0) return "";
     have = have | 0;
@@ -358,6 +366,17 @@ function xpFracHtml(have, need, iconUrl, vehHave) {
         }
         // Then the total remaining (free XP counts), in the headline's currency.
         sub += '<span class="wg-tip-rem-tot">-' + fmtXp(left) + ico + "</span>";
+        // Battles-remaining estimate ("≈ N"): divide the COMBAT-XP shortfall by the
+        // historical avg XP/battle. Only combat XP grows by PLAYING this tank (free XP
+        // is a shared account pool), so use the vehicle-only gap when we have it, else
+        // `have` is already combat XP (the elite footer passes it with no vehHave).
+        // Hidden when avg is 0 (no random battles / unreadable) -> never divide by zero.
+        avg = avg | 0;
+        const combatLeft = (vehHave !== undefined) ? (need - (vehHave | 0)) : left;
+        if (avg > 0 && combatLeft > 0) {
+            sub += '<span class="wg-tip-battles">&#8776; ' +
+                fmtXp(Math.ceil(combatLeft / avg)) + xpIco(BATTLE_ICON) + "</span>";
+        }
         h += '<div class="wg-tip-xp-rem">' + sub + "</div>";
     }
     return h;
@@ -509,7 +528,7 @@ function doneGlyph(t) {
 // right-side icon) -> FOOTER ("have / need XP", or the prerequisite line when
 // locked). A field-mod choice level puts its selectable variants (each with its
 // buffs) in place of a single title.
-function tooltipHtml(t, spendableXp, fillVehicle) {
+function tooltipHtml(t, spendableXp, fillVehicle, avgBattleXp) {
     const opts = splitLines(t.options);
     const optEffects = (t.optionEffects || "").split("\n");   // raw: index-aligned with opts
     let title = "", body = "", foot = "";
@@ -545,7 +564,7 @@ function tooltipHtml(t, spendableXp, fillVehicle) {
         // is force-brightened and it's always OPEN_SKILL_TREE-clickable -- so show
         // name + cost in every state, not the generic "Prerequisites not met". Uses
         // t.xpRequired (the real cost), not t.position (a node index); no fillVehicle.
-        foot = xpFracHtml(spendableXp, t.xpRequired, XP_ICON);
+        foot = xpFracHtml(spendableXp, t.xpRequired, XP_ICON, undefined, avgBattleXp);
     } else if (t.locked) {
         // Name the blocking prerequisites when known, else the generic line.
         const reqs = splitLines(t.prereqNames);
@@ -555,7 +574,7 @@ function tooltipHtml(t, spendableXp, fillVehicle) {
             : '<div class="wg-tip-status">' +
                 escapeHtml(L("prereqNotMet", "Prerequisites not met")) + "</div>";
     } else {
-        foot = xpFracHtml(spendableXp, t.position, XP_ICON, fillVehicle);
+        foot = xpFracHtml(spendableXp, t.position, XP_ICON, fillVehicle, avgBattleXp);
     }
     // Text block + its icon are ONE unit (no divider between them); the divider only
     // separates that unit from the footer (cost / prerequisite).
@@ -731,7 +750,7 @@ function arrGet(a, i) {
 // proven-interactive layer, which spans this row's area): we register each chip's
 // element + command + tooltip in hotEl._wgChips, and ensureHover() hit-tests them by
 // bounding rect for hover (toggling the chip's own .wg-chip-tip) and click.
-function renderNextAvailable(nextEl, arr, hotEl, spendableXp) {
+function renderNextAvailable(nextEl, arr, hotEl, spendableXp, avgBattleXp) {
     nextEl.innerHTML = "";
     const chips = [];
     const n = arrLen(arr);
@@ -768,7 +787,7 @@ function renderNextAvailable(nextEl, arr, hotEl, spendableXp) {
             // remaining sub-line would be bogus.
             const cFoot = u.done
                 ? ""
-                : xpFracHtml(spendableXp, xp, XP_ICON);
+                : xpFracHtml(spendableXp, xp, XP_ICON, undefined, avgBattleXp);
             // Text block + icon as one unit (no divider between them); divider before cost.
             tip.innerHTML = joinSections([tipMain(cIcon, cTitle, cBody), cFoot]);
             chip.appendChild(tip);
@@ -1189,6 +1208,9 @@ function render(model) {
     const mode = data.mode;
     // Spendable XP (vehicle + free), the affordability yardstick for tooltips.
     const spendableXp = data.spendableXp | 0;
+    // Historical avg combat XP/random battle; divisor for the tooltip "≈ N" battles
+    // estimate (0 = no battles / unreadable -> the estimate is suppressed downstream).
+    const avgBattleXp = data.avgBattleXp | 0;
     const sMin = data.scaleMin || 0;
     const sMax = data.scaleMax || 0;
     const fv = data.fillVehicle || 0;
@@ -1258,7 +1280,7 @@ function render(model) {
         if (nextEl._wgSig !== sig) {
             nextEl._wgSig = sig;
             setActiveChip(hotEl, null);
-            renderNextAvailable(nextEl, data.availUpgrades, hotEl, spendableXp);
+            renderNextAvailable(nextEl, data.availUpgrades, hotEl, spendableXp, avgBattleXp);
         } else {
             nextEl.style.display = "flex";   // unchanged -> keep chips + tooltip, re-show
         }
@@ -1363,7 +1385,7 @@ function render(model) {
             className: className,
             leftPct: leftPct,
             tip: tip,
-            body: tip ? tooltipHtml(t, spendableXp, fv) : "",
+            body: tip ? tooltipHtml(t, spendableXp, fv, avgBattleXp) : "",
             cmd: cmd,
             arg: arg,
             glyph: linearGlyph(t, mode),
@@ -1378,7 +1400,7 @@ function render(model) {
 
 // Tooltip body for an elite mark: the grade/reward name, (rewards) the reward
 // type, and the elite level the mark sits at.
-function eliteTooltipHtml(t, isRewards, combatXp) {
+function eliteTooltipHtml(t, isRewards, combatXp, avgBattleXp) {
     const name = t.name || "";
     // Category caption at the TOP (like native tooltips put the kind line above the
     // title). Rewards: JUST the localized reward TYPE. Grade progression: the localized
@@ -1403,7 +1425,7 @@ function eliteTooltipHtml(t, isRewards, combatXp) {
     if (name) text += '<div class="wg-tip-name">' + escapeHtml(name) + "</div>";
     // Footer: progress to this milestone as "<earned> / <needed> combat XP" (the
     // tick's xpRequired is the cumulative combat XP to reach the level).
-    const foot = xpFracHtml(combatXp, t.xpRequired, COMBAT_XP_ICON);
+    const foot = xpFracHtml(combatXp, t.xpRequired, COMBAT_XP_ICON, undefined, avgBattleXp);
     return joinSections([tipMain(iconHtml, text), foot]);
 }
 
@@ -1519,7 +1541,7 @@ function renderElite(root, data, isRewards) {
             className: "wg-tick wg-elite-tick wg-state-" + (t.state || "upcoming"),
             leftPct: pct(t.position),
             tip: true,
-            body: eliteTooltipHtml(t, isRewards, data.combatXp | 0),
+            body: eliteTooltipHtml(t, isRewards, data.combatXp | 0, data.avgBattleXp | 0),
             glyph: eliteGlyph(t, isRewards),
             lane: place[i] ? place[i].lane : 0,
         };
