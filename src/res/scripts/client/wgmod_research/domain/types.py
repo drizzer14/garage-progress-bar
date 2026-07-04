@@ -22,6 +22,9 @@ class Mode(object):
     FIELD_MODS = "field_mods"   # elite: remaining field-modification ("upgrade") steps
     SKILL_TREE = "skill_tree"   # tier-XI upgrade: branching skill tree, shown as an
                                 # aggregate XP readout (remaining XP to fully upgrade)
+    POTENTIAL_TIER_XI = "potential_tier_xi"  # opt-in: a tier-X tank with NO real tier XI,
+                                # fully done -> a speculative bar tracking banked spendable
+                                # XP toward a representative tier-XI cost (sits above ELITE)
     ELITE_REWARDS = "elite_rewards"  # tier XI w/ unearned milestone rewards: reward roadmap
     ELITE = "elite"             # elite + prestige: current grade-band progression
     COMPLETE = "complete"       # elite, no prestige data: "fully researched" badge

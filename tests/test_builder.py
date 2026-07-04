@@ -429,3 +429,82 @@ def test_genuine_complete_unaffected_by_toggles():
     # a fully-done vehicle still shows COMPLETE (not HIDDEN).
     snap = t.VehicleSnapshot(tier=8, is_elite=True, vehicle_xp=0, free_xp=0)
     assert build_model(snap, set()).mode == t.Mode.COMPLETE
+
+
+# --- potential Tier XI (opt-in speculative mode) --------------------------
+# A tier-X tank with no real tier XI, fully done. Gated at ENTRY (only when the
+# mode is explicitly in `enabled`), so OFF falls THROUGH to elite/complete rather
+# than hiding, and enabled=None (legacy default) never triggers it.
+
+_WITH_PXI = _ALL_MODES | {t.Mode.POTENTIAL_TIER_XI}
+
+
+def _done_tier_x(vehicle_xp=100000, free_xp=50000, **kw):
+    # A tier-X tank with nothing left to research and no field mods -> would be
+    # COMPLETE (or ELITE with prestige) today.
+    return t.VehicleSnapshot(tier=10, is_elite=True,
+                             vehicle_xp=vehicle_xp, free_xp=free_xp, **kw)
+
+
+def test_potential_mode_when_enabled_on_done_tier_x():
+    m = build_model(_done_tier_x(vehicle_xp=100000, free_xp=50000), _WITH_PXI)
+    assert m.mode == t.Mode.POTENTIAL_TIER_XI
+    assert m.scale_min == 0
+    assert m.scale_max == 325000              # fixed tier-XI price
+    assert m.fill_vehicle == 100000           # two stacked segments (vehicle + free)
+    assert m.fill_free == 50000
+    assert m.spendable_xp == 150000
+    assert len(m.ticks) == 1                  # single milestone tick
+    assert m.ticks[0].xp_position == 325000
+    assert m.ticks[0].action_id == 0          # not clickable
+
+
+def test_potential_replaces_elite_when_enabled():
+    # With prestige data present, the potential mode still wins (sits above ELITE).
+    snap = _done_tier_x(has_prestige=True, elite_level=10, elite_max_level=20,
+                        elite_grades=_grades(), elite_level_xp={10: 650000})
+    assert build_model(snap, _WITH_PXI).mode == t.Mode.POTENTIAL_TIER_XI
+
+
+def test_potential_off_falls_through_to_elite_not_hidden():
+    # OFF (mode absent from enabled) must fall THROUGH to the prestige band, NOT hide.
+    snap = _done_tier_x(has_prestige=True, elite_level=10, elite_max_level=20,
+                        elite_grades=_grades(), elite_level_xp={10: 650000})
+    assert build_model(snap, _ALL_MODES).mode == t.Mode.ELITE
+
+
+def test_potential_off_falls_through_to_complete():
+    assert build_model(_done_tier_x(), _ALL_MODES).mode == t.Mode.COMPLETE
+
+
+def test_potential_enabled_none_does_not_trigger():
+    # Legacy/tests default (enabled=None = "all on") never includes this opt-in mode.
+    assert build_model(_done_tier_x()).mode == t.Mode.COMPLETE
+    assert build_model(_done_tier_x(), None).mode == t.Mode.COMPLETE
+
+
+def test_potential_not_for_skill_tree_vehicle():
+    # A tank with a real (fully-upgraded) tier XI is excluded even when enabled.
+    m = build_model(_skill_snap(done=26, total=26), _WITH_PXI)
+    assert m.mode == t.Mode.COMPLETE
+
+
+def test_potential_not_for_non_tier_x():
+    # Tier gate: only tier X (level 10) qualifies.
+    snap = t.VehicleSnapshot(tier=9, is_elite=True, vehicle_xp=100000, free_xp=0)
+    assert build_model(snap, _WITH_PXI).mode == t.Mode.COMPLETE
+
+
+def test_field_mods_take_priority_over_potential():
+    # Remaining field mods win: the speculative bar only shows once everything real
+    # is done.
+    snap = t.VehicleSnapshot(tier=10, is_elite=True, vehicle_xp=0, free_xp=0,
+                             field_mod_steps=[_step(1, 2000)])
+    assert build_model(snap, _WITH_PXI).mode == t.Mode.FIELD_MODS
+
+
+def test_tech_tree_takes_priority_over_potential():
+    # Unresearched modules still show the tech tree first.
+    snap = t.VehicleSnapshot(tier=10, is_elite=False, vehicle_xp=0, free_xp=0,
+                             tech_unlocks=[_u(1, 5000)])
+    assert build_model(snap, _WITH_PXI).mode == t.Mode.TECH_TREE

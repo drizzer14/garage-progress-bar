@@ -49,7 +49,12 @@ DEFAULTS = {"hideAlways": False, "hideWhenComplete": False, "posX": 0, "posY": 0
             # off, a vehicle that resolves to it hides the bar -- no fall-through
             # (see domain.builder.build_model / enabled_modes below).
             "showTechTree": True, "showSkillTree": True, "showFieldMods": True,
-            "showEliteRewards": True, "showElite": True}
+            "showEliteRewards": True, "showElite": True,
+            # Speculative "potential Tier XI" mode -- opt-in (default off): on a tier-X
+            # tank with no real tier XI, tracks banked XP toward a hypothetical one and
+            # REPLACES the Elite-Levels bar. Unlike the toggles above, off does not hide
+            # the bar -- it falls through to the normal Elite/COMPLETE behavior.
+            "showPotentialTierXI": False}
 
 
 def clamp_pos(v):
@@ -89,7 +94,7 @@ def _template():
         # settings to defaults when this number is BUMPED. Bump it whenever the set of
         # varNames / control layout changes (not for text-only edits). Verified against
         # the Aslain 1.3.2 + izeberg 1.7.0 compareTemplates bytecode.
-        "settingsVersion": 2,
+        "settingsVersion": 3,
         "column1": [
             {
                 "type": "CheckBox",
@@ -160,6 +165,18 @@ def _template():
                             "{BODY}The Elite-Levels grade-band progression on prestige "
                             "vehicles.{/BODY}"),
                 "varName": "showElite",
+            },
+            {
+                "type": "CheckBox",
+                "text": "Show potential Tier XI",
+                "value": DEFAULTS["showPotentialTierXI"],
+                "tooltip": ("{HEADER}Show potential Tier XI{/HEADER}"
+                            "{BODY}On a Tier X tank that has no Tier XI, once it's fully "
+                            "researched and its field mods are done, track your banked XP "
+                            "(vehicle XP + Free XP) toward the fixed price a Tier XI costs "
+                            "to unlock. Replaces the Elite-Levels bar on those tanks. Off "
+                            "by default.{/BODY}"),
+                "varName": "showPotentialTierXI",
             },
         ],
         "column2": [
@@ -530,4 +547,6 @@ def enabled_modes():
         modes.add(t.Mode.ELITE_REWARDS)
     if _settings["showElite"]:
         modes.add(t.Mode.ELITE)
+    if _settings["showPotentialTierXI"]:
+        modes.add(t.Mode.POTENTIAL_TIER_XI)
     return modes

@@ -15,7 +15,7 @@ first, then global free XP. The view treats a scale_min == scale_max range as
 scale/ticks/fill axis with a single segment (fill_free = 0).
 """
 from wgmod_research.domain import types as t
-from wgmod_research.domain.resolvers import techtree, fieldmods, elite, skilltree
+from wgmod_research.domain.resolvers import techtree, fieldmods, elite, skilltree, potential
 
 
 def _max_pos(ticks, default):
@@ -141,6 +141,26 @@ def build_model(snapshot, enabled=None):
             fill_vehicle=fill_vehicle, fill_free=fill_free, ticks=fm_ticks,
             fieldmods_done=fm_done, fieldmods_total=fm_total, vehicle_class=veh_class,
             spendable_xp=spendable, **est))
+
+    # Speculative "potential Tier XI" (opt-in, default off): a tier-X tank with NO
+    # real tier XI (not a skill-tree vehicle), fully researched + field mods done.
+    # Banked spendable XP (vehicle + free) filling toward the fixed price a real tier
+    # XI costs (potential.POTENTIAL_TIER_XI_XP). Sits above prestige so it REPLACES
+    # the Elite-Levels bar on these tanks when enabled.
+    # NB: unlike the per-mode "show X" toggles this is gated at ENTRY (only entered
+    # when explicitly enabled), so OFF falls THROUGH to elite/complete rather than
+    # HIDING the bar. enabled is None (legacy/tests default = "all on") is treated as
+    # NOT including this opt-in mode, so every existing test's resolved mode is
+    # unchanged. Tier X == veh.level 10 (tier XI is level 11).
+    if (enabled is not None and t.Mode.POTENTIAL_TIER_XI in enabled
+            and snapshot.tier == 10 and not snapshot.is_skill_tree):
+        pxi = potential.resolve(snapshot)
+        if pxi is not None:
+            return t.ResearchProgressModel(
+                mode=t.Mode.POTENTIAL_TIER_XI, scale_min=pxi["scale_min"],
+                scale_max=pxi["scale_max"], fill_vehicle=fill_vehicle,
+                fill_free=fill_free, ticks=pxi["ticks"],
+                vehicle_class=veh_class, spendable_xp=spendable, **est)
 
     # Fully researched. If the vehicle has Elite-Levels (prestige) data, show
     # the prestige progression instead of the static "fully researched" badge.

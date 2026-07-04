@@ -11,6 +11,7 @@ import { ModelObserver } from "../../libs/model.js";
 // value has ONE definition -- keep in lockstep with the enum noted on each block.
 const MODE = {                                          // domain/types.py Mode
     TECH_TREE: "tech_tree", FIELD_MODS: "field_mods", SKILL_TREE: "skill_tree",
+    POTENTIAL_TIER_XI: "potential_tier_xi",  // opt-in speculative bar (tier-X, no real XI)
     ELITE_REWARDS: "elite_rewards", ELITE: "elite", COMPLETE: "complete",
     HIDDEN: "hidden",   // bar isn't pushed at all for HIDDEN, so JS never sees it
 };
@@ -53,7 +54,14 @@ const CAT_ICON = {
     // Tier-XI vehicle skill tree -> the dedicated "Upgrades" vehicle-management
     // section glyph (white tank + node network), matching research/fieldMod above.
     [MODE.SKILL_TREE]: "img://gui/maps/icons/hangar/vehicleMenu/large/vehSkillTree.png",
+    // Speculative "potential Tier XI" -> the Research section glyph (the bar tracks XP
+    // toward a hypothetical tier-XI research goal, so the research art reads right).
+    [MODE.POTENTIAL_TIER_XI]: "img://gui/maps/icons/hangar/vehicleMenu/large/research.png",
 };
+
+// NB: the potential-Tier-XI milestone tick's glyph / "Tier XI" caption / class-name
+// title are stamped on the Python Tick in the bridge (_decorate_potential), NOT here --
+// marshalled tick objects are read-only in this widget, so JS-side writes wouldn't take.
 
 // Skill-tree (Tier-XI upgrades) mode replaces the right-side Total-XP readout with
 // an "unlocked / total nodes" counter, fronted by the in-game Upgrades-screen
@@ -1366,6 +1374,7 @@ function render(model) {
     root.className = (mode === MODE.SKILL_TREE ? "wg-skill" : "") + cbClass(data);
 
     label.textContent = mode === MODE.SKILL_TREE ? L("headerSkillTree", "Upgrades")
+        : mode === MODE.POTENTIAL_TIER_XI ? L("capTierXI", "Tier XI")
         : mode === MODE.FIELD_MODS ? L("headerFieldMods", "Field Modifications")
         : L("headerResearch", "Research");
     setCatIcon(catIcon, CAT_ICON[mode] || "");

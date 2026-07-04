@@ -61,6 +61,10 @@ _FALLBACK = {
     "headerSkillTree": u"Upgrades",
     "headerElite": u"Elite System",
     "headerEliteRewards": u"Elite Rewards",
+    # Localized "Tier XI" -- the potential-Tier-XI mode's header AND its tooltip
+    # category caption (like a tech-tree next-vehicle tick's "Tier IX"). Built from the
+    # game's own "Tier" label + the roman numeral (see widget_labels / tier_label).
+    "capTierXI": u"Tier XI",
     # Tooltip type captions.
     "capFieldMod": u"Field Modification",
     "capEliteLevel": u"Elite Levels",
@@ -131,6 +135,10 @@ def widget_labels():
     # The localized "or" the game itself puts between mutually exclusive choices.
     out["sepOr"] = _text(
         lambda: _S().tooltips.vehicle.textDelimiter.c_or(), _FALLBACK["sepOr"])
+    # "Tier XI" for the potential-Tier-XI mode -> the game's own "Tier" label + the
+    # roman numeral (reuses tier_label, the same builder the tech-tree "Tier IX" tick
+    # caption uses). Fully localized; falls back to the English "Tier XI" on failure.
+    out["capTierXI"] = tier_label(u"XI") or _FALLBACK["capTierXI"]
 
     return out
 
@@ -165,3 +173,29 @@ def tier_label(roman):
         return R.strings.tooltips.vehicle.level()
 
     return _text(_acc, u"Tier") + u" " + roman
+
+
+# English fallbacks for the singular vehicle-class name, keyed by veh.type. Also the
+# value shown if the localized lookup fails (never blank for a known class).
+_CLASS_FALLBACK = {
+    u"lightTank": u"Light Tank",
+    u"mediumTank": u"Medium Tank",
+    u"heavyTank": u"Heavy Tank",
+    u"AT-SPG": u"Tank Destroyer",
+    u"SPG": u"SPG",
+}
+
+
+def vehicle_class_label(class_id):
+    """Localized singular class name for a veh.type id ('heavyTank' -> "Heavy Tank",
+    'AT-SPG' -> "Tank Destroyer") -- the game's OWN vehicle-type header noun
+    (menu.header.vehicleType.<id>). ``dyn(id)`` is used so the hyphenated 'AT-SPG' id
+    resolves; any failure degrades to the English fallback. Empty id -> ""."""
+    if not class_id:
+        return u""
+
+    def _acc():
+        from gui.impl.gen import R
+        return R.strings.menu.header.vehicleType.dyn(class_id)()
+
+    return _text(_acc, _CLASS_FALLBACK.get(class_id, u""))

@@ -25,6 +25,7 @@ from wgmod_research.adapter import i18n
 from wgmod_research.adapter import recent
 from wgmod_research.domain.builder import build_model, bar_visible
 from wgmod_research.domain.constants import Category
+from wgmod_research.domain.types import Mode
 from wgmod_research.bridge import mod_settings
 from wgmod_research.bridge.view_models import ResearchVM, TickVM, UpgradeVM
 from wgmod_research.bridge.wulf_args import (
@@ -459,6 +460,32 @@ def refresh():
     return True
 
 
+# The potential-Tier-XI milestone tick's glyph: the game's generic "undefined tank"
+# icon (there is no real vehicle). Set here (not in the widget) because the marshalled
+# tick objects are read-only in the JS, and not in the domain because it's engine-free.
+_UNDEFINED_TANK_ICON = "img://gui/maps/icons/library/vehicle_default.png"
+
+
+def _decorate_potential(model):
+    """POTENTIAL_TIER_XI: stamp the milestone tick's engine/i18n-aware presentation --
+    the "undefined tank" glyph, the localized "Tier XI" caption (kind_label, like a
+    tech-tree next-vehicle tick), and the localized vehicle-class name as the title
+    (NOT concatenated with "Tier XI"). Must live here: the domain can't localize or know
+    asset URLs, and the widget can't mutate marshalled ticks. Fails soft (leaves the
+    tick bare rather than aborting the push)."""
+    if model.mode != Mode.POTENTIAL_TIER_XI:
+        return
+    try:
+        cap = i18n.tier_label(u"XI")
+        name = i18n.vehicle_class_label(model.vehicle_class or "")
+        for tk in model.ticks:
+            tk.icon = _UNDEFINED_TANK_ICON
+            tk.kind_label = cap
+            tk.name = name
+    except Exception:
+        LOG_CURRENT_EXCEPTION()
+
+
 def push(rvm, host_vm=None):
     """Recompute the model for the selected vehicle and write it into rvm."""
     if rvm is None:
@@ -471,6 +498,9 @@ def push(rvm, host_vm=None):
         # Session "done" markers: promote a confirmed click and inject the current
         # vehicle's marker (a first tick / first chip). Engine-free + guarded.
         recent.decorate(model, snap)
+        # POTENTIAL_TIER_XI: enrich the milestone tick with its localized/asset
+        # presentation (the widget can't, since marshalled ticks are read-only there).
+        _decorate_potential(model)
         LOG_NOTE("[wgmod] push mode=%s ticks=%d fillV=%d fillF=%d" % (
             model.mode, len(model.ticks), model.fill_vehicle, model.fill_free))
         # Resolve localized labels OUTSIDE the transaction: a bad resource id must never
