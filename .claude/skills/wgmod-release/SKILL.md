@@ -50,6 +50,20 @@ Compress-Archive -Path dist\com.14th_ua.garageprogressbar_X.Y.Z.wotmod,dist\INST
   -DestinationPath dist\Research-Progress-Bar_X.Y.Z.zip          # flat root, 2 files
 ```
 
+**wgmods.net bundle zip** (the extra deliverable, uploaded to wgmods.net BY HAND):
+```powershell
+python build\build_wgmods_zip.py       # -> dist\GarageProgressBar-wgmods_X.Y.Z.zip
+```
+Runs on either Python — it only zips already-built files (no bytecode). It needs
+the `.wotmod` built (step above) and both `installer\vendor\*.wotmod` deps present;
+it bundles the mod + every vendor `.wotmod` under `mods\2.3.0.1\` plus a bilingual
+`readme.txt` at the zip root, so the player extracts straight into `<WoT>\`. The
+readme is generated from the committed `installer\readme.wgmods.txt` template
+(`{VERSION}` auto-stamped, so it can't drift — nothing to bump). The `2.3.0.1`
+folder is `CLIENT_VERSION` in the generator; bump it when the supported client
+changes. This zip is **uploaded to wgmods.net manually** and is **NOT** attached
+to the GitHub release (GitHub keeps its 3 assets — see §4).
+
 ## 4. Publish the GitHub Release (every version gets a full release, not just a tag)
 All 3 assets:
 ```powershell
