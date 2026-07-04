@@ -16,7 +16,7 @@ person (or session) that captured it. A one-line backlog blurb loses the context
 you had at capture time — which file, which function, why it's tricky. A saved
 research note preserves that, so the implementer starts from findings instead of
 from scratch. This is the difference between "add icons to tooltips" and "the
-tooltip header is built in `tooltipHtml()` (WGModResearch.js ~264), it's
+tooltip header is built in `tooltipHtml()` (WGModResearch.js ~511), it's
 text-only today, and the widget already resolves `img://` icon URLs you can
 reuse."
 

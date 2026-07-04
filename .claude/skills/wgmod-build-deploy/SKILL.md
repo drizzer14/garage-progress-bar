@@ -43,7 +43,9 @@ deploy through it, never hand-copy.
 
 Other constraints: `.wotmod` is a STORED (uncompressed) ZIP with `meta.xml` at the
 root (the build script handles this); EU/global 2.3.0.1 only; OpenWG GameFace must
-be installed in the same `mods/<version>/`.
+be installed in the same `mods/<version>/` (hard dependency), and ModsSettingsAPI
+(`izeberg.modssettingsapi`) should be too — the settings panel, per-mode toggles,
+and drag-position persistence need it (the bar itself still renders without it).
 
 ## Verifying a change actually works
 Build+deploy+relaunch (or hot-reload for JS/CSS), open the Garage, select a vehicle

@@ -1,9 +1,13 @@
 # WoT / BigWorld game API used by the mod
 
 Concrete game symbols the mod depends on, and where they live in the EU 2.3 decompiled
-client. Game symbols are confined to `engine_adapter.py` (reads) and `actions.py`
-(writes); the domain layer never imports these. All reads are wrapped in try/except so an
-API drift degrades a single category to a safe default instead of blanking the bar.
+client. Game symbols are confined to the adapter layer — `engine_adapter.py` (read
+orchestrator) plus the per-subsystem readers (`tech_read.py`,
+`post_progression_read.py`, `skill_tree_read.py`, `prestige_read.py`,
+`pricing_read.py`, `_read_common.py`), `actions.py` (writes), `i18n.py` (resource
+strings) — and `bridge/` (Wulf, ModsSettingsAPI); the domain layer never imports
+these. All reads are wrapped in try/except so an API drift degrades a single
+category to a safe default instead of blanking the bar.
 
 To inspect any of these live, use the **wgmod-debug-repl** skill. To re-locate a symbol
 after a client patch, clone the decompiled source for the matching region/branch (see
@@ -15,7 +19,8 @@ that skill).
 - `openwg_gameface.gf_mod_inject(host_vm, name, styles=[…], modules=[…])` — load our
   CSS/JS into the hangar document (hard dependency; import raises if OpenWG absent).
 - `frameworks.wulf.ViewModel`, `frameworks.wulf.Array` — base classes for
-  `ResearchVM`/`TickVM`/`UpgradeVM`; `_addNumber/String/Bool/Array/ViewModelProperty`,
+  `ResearchVM`/`TickVM`/`UpgradeVM` (defined in `bridge/view_models.py`);
+  `_addNumber/String/Bool/Array/ViewModelProperty`,
   `_addCommand`, `transaction()`, `addViewModel`, `invalidate`.
 - `BigWorld.callback(0.0, fn)` — defer the coalesced refresh to the next tick (main thread).
 
@@ -39,8 +44,13 @@ that skill).
   `editVehiclePlaylists`; loadout overlays are leaves under `loadout/*`.
   `.onVisibleRouteChanged` is the change Event (subscribe like `.onInteractorUpdated`;
   re-arm each mount). The bar's garage check is FAIL-CLOSED (unreadable → hide).
+- **Color-blind toggle**: `skeletons.account_helpers.settings_core.ISettingsCore`
+  (via `dependency.instance`) — `.getSetting(GRAPHICS.COLOR_BLIND)`
+  (`account_helpers.settings_core.settings_constants.GRAPHICS`) is the read
+  (`engine_adapter.is_color_blind()`); `.onSettingsChanged(diff)` is the listener
+  (refresh only when `GRAPHICS.COLOR_BLIND` is in the diff; fail-open).
 
-## Reads (`adapter/engine_adapter.py`)
+## Reads (`adapter/engine_adapter.py` + the per-subsystem `*_read.py` readers)
 - `CurrentVehicle.g_currentVehicle` — `.isPresent()`, `.item` (the selected vehicle).
 - Vehicle item: `.level`, `.isElite`, `.xp`, `.type` (class id), `.intCD`,
   `.getUnlocksDescrs()` → rows `(unlockIdx, xpCost, intCD, prereqs)`,
@@ -78,6 +88,13 @@ that skill).
     (no entry).
   - No ready KPI→text formatter at `gui.impl.lobby.common.kpi_helpers` /
     `gui.shared.formatters.kpi` (don't exist) — format the magnitude ourselves.
+- Done-tick credits price (`pricing_read.read_purchase_price`):
+  `items_cache.items.getItemByCD(int_cd)` → skip if `.isInInventory` /
+  `.inventoryCount > 0` (owned → no footer), else
+  `item.buyPrices.itemPrice.price.getSignValue(Currency.CREDITS)`
+  (`gui.shared.money.Currency`), falling back to `item.buyPrice.getSignValue(...)`.
+  Field-mod selection levels: the child `MultiModsItem` whose
+  `getParentStepID() == step_id` → first variant's `mod.getPrice().credits`.
 - Prestige (`gui.prestige.prestige_helpers as ph`):
   `ph.hasVehiclePrestige(cd, checkElite=True)` (gate),
   `ph.getVehiclePrestige(cd)` → `.currentLevel`, `.remainingPoints`,
