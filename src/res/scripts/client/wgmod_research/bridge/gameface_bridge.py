@@ -507,6 +507,11 @@ def push(rvm, host_vm=None):
             tx.setCombatXp(model.combat_xp or 0)
             tx.setSpendableXp(model.spendable_xp or 0)
             tx.setAvgBattleXp(getattr(model, "avg_battle_xp", 0) or 0)
+            tx.setBattleCount(getattr(model, "battle_count", 0) or 0)
+            tx.setAccountAvgBattleXp(getattr(model, "account_avg_battle_xp", 0) or 0)
+            tx.setReserveMult(getattr(model, "reserve_mult", 100) or 100)
+            tx.setDailyDoubleFactor(getattr(model, "daily_double_factor", 100) or 100)
+            tx.setMaxBattleXp(getattr(model, "max_battle_xp", 0) or 0)
             arr = tx.getTicks()
             arr.clear()
             for t in model.ticks:

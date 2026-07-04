@@ -57,11 +57,35 @@ that skill).
   `.postProgression` → `.isVehSkillTree()`, `.iterOrderedSteps()` (a DAG — DEDUPE by
   stepID; visited once per parent edge).
 - `helpers.dependency.instance(IItemsCache)` → `stats.freeXP`, `stats.unlocks` (set).
-- **Avg combat XP/battle** (`_read_common.avg_battle_xp`, for the tooltip "≈ N battles"
-  estimate): `items.getVehicleDossier(intCD)` → a `VehicleDossier`
+- **Avg combat XP/battle** (`_read_common.vehicle_xp_stats` / `avg_battle_xp`, for the
+  tooltip "≈ M–N battles" estimate): `items.getVehicleDossier(intCD)` → a `VehicleDossier`
   (`gui/shared/gui_items/dossier`, a `VehicleDossierStats`); `.getRandomStats()` →
   `RandomStatsBlock`; `.getAvgXP()` = `getXP()/getBattlesCount()` and returns **None**
   for 0 battles (`dossier/stats.py` `_getAvgValue`), so coerce falsy → 0 (never ÷0).
+  `.getBattlesCount()` on the same block gives the sample size (no `getMaxXP()` — it does
+  NOT exist on `RandomStatsBlock`, so the estimate's range is bonus-driven, not variance).
+- **Enriched "battles remaining" estimate reads** (all guarded, verified live EU 2.3):
+  - **Account-wide avg XP** (`account_avg_battle_xp`, fallback divisor for an under-sampled
+    tank): `items.getAccountDossier()` → `AccountDossier`; `.getRandomStats()` →
+    `AccountRandomStatsBlock`; `.getAvgXP()` (None → 0). NB `items.stats.accountDossier`
+    is a raw string blob, NOT this object — use `items.getAccountDossier()`.
+  - **Active personal-reserve XP multiplier** (`active_reserve_mult`, int % ×100):
+    `dependency.instance(skeletons.gui.game_control.IBoostersController).getExpirableBoosters()`
+    → `{goodieID: Booster}` (all OWNED expirable boosters, active or not). A `Booster` is
+    currently RUNNING iff `getUsageLeftTime() > 0`; `.boosterGuiType` is a string
+    (`'booster_xp'` = vehicle combat XP — the only kind that grows research XP;
+    `'booster_free_xp_and_crew_xp'`, `'booster_credits'`, … don't); `.effectValue` is the
+    percent bonus (e.g. `100` = +100%, `300` = +300%). Reserves of one resource don't
+    stack in-game. (Boosters are NOT in `items.goodies.goodies` — those are `GoodieVariable`.)
+  - **First-win-of-day factor** (`daily_double_factor`, int % ×100): the GUI item's
+    `veh.dailyXPFactor` is a STATIC per-type config (always 2, set once in `Vehicle.__init__`,
+    never reflects use) — so availability comes from `items.stats.multipliedVehicles`, the
+    set of vehicle intCDs that HAVE ALREADY taken today's double (verified via
+    `carousel_data_provider.Vehicle.__init__`: factor applies when `intCD **not in**
+    multipliedVehicles`). Full rule mirrors the carousel: factor = `items.shop.dailyXPFactor`
+    (normally 2) when `shop.winXPFactorMode == constants.WIN_XP_FACTOR_MODE.ALWAYS` (==1;
+    `DAILY`==0) OR (`intCD not in multipliedVehicles` AND not `veh.isOnlyForEventBattles`),
+    else 1.
 - `items.getTypeOfCompactDescr(intCD)` + `gui.shared.gui_items.GUI_ITEM_TYPE.VEHICLE` —
   distinguish a next-vehicle unlock from a module unlock.
 - Localization: `action.getLocNameRes()` returns a Wulf `DynAccessor` — CALL it for the

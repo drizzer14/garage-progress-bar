@@ -194,7 +194,8 @@ class VehicleSnapshot(object):
                  skilltree_final_icon="", skilltree_final_name="",
                  skilltree_final_xp=0, skilltree_available=None,
                  skilltree_final_effect="", vehicle_int_cd=0,
-                 avg_battle_xp=0):
+                 avg_battle_xp=0, battle_count=0, account_avg_battle_xp=0,
+                 reserve_mult=100, daily_double_factor=100, max_battle_xp=0):
         self.tier = tier                          # 1..11
         self.is_elite = is_elite                  # True = fully researched
         self.vehicle_xp = vehicle_xp              # unspent accumulated vehicle XP
@@ -246,6 +247,14 @@ class VehicleSnapshot(object):
         # view divides an XP shortfall by this to estimate "battles remaining" in a
         # tooltip; the domain only carries it through to the model.
         self.avg_battle_xp = avg_battle_xp
+        # --- Rest of the "battles remaining" estimate inputs, likewise carried straight
+        # through to the model for the view's "≈ M-N battles" range (see WGModResearch.js
+        # xpFracHtml). Neutral defaults leave the estimate at today's single-number form. ---
+        self.battle_count = battle_count              # random battles behind avg_battle_xp
+        self.account_avg_battle_xp = account_avg_battle_xp  # fallback divisor (under-sampled tank)
+        self.reserve_mult = reserve_mult              # active XP-reserve multiplier, int % (100 = x1.0)
+        self.daily_double_factor = daily_double_factor  # first-win-of-day factor, int % (100 = x1.0)
+        self.max_battle_xp = max_battle_xp            # best single random battle -> range's optimistic bound
 
 
 class ResearchProgressModel(object):
@@ -257,7 +266,8 @@ class ResearchProgressModel(object):
                  elite_level=0, elite_max_level=0, elite_grade="", elite_sub=0,
                  elite_current_icon="",
                  combat_xp=0, avail_upgrades=None, spendable_xp=0,
-                 avg_battle_xp=0):
+                 avg_battle_xp=0, battle_count=0, account_avg_battle_xp=0,
+                 reserve_mult=100, daily_double_factor=100, max_battle_xp=0):
         self.mode = mode
         self.scale_min = scale_min
         self.scale_max = scale_max
@@ -291,3 +301,11 @@ class ResearchProgressModel(object):
         # on every model so the view can estimate "battles remaining" beside an XP
         # shortfall in any mode's tooltip; 0 hides that estimate (no battles / unread).
         self.avg_battle_xp = avg_battle_xp
+        # Rest of the estimate inputs (see VehicleSnapshot) -> the view's "≈ M-N battles"
+        # range: battle count (sample-size / fallback gate), account-wide avg (fallback
+        # divisor), and the optimistic-bound bonuses (int %, 100 = x1.0).
+        self.battle_count = battle_count
+        self.account_avg_battle_xp = account_avg_battle_xp
+        self.reserve_mult = reserve_mult
+        self.daily_double_factor = daily_double_factor
+        self.max_battle_xp = max_battle_xp

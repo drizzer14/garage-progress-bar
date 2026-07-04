@@ -343,7 +343,41 @@ function xpIco(url) {
 // (free XP counts) follows in the headline's currency (total-XP + tan; combat + white
 // for elite). The vehicle-only figure shows only when free XP actually moves the
 // number. Once covered, the whole sub-line is omitted.
-function xpFracHtml(have, need, iconUrl, vehHave, avg) {
+// Below this many random battles, a tank's own average XP is too noisy to trust as a
+// divisor -> fall back to the account-wide average (see estDivisor).
+const MIN_BATTLES_FOR_VEH_AVG = 5;
+
+// Lifetime-average XP undersells ACTIVE play: the average is dragged down by mediocre /
+// early games, while an engaged player earns well above it (good form, consumables, crew
+// perks). Calibrate the divisor up by this empirical factor so the estimate tracks real
+// pace. Trade-off: a purely average player earns ~their lifetime avg, so this reads a bit
+// optimistic for them -- accepted, to better match how the bar's users actually grind.
+const ESTIMATE_CALIBRATION = 1.5;
+
+// Bundle the Python-pushed "battles remaining" inputs into one object threaded through
+// the tooltip builders (avoids a long parameter tail). Multipliers arrive as ints x100
+// (100 == x1.0); default to no-bonus so an unread value never widens the range wrongly.
+function mkBattleEst(data) {
+    return {
+        avg: data.avgBattleXp | 0,                       // this tank's avg XP/random battle
+        count: data.battleCount | 0,                     // its random battle count
+        acctAvg: data.accountAvgBattleXp | 0,            // account-wide avg (fallback divisor)
+        maxXp: data.maxBattleXp | 0,                     // this tank's best single battle (optimistic bound)
+        reserveMult: (data.reserveMult | 0) || 100,      // active XP-reserve multiplier
+        ddFactor: (data.dailyDoubleFactor | 0) || 100,   // first-win-of-day factor
+    };
+}
+
+// The per-battle XP divisor for the estimate: trust this tank's own average only with
+// enough battles behind it, else fall back to the account-wide average so a freshly
+// bought tank still estimates. 0 (no divisor) suppresses the estimate upstream.
+function estDivisor(est) {
+    if (!est) return 0;
+    if ((est.count | 0) >= MIN_BATTLES_FOR_VEH_AVG && (est.avg | 0) > 0) return est.avg | 0;
+    return (est.acctAvg | 0) || (est.avg | 0);
+}
+
+function xpFracHtml(have, need, iconUrl, vehHave, est) {
     need = need | 0;
     if (need <= 0) return "";
     have = have | 0;
@@ -366,16 +400,33 @@ function xpFracHtml(have, need, iconUrl, vehHave, avg) {
         }
         // Then the total remaining (free XP counts), in the headline's currency.
         sub += '<span class="wg-tip-rem-tot">-' + fmtXp(left) + ico + "</span>";
-        // Battles-remaining estimate ("≈ N"): divide the COMBAT-XP shortfall by the
-        // historical avg XP/battle. Only combat XP grows by PLAYING this tank (free XP
-        // is a shared account pool), so use the vehicle-only gap when we have it, else
-        // `have` is already combat XP (the elite footer passes it with no vehHave).
-        // Hidden when avg is 0 (no random battles / unreadable) -> never divide by zero.
-        avg = avg | 0;
+        // Battles-remaining estimate ("≈ M-N"): a RANGE of battles of playing THIS tank
+        // to close the COMBAT-XP shortfall. Only combat XP grows by playing (free XP is a
+        // shared account pool), so use the vehicle-only gap when we have it, else `have`
+        // is already combat XP (the elite footer passes it with no vehHave). Both ends
+        // divide the gap by a calibrated per-battle XP:
+        //   - HIGH end (more battles) = your typical pace: the average * calibration.
+        //   - LOW end (fewer battles) = your best-game pace: max(average, best-battle) *
+        //     calibration, then the bonuses you have -- an active XP reserve (every
+        //     battle) + the daily-double x2 on the first winning battle (if still up).
+        // When the tank is under-sampled, estDivisor falls back to the account-wide avg.
+        // Hidden when there's no divisor (no battles / unreadable) -> never divide by zero.
         const combatLeft = (vehHave !== undefined) ? (need - (vehHave | 0)) : left;
-        if (avg > 0 && combatLeft > 0) {
+        const base = estDivisor(est);
+        if (base > 0 && combatLeft > 0) {
+            const cal = ESTIMATE_CALIBRATION;
+            const typical = base * cal;                          // average form (high end)
+            const best = Math.max(base, est.maxXp | 0) * cal;    // best-game form (low end)
+            const res = (est.reserveMult || 100) / 100;          // reserve multiplier (>= 1)
+            const dd = (est.ddFactor || 100) / 100;              // daily-double factor (>= 1)
+            const nMax = Math.ceil(combatLeft / typical);
+            const first = best * res * dd;                       // best battle: best game + reserve + double
+            const nMin = (combatLeft <= first)
+                ? 1
+                : 1 + Math.ceil((combatLeft - first) / (best * res));
+            const label = (nMin < nMax) ? (fmtXp(nMin) + "–" + fmtXp(nMax)) : fmtXp(nMax);
             sub += '<span class="wg-tip-battles">&#8776; ' +
-                fmtXp(Math.ceil(combatLeft / avg)) + xpIco(BATTLE_ICON) + "</span>";
+                label + xpIco(BATTLE_ICON) + "</span>";
         }
         h += '<div class="wg-tip-xp-rem">' + sub + "</div>";
     }
@@ -528,7 +579,7 @@ function doneGlyph(t) {
 // right-side icon) -> FOOTER ("have / need XP", or the prerequisite line when
 // locked). A field-mod choice level puts its selectable variants (each with its
 // buffs) in place of a single title.
-function tooltipHtml(t, spendableXp, fillVehicle, avgBattleXp) {
+function tooltipHtml(t, spendableXp, fillVehicle, est) {
     const opts = splitLines(t.options);
     const optEffects = (t.optionEffects || "").split("\n");   // raw: index-aligned with opts
     let title = "", body = "", foot = "";
@@ -564,7 +615,7 @@ function tooltipHtml(t, spendableXp, fillVehicle, avgBattleXp) {
         // is force-brightened and it's always OPEN_SKILL_TREE-clickable -- so show
         // name + cost in every state, not the generic "Prerequisites not met". Uses
         // t.xpRequired (the real cost), not t.position (a node index); no fillVehicle.
-        foot = xpFracHtml(spendableXp, t.xpRequired, XP_ICON, undefined, avgBattleXp);
+        foot = xpFracHtml(spendableXp, t.xpRequired, XP_ICON, undefined, est);
     } else if (t.locked) {
         // Name the blocking prerequisites when known, else the generic line.
         const reqs = splitLines(t.prereqNames);
@@ -574,7 +625,7 @@ function tooltipHtml(t, spendableXp, fillVehicle, avgBattleXp) {
             : '<div class="wg-tip-status">' +
                 escapeHtml(L("prereqNotMet", "Prerequisites not met")) + "</div>";
     } else {
-        foot = xpFracHtml(spendableXp, t.position, XP_ICON, fillVehicle, avgBattleXp);
+        foot = xpFracHtml(spendableXp, t.position, XP_ICON, fillVehicle, est);
     }
     // Text block + its icon are ONE unit (no divider between them); the divider only
     // separates that unit from the footer (cost / prerequisite).
@@ -750,7 +801,7 @@ function arrGet(a, i) {
 // proven-interactive layer, which spans this row's area): we register each chip's
 // element + command + tooltip in hotEl._wgChips, and ensureHover() hit-tests them by
 // bounding rect for hover (toggling the chip's own .wg-chip-tip) and click.
-function renderNextAvailable(nextEl, arr, hotEl, spendableXp, avgBattleXp) {
+function renderNextAvailable(nextEl, arr, hotEl, spendableXp, est) {
     nextEl.innerHTML = "";
     const chips = [];
     const n = arrLen(arr);
@@ -787,7 +838,7 @@ function renderNextAvailable(nextEl, arr, hotEl, spendableXp, avgBattleXp) {
             // remaining sub-line would be bogus.
             const cFoot = u.done
                 ? ""
-                : xpFracHtml(spendableXp, xp, XP_ICON, undefined, avgBattleXp);
+                : xpFracHtml(spendableXp, xp, XP_ICON, undefined, est);
             // Text block + icon as one unit (no divider between them); divider before cost.
             tip.innerHTML = joinSections([tipMain(cIcon, cTitle, cBody), cFoot]);
             chip.appendChild(tip);
@@ -1208,9 +1259,9 @@ function render(model) {
     const mode = data.mode;
     // Spendable XP (vehicle + free), the affordability yardstick for tooltips.
     const spendableXp = data.spendableXp | 0;
-    // Historical avg combat XP/random battle; divisor for the tooltip "≈ N" battles
-    // estimate (0 = no battles / unreadable -> the estimate is suppressed downstream).
-    const avgBattleXp = data.avgBattleXp | 0;
+    // Inputs for the tooltip "≈ M-N battles" estimate (divisor selection + bonuses);
+    // suppressed downstream when no divisor is available (no battles / unreadable).
+    const battleEst = mkBattleEst(data);
     const sMin = data.scaleMin || 0;
     const sMax = data.scaleMax || 0;
     const fv = data.fillVehicle || 0;
@@ -1280,7 +1331,7 @@ function render(model) {
         if (nextEl._wgSig !== sig) {
             nextEl._wgSig = sig;
             setActiveChip(hotEl, null);
-            renderNextAvailable(nextEl, data.availUpgrades, hotEl, spendableXp, avgBattleXp);
+            renderNextAvailable(nextEl, data.availUpgrades, hotEl, spendableXp, battleEst);
         } else {
             nextEl.style.display = "flex";   // unchanged -> keep chips + tooltip, re-show
         }
@@ -1385,7 +1436,7 @@ function render(model) {
             className: className,
             leftPct: leftPct,
             tip: tip,
-            body: tip ? tooltipHtml(t, spendableXp, fv, avgBattleXp) : "",
+            body: tip ? tooltipHtml(t, spendableXp, fv, battleEst) : "",
             cmd: cmd,
             arg: arg,
             glyph: linearGlyph(t, mode),
@@ -1400,7 +1451,7 @@ function render(model) {
 
 // Tooltip body for an elite mark: the grade/reward name, (rewards) the reward
 // type, and the elite level the mark sits at.
-function eliteTooltipHtml(t, isRewards, combatXp, avgBattleXp) {
+function eliteTooltipHtml(t, isRewards, combatXp, est) {
     const name = t.name || "";
     // Category caption at the TOP (like native tooltips put the kind line above the
     // title). Rewards: JUST the localized reward TYPE. Grade progression: the localized
@@ -1425,7 +1476,7 @@ function eliteTooltipHtml(t, isRewards, combatXp, avgBattleXp) {
     if (name) text += '<div class="wg-tip-name">' + escapeHtml(name) + "</div>";
     // Footer: progress to this milestone as "<earned> / <needed> combat XP" (the
     // tick's xpRequired is the cumulative combat XP to reach the level).
-    const foot = xpFracHtml(combatXp, t.xpRequired, COMBAT_XP_ICON, undefined, avgBattleXp);
+    const foot = xpFracHtml(combatXp, t.xpRequired, COMBAT_XP_ICON, undefined, est);
     return joinSections([tipMain(iconHtml, text), foot]);
 }
 
@@ -1536,12 +1587,13 @@ function renderElite(root, data, isRewards) {
     const n = arrLen(ticks);
     // Pre-pass: every elite tick carries a glyph, so all reserve a lane (no predicate).
     const place = computeLanes(ticks, n, pct, data.mode, hotEl);
+    const battleEst = mkBattleEst(data);
     const res = renderTicks(ticksEl, ticks, n, function (t, i) {
         return {
             className: "wg-tick wg-elite-tick wg-state-" + (t.state || "upcoming"),
             leftPct: pct(t.position),
             tip: true,
-            body: eliteTooltipHtml(t, isRewards, data.combatXp | 0, data.avgBattleXp | 0),
+            body: eliteTooltipHtml(t, isRewards, data.combatXp | 0, battleEst),
             glyph: eliteGlyph(t, isRewards),
             lane: place[i] ? place[i].lane : 0,
         };

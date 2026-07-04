@@ -24,7 +24,11 @@ from CurrentVehicle import g_currentVehicle
 from helpers import dependency
 
 from wgmod_research._compat import LOG_CURRENT_EXCEPTION, _safe, _safe_int
-from wgmod_research.adapter._read_common import _safe_stats, avg_battle_xp as _avg_battle_xp
+from wgmod_research.adapter._read_common import (
+    _safe_stats, vehicle_xp_stats as _vehicle_xp_stats,
+    account_avg_battle_xp as _account_avg_battle_xp,
+    active_reserve_mult as _active_reserve_mult,
+    daily_double_factor as _daily_double_factor)
 from wgmod_research.adapter.tech_read import read_tech_unlocks as _read_tech_unlocks
 from wgmod_research.adapter.post_progression_read import (
     read_post_progression as _read_post_progression)
@@ -73,6 +77,13 @@ def build_snapshot():
         _read_skill_tree(veh) if is_skill_tree else (0, 0, 0, 0, "", "", 0, "", []))
     prestige = _read_prestige(veh)
 
+    int_cd = _safe_int(lambda: veh.intCD, 0)
+    # Battles-remaining estimate inputs (see the "≈ M–N battles" tooltip range): this
+    # tank's avg XP + battle count, the account-wide avg (fallback divisor for an
+    # under-sampled tank), plus the two optimistic-bound bonuses (active XP reserve,
+    # first-win-of-day). Each read is guarded to a neutral default.
+    avg_xp, battle_count, max_xp = _vehicle_xp_stats(int_cd)
+
     return t.VehicleSnapshot(
         tier=_safe_int(lambda: veh.level, 0),
         is_elite=_safe(lambda: bool(veh.isElite), False),
@@ -98,5 +109,10 @@ def build_snapshot():
         skilltree_final_icon=st_final_icon, skilltree_final_name=st_final_name,
         skilltree_final_xp=st_final_xp, skilltree_final_effect=st_final_effect,
         skilltree_available=st_available,
-        vehicle_int_cd=_safe_int(lambda: veh.intCD, 0),
-        avg_battle_xp=_avg_battle_xp(_safe_int(lambda: veh.intCD, 0)))
+        vehicle_int_cd=int_cd,
+        avg_battle_xp=avg_xp,
+        battle_count=battle_count,
+        max_battle_xp=max_xp,
+        account_avg_battle_xp=_account_avg_battle_xp(),
+        reserve_mult=_active_reserve_mult(),
+        daily_double_factor=_daily_double_factor(veh))

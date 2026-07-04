@@ -84,6 +84,39 @@ def test_avg_battle_xp_carries_onto_model():
     assert build_model(bare).avg_battle_xp == 0
 
 
+def test_estimate_inputs_carry_onto_model():
+    # The rest of the "battles remaining" estimate inputs (sample size, account-wide
+    # fallback avg, and the optimistic-bound bonuses) ride every model like avg_battle_xp.
+    snap = t.VehicleSnapshot(
+        tier=6, is_elite=False, vehicle_xp=800, free_xp=300,
+        tech_unlocks=[_u(1, 1000)], avg_battle_xp=740, battle_count=42,
+        account_avg_battle_xp=560, reserve_mult=200, daily_double_factor=200,
+        max_battle_xp=1900)
+    m = build_model(snap)
+    assert (m.battle_count, m.account_avg_battle_xp, m.reserve_mult,
+            m.daily_double_factor, m.max_battle_xp) == (42, 560, 200, 200, 1900)
+
+    # An elite/prestige model routes through _elite_model -- inputs must survive there too.
+    fm = t.VehicleSnapshot(
+        tier=10, is_elite=True, vehicle_xp=1000, free_xp=200,
+        field_mod_steps=[_step(1, 2000)], battle_count=7,
+        account_avg_battle_xp=610, reserve_mult=150, daily_double_factor=100)
+    mfm = build_model(fm)
+    assert mfm.mode == t.Mode.FIELD_MODS
+    assert (mfm.battle_count, mfm.account_avg_battle_xp,
+            mfm.reserve_mult, mfm.daily_double_factor) == (7, 610, 150, 100)
+
+
+def test_estimate_inputs_default_to_no_bonus():
+    # Unread reads default to neutral: multipliers 100 (x1.0), counts/avg 0 -> the view
+    # renders today's single-number estimate with no range widening.
+    bare = t.VehicleSnapshot(tier=6, is_elite=False, vehicle_xp=0, free_xp=0,
+                             tech_unlocks=[_u(1, 1000)])
+    m = build_model(bare)
+    assert (m.battle_count, m.account_avg_battle_xp, m.max_battle_xp) == (0, 0, 0)
+    assert (m.reserve_mult, m.daily_double_factor) == (100, 100)
+
+
 def test_elite_with_remaining_unlocks_is_tech_tree():
     # Regression: veh.isElite can be True (eliteVehicles membership) while modules
     # are still unresearched (e.g. Leopard 1). Research must win over field mods.
