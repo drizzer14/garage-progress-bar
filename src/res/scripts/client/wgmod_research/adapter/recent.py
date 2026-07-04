@@ -35,6 +35,12 @@ SKILLTREE = "skilltree"
 _done = {}
 # The last optimistic click, awaiting confirmation on the next reconciled snapshot.
 _pending = None
+# How many decorate() calls the current pending has survived without promotion; a
+# cancelled/failed click never confirms, so a stale pending is dropped after N
+# reconciles rather than lingering forever. Count-based (no wall clock) to stay
+# engine-free and deterministic in tests.
+_pending_reconciles = 0
+_PENDING_MAX_RECONCILES = 5
 
 # Modes whose views actually render ticks (main tick loop) -- the elite modes use a
 # separate render path and complete/hidden draw no ticks, so a done tick isn't shown
@@ -46,11 +52,16 @@ def record(kind, veh_int_cd, item_id, name="", icon="", category="",
            level=0, effect="", xp_cost=0, kind_label=""):
     """Optimistically stash the item just clicked. Display fields are captured now
     because a researched item vanishes from every snapshot source afterwards."""
-    global _pending
+    global _pending, _pending_reconciles
     try:
+        veh = int(veh_int_cd or 0)
+        if not veh:
+            # A failing/unknown vehicle would share the sentinel key 0 with every
+            # other; never record it (avoids cross-vehicle marker bleed).
+            return
         _pending = {
             "kind": kind,
-            "veh_int_cd": int(veh_int_cd or 0),
+            "veh_int_cd": veh,
             "item_id": int(item_id or 0),
             "name": name or "",
             "icon": icon or "",
@@ -60,6 +71,7 @@ def record(kind, veh_int_cd, item_id, name="", icon="", category="",
             "xp_cost": int(xp_cost or 0),
             "kind_label": kind_label or "",
         }
+        _pending_reconciles = 0
     except Exception:
         LOG_CURRENT_EXCEPTION()
         _pending = None
@@ -76,17 +88,28 @@ def decorate(model, snapshot):
     """Promote a confirmed pending click to this vehicle's marker, then inject that
     vehicle's marker into the built model. Mutates `model` in place; guarded so any
     failure leaves the model untouched."""
-    global _pending
+    global _pending, _pending_reconciles
     try:
         if snapshot is None or model is None:
             return
         veh = int(getattr(snapshot, "vehicle_int_cd", 0) or 0)
+        if not veh:
+            # Never key markers on the sentinel 0 (see record()).
+            return
 
         # 1) Promote a pending record IF it belongs to this vehicle and is now done.
+        #    A pending that never confirms (cancelled/failed click) is dropped after
+        #    _PENDING_MAX_RECONCILES reconciles so it doesn't linger and false-promote.
         if _pending is not None and _pending["veh_int_cd"] == veh:
             if _is_done(_pending, snapshot):
                 _done[veh] = _pending
                 _pending = None
+                _pending_reconciles = 0
+            else:
+                _pending_reconciles += 1
+                if _pending_reconciles > _PENDING_MAX_RECONCILES:
+                    _pending = None
+                    _pending_reconciles = 0
 
         # 2) Inject this vehicle's marker (if any) into the model.
         rec = _done.get(veh)
@@ -111,18 +134,24 @@ def _is_done(rec, snap):
         kind = rec["kind"]
         item_id = rec["item_id"]
         if kind == TECHTREE:
-            # No longer among the remaining (unresearched) tech-tree unlocks.
-            remaining = [u.int_cd for u in (snap.tech_unlocks or [])
-                         if not getattr(u, "researched", False)]
-            return item_id not in remaining
+            # Positive evidence: a researched item STAYS in tech_unlocks with
+            # researched=True, so match by presence + flag. A degraded/empty read
+            # leaves the loop un-run and returns False (defers -- never false-promotes
+            # on missing data).
+            for u in (snap.tech_unlocks or []):
+                if u.int_cd == item_id:
+                    return bool(getattr(u, "researched", False))
+            return False
         if kind == FIELDMOD:
             for s in (snap.field_mod_steps or []):
                 if getattr(s, "step_id", None) == item_id:
                     return bool(getattr(s, "unlocked", False))
             return False
         if kind == SKILLTREE:
+            # No per-node researched flag, so keep the absence test -- but guard the
+            # empty list (a degraded [] read must NOT read as "done").
             avail = [getattr(s, "step_id", None) for s in (snap.skilltree_available or [])]
-            return item_id not in avail
+            return bool(avail) and (item_id not in avail)
     except Exception:
         LOG_CURRENT_EXCEPTION()
     return False

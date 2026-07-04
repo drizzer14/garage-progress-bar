@@ -1,5 +1,5 @@
 # Research: Dragging the bar flush to the top edge silently loses the saved position
-_Submitted: full-codebase bug sweep (2026-07-04) · Status: open_
+_Submitted: full-codebase bug sweep (2026-07-04) · Status: shipped (2026-07-04)_
 
 ## Summary
 Ctrl+dragging the bar to the very top of the screen persists `posY=0` — but 0 is

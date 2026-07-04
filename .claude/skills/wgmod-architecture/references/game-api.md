@@ -105,9 +105,20 @@ that skill).
 ## Writes (`adapter/actions.py`) — verified via the dev REPL
 - **Tech-tree research:** `gui.shared.gui_items.items_actions.factory.doAction(
   factory.UNLOCK_ITEM, intCD, props)` where `props = UnlockProps(parentID, unlockIdx,
-  xpCost, set(required), 0, xpFullCost)` from
+  xpCost, set(required), discount, xpFullCost)` from
   `gui.Scaleform.daapi.view.lobby.techtree.settings.UnlockProps`. Build the row from
-  `veh.getUnlocksDescrs()`.
+  `veh.getUnlocksDescrs()`. `UnlockProps._fields =
+  ('parentID','unlockIdx','xpCost','required','discount','xpFullCost')` (namedtuple);
+  `xpCost` is the EFFECTIVE (post-discount) cost, `discount` is the percent, `xpFullCost`
+  the raw cost. Modules always pass `discount=0`, `xpCost==xpFullCost`.
+- **Blueprint fragment discount (next-vehicle unlocks only):** the requester is
+  `cache.items.blueprints` (`BlueprintsRequester`, no `IBlueprintsRequester` skeleton).
+  `getFragmentDiscountAndCost(vehicleCD, vLevel, xpFullCost) -> (discountPct, savingsXP)`
+  and `calculateCost(xpFullCost, discountPct) -> effectiveCost` (== full − savings). E.g.
+  Type 68 (cd 8801, tier 9): full 156900 → `(9, 14121)`, effective `calculateCost(156900, 9)
+  == 142779`. `vLevel` is `item.level` (a vehicle item's tier). Returns a 0% discount when
+  no fragments are held. Applies to VEHICLE unlocks only — WG's validator rejects a
+  module unlocked at a differing cost, so modules stay on the raw cost.
 - **Field-mod step:** `factory.doAction(factory.PURCHASE_POST_PROGRESSION_STEPS, veh,
   [stepID])` (same items-actions factory as tech-tree UNLOCK_ITEM). This runs WG's
   `AsyncGUIItemAction` confirm→research chain: `_confirm()` shows the dialog,

@@ -1,5 +1,5 @@
 # Research: Skill-tree chip tooltip shows a bogus vehicle-XP shortfall (node count used as XP)
-_Submitted: full-codebase bug sweep (2026-07-04) · Status: open_
+_Submitted: full-codebase bug sweep (2026-07-04) · Status: shipped (2026-07-04)_
 
 ## Summary
 Hovering an **unaffordable** "Next available" chip in skill_tree mode shows a

@@ -1,5 +1,5 @@
 # Research: Elite band's trailing tick never gets the "next" highlight
-_Submitted: full-codebase bug sweep (2026-07-04) · Status: open_
+_Submitted: full-codebase bug sweep (2026-07-04) · Status: shipped (2026-07-04)_
 
 ## Summary
 A player who has achieved every sub-grade of their elite grade band but not the next

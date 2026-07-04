@@ -80,6 +80,23 @@ def test_grade_band_tick_states_and_completed():
     ]
 
 
+def test_grade_band_trailing_tick_is_next_when_band_fully_reached():
+    # A band whose every sub-grade is reached but the next family isn't: the
+    # trailing next-family tick must carry the "next" highlight (the in-band loop
+    # marks nothing "next" once all sub-grades are achieved).
+    grades = [
+        _grade(1, "iron", 1, True), _grade(3, "iron", 2),
+        _grade(5, "iron", 3), _grade(7, "iron", 4),
+        _grade(10, "bronze", 1, True),
+    ]
+    res = elite.resolve_grade_band(_snap(8, grades=grades, max_level=10))
+    states = [(tk.xp_position, tk.state) for tk in res["ticks"]]
+    assert states == [
+        (1, "achieved"), (3, "achieved"), (5, "achieved"), (7, "achieved"),
+        (10, "next"),  # next family's first level -> "next" now the band is done
+    ]
+
+
 def test_grade_band_fill_offset_includes_fraction():
     # level 12 in band [10,20], halfway to level 13 -> position 12.5, offset 2.5
     res = elite.resolve_grade_band(_snap(12, current_xp=50, next_xp=100))

@@ -163,18 +163,24 @@ def resolve_grade_band(snapshot):
 
     # One extra tick at the band's end = the NEXT grade's first level, so the bar
     # always shows what you're climbing toward. Sits at scale_max (the right edge).
+    # When the whole current band is achieved but this next-family tick isn't yet
+    # reached, it is the "next" milestone (the in-band loop only marks a tick "next"
+    # while sub-grades remain, so a fully-achieved band would otherwise show none).
     if next_families:
         nxt = next_families[0]
         nxt_grades = [g for g in grades if g.grade == nxt]
         if nxt_grades:
             ng = min(nxt_grades, key=lambda g: g.level)
+            band_all_reached = all(level >= g.level for g in band_grades)
+            trailing_state = ("achieved" if level >= ng.level
+                              else ("next" if band_all_reached else "upcoming"))
             ticks.append(t.Tick(
                 xp_position=ng.level, category=Category.ELITE,
                 icon=_emblem_url(nxt, ng.sub),
                 name=_grade_title(nxt, ng.sub),
                 xp_gained=0, xp_required=level_xp.get(ng.level, 0), affordable=False,
                 completed=(level >= ng.level), level=ng.sub,
-                state=("achieved" if level >= ng.level else "upcoming")))
+                state=trailing_state))
 
     frac = _fill_fraction(snapshot.elite_current_xp, snapshot.elite_next_xp)
     if current_family == GradeFamily.PRESTIGE:

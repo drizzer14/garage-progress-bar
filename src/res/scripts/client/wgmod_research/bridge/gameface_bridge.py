@@ -376,6 +376,12 @@ def _on_set_position(*args):
         # it. See mod_settings.set_position / _store_default_position.
         is_seed = bool(_map_get(args[0], "seed")) if args else False
         LOG_NOTE("[wgmod] setPosition x=%s y=%s seed=%s" % (x, y, is_seed))
+        # A non-seed drag with a coord <= 0 is not a real placement: 0 is the
+        # auto/unseeded sentinel, and the _cmd_xy_arg failure signature is (0, 0).
+        # Dropping it keeps a bad measurement from clobbering the stored position.
+        # Seed writes are always allowed -- they carry real measured default coords.
+        if not is_seed and (x <= 0 or y <= 0):
+            return
         mod_settings.set_position(x, y, is_default=is_seed)
     except Exception:
         LOG_CURRENT_EXCEPTION()

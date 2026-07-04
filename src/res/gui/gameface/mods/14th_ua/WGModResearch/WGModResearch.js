@@ -538,6 +538,13 @@ function tooltipHtml(t, spendableXp, fillVehicle) {
         // Session "done" marker: already researched -> show the credits buy price
         // (hidden once owned; 0 renders nothing), styled like the XP cost line.
         foot = creditsHtml(t.price);
+    } else if (t.category === CAT.UPGRADE && t.icon && t.xpRequired) {
+        // Skill-tree final (capstone) tick: only this tick carries a name + real XP
+        // cost (domain skilltree.py). It's "locked" on the COUNT axis, but the glyph
+        // is force-brightened and it's always OPEN_SKILL_TREE-clickable -- so show
+        // name + cost in every state, not the generic "Prerequisites not met". Uses
+        // t.xpRequired (the real cost), not t.position (a node index); no fillVehicle.
+        foot = xpFracHtml(spendableXp, t.xpRequired, XP_ICON);
     } else if (t.locked) {
         // Name the blocking prerequisites when known, else the generic line.
         const reqs = splitLines(t.prereqNames);
@@ -723,7 +730,7 @@ function arrGet(a, i) {
 // proven-interactive layer, which spans this row's area): we register each chip's
 // element + command + tooltip in hotEl._wgChips, and ensureHover() hit-tests them by
 // bounding rect for hover (toggling the chip's own .wg-chip-tip) and click.
-function renderNextAvailable(nextEl, arr, hotEl, spendableXp, fillVehicle) {
+function renderNextAvailable(nextEl, arr, hotEl, spendableXp) {
     nextEl.innerHTML = "";
     const chips = [];
     const n = arrLen(arr);
@@ -755,18 +762,25 @@ function renderNextAvailable(nextEl, arr, hotEl, spendableXp, fillVehicle) {
             const cBody = effectHtml(u.effect);
             const cIcon = (u.icon && u.icon.indexOf("img://") === 0) ? bgIconHtml(u.icon) : "";
             // Done marker -> already unlocked, no cost/footer; else per-node cost
-            // (frontier nodes unlock independently).
+            // (frontier nodes unlock independently). No fillVehicle arg: `xp` here is
+            // a node COUNT-cost, not a two-currency XP figure, so a "-<n>" vehicle
+            // remaining sub-line would be bogus.
             const cFoot = u.done
                 ? ""
-                : xpFracHtml(spendableXp, xp, XP_ICON, fillVehicle);
+                : xpFracHtml(spendableXp, xp, XP_ICON);
             // Text block + icon as one unit (no divider between them); divider before cost.
             tip.innerHTML = joinSections([tipMain(cIcon, cTitle, cBody), cFoot]);
             chip.appendChild(tip);
             if (u.done) chip.appendChild(doneBadge());   // green check, bottom-right
             nextEl.appendChild(chip);
+            // Gate clickability on affordability, like the bar's ticks: an
+            // unaffordable frontier node isn't unlockable, so give it a null cmd
+            // (the click handler no-ops on null). Done markers open the screen.
             chips.push(u.done
                 ? { el: chip, tip: tip, cmd: CMD.OPEN_SKILL_TREE, arg: undefined }
-                : { el: chip, tip: tip, cmd: CMD.UNLOCK_FIELD_MOD, arg: u.actionId });
+                : { el: chip, tip: tip,
+                    cmd: (spendableXp >= xp) ? CMD.UNLOCK_FIELD_MOD : null,
+                    arg: u.actionId });
         }
         nextEl.style.display = "flex";
     } else {
@@ -1232,7 +1246,7 @@ function render(model) {
         if (nextEl._wgSig !== sig) {
             nextEl._wgSig = sig;
             setActiveChip(hotEl, null);
-            renderNextAvailable(nextEl, data.availUpgrades, hotEl, spendableXp, fv);
+            renderNextAvailable(nextEl, data.availUpgrades, hotEl, spendableXp);
         } else {
             nextEl.style.display = "flex";   // unchanged -> keep chips + tooltip, re-show
         }
@@ -1575,9 +1589,11 @@ function ensureHover(hotEl, tipEl) {
             const h = window.innerHeight || 0;
             let cx = ev.clientX - offX;
             let cy = ev.clientY - offY;
-            // clamp so the bar can't be dragged off-screen (whole width kept visible)
+            // clamp so the bar can't be dragged off-screen (whole width kept visible).
+            // Floor y at 1, not 0: y=0 is the "auto/unseeded" sentinel Python re-seeds
+            // from, so a flush-to-top drag stored as 0 would be discarded on the next push.
             if (w) cx = Math.max(halfW, Math.min(w - halfW, cx));
-            if (h) cy = Math.max(0, Math.min(h - 20, cy));
+            if (h) cy = Math.max(1, Math.min(h - 20, cy));
             root.style.left = Math.round(cx) + "px";
             root.style.top = Math.round(cy) + "px";
         };
@@ -1588,7 +1604,7 @@ function ensureHover(hotEl, tipEl) {
             const r = root.getBoundingClientRect();
             invokeCommand(CMD.SET_POSITION, {
                 x: Math.round(r.left + r.width / 2),
-                y: Math.round(r.top),
+                y: Math.max(1, Math.round(r.top)),   // never 0 (the unseeded sentinel)
             });
             // keep _wgDidDrag set through the click that fires right after this mouseup,
             // then clear it (the click handler reads it to suppress a research action).
@@ -1605,7 +1621,9 @@ function ensureHover(hotEl, tipEl) {
         const root = getRoot();
         if (root && root._wgDidDrag) return;
         const chip = chipAt(hotEl, e.clientX, e.clientY);
-        if (chip) { invokeCommand(chip.cmd, chip.arg); return; }
+        // chipAt returns any chip under the cursor regardless of clickability; an
+        // unaffordable frontier chip carries a null cmd -> swallow the click here.
+        if (chip) { if (chip.cmd) invokeCommand(chip.cmd, chip.arg); return; }
         const hit = nearestClick(hotEl, e.clientX);
         if (hit) invokeCommand(hit.cmd, hit.arg);
     });

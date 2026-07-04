@@ -94,11 +94,18 @@ class Tick(object):
 class UnlockItem(object):
     """A tech-tree unlock (module or next vehicle, including a Tier XI vehicle)."""
     def __init__(self, int_cd, name, icon, xp_cost, kind, researched, prereqs_met,
-                 kind_label="", prereq_names=None):
+                 kind_label="", prereq_names=None, xp_cost_effective=None):
         self.int_cd = int_cd
         self.name = name
         self.icon = icon
         self.xp_cost = xp_cost
+        # Effective (post-discount) XP cost. For a next-vehicle unlock the player holds
+        # blueprint fragments for, this is the discounted price; modules and un-
+        # discounted vehicles keep the raw cost. The techtree resolver prices/positions
+        # each tick from this (defaulting to xp_cost when absent), so the bar reflects
+        # what the player would actually pay. Modules MUST stay on raw cost (WG's
+        # validator rejects a module unlocked at a differing cost).
+        self.xp_cost_effective = xp_cost if xp_cost_effective is None else xp_cost_effective
         self.kind = kind                  # 'module' | 'vehicle'
         self.researched = researched
         self.prereqs_met = prereqs_met

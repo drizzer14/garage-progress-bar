@@ -13,7 +13,7 @@ from gui.shared.gui_items import GUI_ITEM_TYPE
 
 from wgmod_research._compat import LOG_CURRENT_EXCEPTION
 from wgmod_research.adapter import i18n
-from wgmod_research.adapter._read_common import _items_cache
+from wgmod_research.adapter._read_common import _items_cache, blueprint_effective_cost
 from wgmod_research.adapter.format import roman as _roman, module_big_icon as _module_big_icon
 from wgmod_research.domain import types as t
 from wgmod_research.domain.constants import Category
@@ -70,12 +70,18 @@ def read_tech_unlocks(veh, unlocks):
             # in the tooltip. Only resolved when something is actually missing.
             missing = [p for p in prereqs if p not in unlocks]
             prereq_names = [nm for nm in (_unlock_name(cache, p) for p in missing) if nm]
+            # Blueprint-fragment discount applies to next-vehicle unlocks only (modules
+            # must keep raw cost). Guarded: any failure falls back to the raw cost.
+            xp_effective = int(xp_cost)
+            if is_vehicle:
+                xp_effective = blueprint_effective_cost(int_cd, int(xp_cost))[0]
             out.append(t.UnlockItem(
                 int_cd=int_cd, name=name, icon=icon, xp_cost=int(xp_cost),
                 kind=(Category.VEHICLE if is_vehicle else Category.MODULE),
                 researched=(int_cd in unlocks),
                 prereqs_met=(not missing),
-                kind_label=kind_label, prereq_names=prereq_names))
+                kind_label=kind_label, prereq_names=prereq_names,
+                xp_cost_effective=xp_effective))
         return out
     except Exception:
         LOG_CURRENT_EXCEPTION()

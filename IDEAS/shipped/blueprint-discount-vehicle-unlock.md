@@ -1,5 +1,5 @@
 # Research: Blueprint discounts ignored for the next-vehicle tick (wrong affordability + silent failure)
-_Submitted: full-codebase bug sweep (2026-07-04) · Status: open_
+_Submitted: full-codebase bug sweep (2026-07-04) · Status: shipped (2026-07-04)_
 
 ## Summary
 When the player holds blueprint fragments for the next vehicle, the bar prices the

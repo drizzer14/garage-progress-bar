@@ -34,6 +34,34 @@ def _safe_stats():
         return None
 
 
+def blueprint_effective_cost(int_cd, xp_full):
+    """(effective_cost, discount_pct) for the VEHICLE unlock `int_cd` given its raw
+    XP cost `xp_full`, applying any blueprint-fragment discount the player holds.
+
+    Returns (int(xp_full), 0) when no fragments apply or on any failure -- so a
+    degraded read never blanks or misprices the row. VEHICLE unlocks only: modules
+    must keep their raw cost (WG's validator rejects a module unlocked at a differing
+    cost). Mirrors the game's own flow: getFragmentDiscountAndCost gives the current
+    discount percent, calculateCost turns full cost + percent into the paid cost.
+    Symbols verified live (EU 2.3): cache.items.blueprints (BlueprintsRequester)."""
+    xp_full = int(xp_full or 0)
+    try:
+        cache = _items_cache()
+        bp = getattr(cache.items, "blueprints", None)
+        if bp is None or xp_full <= 0:
+            return xp_full, 0
+        vlevel = int(getattr(cache.items.getItemByCD(int_cd), "level", 0) or 0)
+        if not vlevel:
+            return xp_full, 0
+        disc_pct = int(bp.getFragmentDiscountAndCost(int_cd, vlevel, xp_full)[0] or 0)
+        if disc_pct <= 0:
+            return xp_full, 0
+        return int(bp.calculateCost(xp_full, disc_pct)), disc_pct
+    except Exception:
+        LOG_CURRENT_EXCEPTION()
+        return xp_full, 0
+
+
 def _kpi_lines(action, numbers_only=False):
     """The effect/bonus lines for a post-progression action, from its KPI list:
     one "<signed %> <stat phrase>" string per KPI that carries a description (e.g.

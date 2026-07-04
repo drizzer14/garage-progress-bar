@@ -121,11 +121,33 @@ def _do_research(veh, int_cd, row):
         return False
     try:
         unlock_idx, xp_cost, _item_cd, required = row[0], row[1], row[2], row[3]
-        # UnlockProps(parentID, unlockIdx, xpCost, required, discount, xpFullCost).
-        props = UnlockProps(veh.intCD, int(unlock_idx), int(xp_cost),
-                            set(required), 0, int(xp_cost))
+        xp_full = int(xp_cost)
+        # UnlockProps(parentID, unlockIdx, xpCost, required, discount, xpFullCost):
+        # xpCost is the EFFECTIVE (paid) cost. For a next-vehicle unlock the player
+        # holds blueprint fragments for, pass the discounted cost + percent + raw full
+        # cost, so WG unlocks it at the same price the bar showed (no exchange-XP dialog
+        # / silent post-confirm failure). Modules keep the raw cost, discount 0 -- WG's
+        # validator rejects a module unlocked at a differing cost.
+        xp_eff, discount = xp_full, 0
+        if _is_vehicle_cd(int_cd):
+            from wgmod_research.adapter._read_common import blueprint_effective_cost
+            xp_eff, discount = blueprint_effective_cost(int_cd, xp_full)
+        props = UnlockProps(veh.intCD, int(unlock_idx), int(xp_eff),
+                            set(required), int(discount), xp_full)
         actions_factory.doAction(actions_factory.UNLOCK_ITEM, int_cd, props)
         return True
+    except Exception:
+        LOG_CURRENT_EXCEPTION()
+        return False
+
+
+def _is_vehicle_cd(int_cd):
+    """True if `int_cd` is a vehicle compact descriptor (vs a module). Guarded ->
+    False on any failure, so research falls back to the raw-cost module path."""
+    try:
+        from items import getTypeOfCompactDescr
+        from gui.shared.gui_items import GUI_ITEM_TYPE
+        return getTypeOfCompactDescr(int_cd) == GUI_ITEM_TYPE.VEHICLE
     except Exception:
         LOG_CURRENT_EXCEPTION()
         return False

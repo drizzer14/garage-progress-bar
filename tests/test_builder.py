@@ -17,10 +17,10 @@ def test_not_elite_is_tech_tree():
     m = build_model(snap)
     assert m.mode == t.Mode.TECH_TREE
     assert m.scale_min == 0
-    assert m.scale_max == 1500          # cumulative max
+    assert m.scale_max == 1000          # max own cost (per-item, not cumulative)
     assert m.fill_vehicle == 500
     assert m.fill_free == 0
-    assert [tk.xp_position for tk in m.ticks] == [500, 1500]
+    assert [tk.xp_position for tk in m.ticks] == [500, 1000]
     # tech-tree ticks carry the unlock kind as their category
     assert all(tk.category == "module" for tk in m.ticks)
 
@@ -33,8 +33,8 @@ def test_tech_tree_includes_tier_xi_vehicle_unlock():
                       _u(99, 325000, kind="vehicle")])  # the Tier XI successor
     m = build_model(snap)
     assert m.mode == t.Mode.TECH_TREE
-    assert [tk.xp_position for tk in m.ticks] == [5000, 330000]
-    assert m.scale_max == 330000
+    assert [tk.xp_position for tk in m.ticks] == [5000, 325000]
+    assert m.scale_max == 325000
 
 
 def test_tech_tree_fill_is_two_segments():

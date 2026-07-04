@@ -1,5 +1,5 @@
 # Research: Done-marker reconcile can promote a cancelled click into a false "done" marker
-_Submitted: full-codebase bug sweep (2026-07-04) · Status: open_
+_Submitted: full-codebase bug sweep (2026-07-04) · Status: shipped (2026-07-04)_
 
 ## Summary
 Three confirmed weaknesses in the session done-marker reconcile (`adapter/recent.py`),

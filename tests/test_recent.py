@@ -124,3 +124,46 @@ def test_marker_not_injected_outside_tick_modes():
     model = _model(mode=t.Mode.COMPLETE, ticks=[])
     recent.decorate(model, snap)
     assert model.ticks == []
+
+
+def test_techtree_empty_read_does_not_promote():
+    # A degraded/empty tech_unlocks read must NOT be mistaken for "researched".
+    recent.record(recent.TECHTREE, 100, 5, name="Gun", icon="g.png", category="module")
+    model = _model(ticks=[])
+    recent.decorate(model, _snap(100, tech_unlocks=[]))
+    assert model.ticks == []
+
+
+def test_skilltree_empty_read_does_not_promote():
+    recent.record(recent.SKILLTREE, 100, 42, name="Perk", icon="p.png", category="Mechanic")
+    model = _model(mode=t.Mode.SKILL_TREE, avail=[])
+    recent.decorate(model, _snap(100, is_skill_tree=True, skilltree_available=[]))
+    assert model.avail_upgrades == []
+
+
+def test_skilltree_cancel_leaves_no_chip():
+    # Node 42 still available (unlock cancelled) -> nothing surfaces.
+    recent.record(recent.SKILLTREE, 100, 42, name="Perk", icon="p.png", category="Mechanic")
+    model = _model(mode=t.Mode.SKILL_TREE, avail=[])
+    recent.decorate(model, _snap(100, is_skill_tree=True, skilltree_available=[_step(42)]))
+    assert model.avail_upgrades == []
+
+
+def test_pending_expires_after_max_reconciles_without_promotion():
+    recent.record(recent.TECHTREE, 100, 5, name="Gun", icon="g.png", category="module")
+    unconfirmed = _snap(100, tech_unlocks=[_unlock(5, researched=False)])
+    # Survive N non-promoting reconciles, then one more drops the stale pending.
+    for _ in range(recent._PENDING_MAX_RECONCILES + 1):
+        recent.decorate(_model(ticks=[]), unconfirmed)
+    # Even a now-confirmed snapshot no longer promotes -- the pending is gone.
+    model = _model(ticks=[])
+    recent.decorate(model, _snap(100, tech_unlocks=[_unlock(5, researched=True)]))
+    assert model.ticks == []
+
+
+def test_zero_vehicle_id_rejected():
+    # A failing/unknown vehicle keys on the sentinel 0; never record or inject it.
+    recent.record(recent.TECHTREE, 0, 5, name="Gun", icon="g.png", category="module")
+    model = _model(ticks=[])
+    recent.decorate(model, _snap(0, tech_unlocks=[_unlock(5, researched=True)]))
+    assert model.ticks == []

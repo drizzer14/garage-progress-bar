@@ -28,6 +28,15 @@ def test_clamp_pos_negative_becomes_auto():
     assert mod_settings.clamp_pos(-9999) == 0
 
 
+def test_clamp_pos_top_edge_survives_zero_sentinel():
+    # Bug 4: y=0 is the "auto/unseeded" sentinel (re-seeded on the next push), so a
+    # flush-to-top drag must land at 1, not 0. clamp_pos itself keeps 0 mapping to 0
+    # (unchanged) -- the JS drag + bridge guard are what floor the coord at 1; this
+    # locks in that 1 is a legal stored placement while 0 stays the sentinel.
+    assert mod_settings.clamp_pos(0) == 0    # sentinel preserved (auto)
+    assert mod_settings.clamp_pos(1) == 1    # a real top-edge placement is kept
+
+
 def test_clamp_pos_over_max_is_capped():
     assert mod_settings.clamp_pos(mod_settings.POS_MAX + 1) == mod_settings.POS_MAX
     assert mod_settings.clamp_pos(10 ** 9) == mod_settings.POS_MAX
