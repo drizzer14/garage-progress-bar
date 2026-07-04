@@ -61,11 +61,17 @@ def read_tech_unlocks(veh, unlocks):
                 if is_vehicle:
                     tier = int(getattr(item, "level", 0) or 0)
                     kind_label = i18n.tier_label(_roman(tier))
+                    owned = False
                 else:
                     kind_label = getattr(item, "userType", "") or ""
+                    # Modules only: in the player's inventory (bought). Lets a "buy +
+                    # mount" done marker self-clear once the module is owned. Vehicles
+                    # have a different ownership model and never self-clear, so skip.
+                    owned = bool(getattr(item, "isInInventory", False)) \
+                        or (getattr(item, "inventoryCount", 0) or 0) > 0
             except Exception:
                 LOG_CURRENT_EXCEPTION()
-                is_vehicle, name, icon, kind_label = False, "", "", ""
+                is_vehicle, name, icon, kind_label, owned = False, "", "", "", False
             # Names of the prerequisite items not yet researched -> "Requires: ..."
             # in the tooltip. Only resolved when something is actually missing.
             missing = [p for p in prereqs if p not in unlocks]
@@ -81,7 +87,7 @@ def read_tech_unlocks(veh, unlocks):
                 researched=(int_cd in unlocks),
                 prereqs_met=(not missing),
                 kind_label=kind_label, prereq_names=prereq_names,
-                xp_cost_effective=xp_effective))
+                xp_cost_effective=xp_effective, owned=owned))
         return out
     except Exception:
         LOG_CURRENT_EXCEPTION()

@@ -130,7 +130,7 @@ class UpgradeVM(ViewModel):
 
 
 class ResearchVM(ViewModel):
-    def __init__(self, properties=22, commands=6):
+    def __init__(self, properties=22, commands=7):
         super(ResearchVM, self).__init__(properties=properties, commands=commands)
 
     def _initialize(self):
@@ -163,8 +163,9 @@ class ResearchVM(ViewModel):
         self.researchUnlock = self._addCommand("researchUnlock")    # arg: tech-tree int_cd
         self.unlockFieldMod = self._addCommand("unlockFieldMod")    # arg: field-mod step_id
         self.openSkillTree = self._addCommand("openSkillTree")      # no arg
-        self.openResearch = self._addCommand("openResearch")        # no arg (done tech-tree marker click)
+        self.openResearch = self._addCommand("openResearch")        # no arg (done VEHICLE marker click)
         self.openFieldMods = self._addCommand("openFieldMods")      # no arg (done field-mod marker click)
+        self.buyMount = self._addCommand("buyMount")                # arg: module int_cd (done MODULE marker: buy + mount)
         self.setPosition = self._addCommand("setPosition")          # arg: {x, y} px (drag / seed)
 
     def setMode(self, v):

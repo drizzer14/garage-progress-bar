@@ -8,10 +8,10 @@ from wgmod_research.adapter import recent
 from wgmod_research.domain import types as t
 
 
-def _unlock(int_cd, researched=False):
+def _unlock(int_cd, researched=False, owned=False, kind="module"):
     return t.UnlockItem(int_cd=int_cd, name="u%d" % int_cd, icon="u%d.png" % int_cd,
-                        xp_cost=1000, kind="module", researched=researched,
-                        prereqs_met=True)
+                        xp_cost=1000, kind=kind, researched=researched,
+                        prereqs_met=True, owned=owned)
 
 
 def _step(sid, unlocked=False):
@@ -167,3 +167,71 @@ def test_zero_vehicle_id_rejected():
     model = _model(ticks=[])
     recent.decorate(model, _snap(0, tech_unlocks=[_unlock(5, researched=True)]))
     assert model.ticks == []
+
+
+# --- self-clearing "buy + mount" module markers ------------------------------
+
+def test_techtree_module_marker_retires_when_owned():
+    # A module marker shows while researched-but-not-owned, then clears once the module
+    # is owned (bought + mounted via the done-tick "buy + mount" click).
+    recent.record(recent.TECHTREE, 100, 5, name="Gun", icon="g.png", category="module")
+    recent.decorate(_model(ticks=[]), _snap(100, tech_unlocks=[_unlock(5, researched=True)]))
+    # Next sync: the module now reads as owned -> marker retires (no tick, store cleared).
+    snap = _snap(100, tech_unlocks=[_unlock(5, researched=True, owned=True)])
+    model = _model(ticks=[])
+    recent.decorate(model, snap)
+    assert model.ticks == []
+    assert 100 not in recent._done
+
+
+def test_techtree_module_marker_kept_while_not_owned():
+    recent.record(recent.TECHTREE, 100, 5, name="Gun", icon="g.png", category="module")
+    snap = _snap(100, tech_unlocks=[_unlock(5, researched=True, owned=False)])
+    model = _model(ticks=[])
+    recent.decorate(model, snap)
+    assert len(model.ticks) == 1
+    assert model.ticks[0].done is True
+
+
+def test_techtree_vehicle_marker_not_retired_when_owned():
+    # A next-vehicle marker keeps opening Research (you can't mount a tank), so it must
+    # NOT self-retire even if the snapshot's owned flag is set.
+    recent.record(recent.TECHTREE, 100, 5, name="Tank", icon="v.png", category="vehicle")
+    snap = _snap(100, tech_unlocks=[_unlock(5, researched=True, owned=True, kind="vehicle")])
+    model = _model(ticks=[])
+    recent.decorate(model, snap)
+    assert len(model.ticks) == 1
+    assert model.ticks[0].category == "vehicle"
+
+
+def test_techtree_retire_degrades_on_missing_item():
+    # The researched item is absent from tech_unlocks (degraded read) -> the marker must
+    # persist rather than vanish on missing data.
+    recent.record(recent.TECHTREE, 100, 5, name="Gun", icon="g.png", category="module")
+    recent.decorate(_model(ticks=[]), _snap(100, tech_unlocks=[_unlock(5, researched=True)]))
+    model = _model(ticks=[])
+    recent.decorate(model, _snap(100, tech_unlocks=[_unlock(6, researched=True, owned=True)]))
+    assert len(model.ticks) == 1
+    assert 100 in recent._done
+
+
+def test_clear_fieldmod_drops_only_fieldmod_marker():
+    # Promote a field-mod marker, then clear_fieldmod drops it.
+    recent.record(recent.FIELDMOD, 100, 7, name="FM", icon="fm", category="fieldmod", level=3)
+    recent.decorate(_model(mode=t.Mode.FIELD_MODS, ticks=[]),
+                    _snap(100, field_mod_steps=[_step(7, unlocked=True)]))
+    assert 100 in recent._done
+    recent.clear_fieldmod(100)
+    assert 100 not in recent._done
+
+
+def test_clear_fieldmod_leaves_techtree_marker():
+    recent.record(recent.TECHTREE, 100, 5, name="Gun", icon="g.png", category="module")
+    recent.decorate(_model(ticks=[]), _snap(100, tech_unlocks=[_unlock(5, researched=True)]))
+    recent.clear_fieldmod(100)   # wrong kind -> no-op
+    assert 100 in recent._done
+
+
+def test_clear_fieldmod_noop_without_marker():
+    recent.clear_fieldmod(100)   # nothing recorded -> guarded no-op
+    assert 100 not in recent._done

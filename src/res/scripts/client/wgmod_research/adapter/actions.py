@@ -72,6 +72,32 @@ def unlock_field_mod(step_id):
         _open_field_mods_screen(veh)
 
 
+def buy_and_mount(int_cd):
+    """Buy the researched module `int_cd` and install it on the selected vehicle in one
+    action -- WG's own "Buy and equip" path. Invoked by a click on a "done" tech-tree
+    MODULE marker.
+
+    Goes through the items-actions FACTORY, like the tech-tree unlock (UNLOCK_ITEM) and
+    field-mod (PURCHASE_POST_PROGRESSION_STEPS) paths. `doAction` is `@adisp_process`: it
+    runs WG's own credits-exchange / confirm dialogs and never raises into the caller, so
+    the short-credits and cancel flows are handled by the game. On any failure we fall
+    back to opening the research screen -- never a raise back into the JS bridge.
+
+    NB: use BUY_AND_INSTALL_AND_SELL_ITEM. The bare BUY_AND_INSTALL_ITEM constant
+    ('buyAndInstallItemAction') is NOT in the factory's _ACTION_MAP. Analog:
+    research_cm_handlers.buyModule (EU 2.3 decompiled client)."""
+    veh = _current_vehicle()
+    if veh is None:
+        return
+    try:
+        import gui.shared.gui_items.items_actions.factory as actions_factory
+        actions_factory.doAction(
+            actions_factory.BUY_AND_INSTALL_AND_SELL_ITEM, int(int_cd), veh.intCD)
+    except Exception:
+        LOG_CURRENT_EXCEPTION()
+        _open_research_screen(veh)
+
+
 def open_skill_tree():
     """Open WG's current Upgrades screen for the tier-XI final tick. Uses the
     vehicle-hub skill-tree route -- the older showVehPostProgressionView loads a

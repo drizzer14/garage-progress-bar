@@ -94,7 +94,7 @@ class Tick(object):
 class UnlockItem(object):
     """A tech-tree unlock (module or next vehicle, including a Tier XI vehicle)."""
     def __init__(self, int_cd, name, icon, xp_cost, kind, researched, prereqs_met,
-                 kind_label="", prereq_names=None, xp_cost_effective=None):
+                 kind_label="", prereq_names=None, xp_cost_effective=None, owned=False):
         self.int_cd = int_cd
         self.name = name
         self.icon = icon
@@ -108,6 +108,10 @@ class UnlockItem(object):
         self.xp_cost_effective = xp_cost if xp_cost_effective is None else xp_cost_effective
         self.kind = kind                  # 'module' | 'vehicle'
         self.researched = researched
+        # Owned = the module sits in the player's inventory (bought this session or
+        # earlier). Modules only; vehicles keep the default False. Drives the self-
+        # clearing of a "buy + mount" done marker once the module is purchased.
+        self.owned = owned
         self.prereqs_met = prereqs_met
         # Display caption for the tooltip: module type ("Gun"/"Turret"/...) or the
         # next vehicle's tier ("Tier IX"). Empty if it couldn't be determined.

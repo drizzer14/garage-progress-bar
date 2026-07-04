@@ -360,10 +360,31 @@ def _on_open_research(*args):
         LOG_CURRENT_EXCEPTION()
 
 
+def _on_buy_mount(*args):
+    # Click on a "done" tech-tree MODULE marker: buy + mount the module. No _record_click
+    # -- the marker already exists; the buy completes it and recent's removal phase retires
+    # it once it reads as owned on the next sync.
+    try:
+        int_cd = _cmd_int_arg(args)
+        LOG_NOTE("[wgmod] buyMount intCD=%s" % int_cd)
+        if int_cd:
+            actions.buy_and_mount(int_cd)
+    except Exception:
+        LOG_CURRENT_EXCEPTION()
+
+
 def _on_open_field_mods(*args):
     try:
         LOG_NOTE("[wgmod] openFieldMods")
         actions.open_field_mods()
+        # Clicking the field-mod done tick IS the visit -> drop its marker now. Guarded +
+        # kind-scoped (a no-op for any other marker). Read the current vehicle intCD the
+        # same way the read layer does.
+        try:
+            if g_currentVehicle.isPresent():
+                recent.clear_fieldmod(g_currentVehicle.item.intCD)
+        except Exception:
+            LOG_CURRENT_EXCEPTION()
     except Exception:
         LOG_CURRENT_EXCEPTION()
 
@@ -397,6 +418,7 @@ def _connect_commands(rvm):
         rvm.openSkillTree += _on_open_skill_tree
         rvm.openResearch += _on_open_research
         rvm.openFieldMods += _on_open_field_mods
+        rvm.buyMount += _on_buy_mount
         rvm.setPosition += _on_set_position
     except Exception:
         LOG_CURRENT_EXCEPTION()

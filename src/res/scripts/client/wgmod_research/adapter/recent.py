@@ -24,6 +24,7 @@ Engine-free: imports only domain.types, so it unit-tests on plain snapshots.
 Every entry point is guarded -- a failure here must never blank the bar.
 """
 from wgmod_research.domain import types as t
+from wgmod_research.domain.constants import Category
 from wgmod_research._compat import LOG_CURRENT_EXCEPTION
 
 # kind values
@@ -84,6 +85,20 @@ def clear():
     _done.clear()
 
 
+def clear_fieldmod(veh_int_cd):
+    """Drop this vehicle's marker iff it's a field-mod marker. Called after a click on a
+    field-mod done tick opens the Field Modifications page -- clicking the tick IS the
+    visit, so the marker is cleared "after visiting". Guarded + kind-scoped: a tech-tree
+    or tier-XI marker (or no marker) is left untouched."""
+    try:
+        veh = int(veh_int_cd or 0)
+        rec = _done.get(veh)
+        if rec is not None and rec.get("kind") == FIELDMOD:
+            del _done[veh]
+    except Exception:
+        LOG_CURRENT_EXCEPTION()
+
+
 def decorate(model, snapshot):
     """Promote a confirmed pending click to this vehicle's marker, then inject that
     vehicle's marker into the built model. Mutates `model` in place; guarded so any
@@ -111,8 +126,16 @@ def decorate(model, snapshot):
                     _pending = None
                     _pending_reconciles = 0
 
-        # 2) Inject this vehicle's marker (if any) into the model.
+        # 2) Retire a marker whose follow-up action is now complete. A tech-tree module
+        #    marker self-clears once the module is owned (bought + mounted via the "buy +
+        #    mount" click); everything else is retired elsewhere (field-mods on page-open,
+        #    tier-XI never auto-retire). Degrade-safe: unreadable ownership keeps the marker.
         rec = _done.get(veh)
+        if rec is not None and _is_retired(rec, snapshot):
+            del _done[veh]
+            rec = None
+
+        # 3) Inject this vehicle's marker (if any) into the model.
         if not rec:
             return
         if rec["kind"] == SKILLTREE:
@@ -152,6 +175,27 @@ def _is_done(rec, snap):
             # empty list (a degraded [] read must NOT read as "done").
             avail = [getattr(s, "step_id", None) for s in (snap.skilltree_available or [])]
             return bool(avail) and (item_id not in avail)
+    except Exception:
+        LOG_CURRENT_EXCEPTION()
+    return False
+
+
+# --- retirement: is a confirmed marker's follow-up action now complete? ------
+
+def _is_retired(rec, snap):
+    """True if this marker should be dropped because its follow-up completed. Only a
+    tech-tree MODULE marker self-retires here -- once the module is owned (the "buy +
+    mount" click bought it). Vehicle markers keep opening Research (you can't mount a
+    tank), field-mod markers are retired on page-open (clear_fieldmod), and tier-XI chips
+    never auto-retire. Degrade-safe: a missing/unreadable ownership read returns False so
+    the marker persists rather than vanishing on bad data (mirrors _is_done)."""
+    try:
+        if rec.get("kind") != TECHTREE or rec.get("category") != Category.MODULE:
+            return False
+        item_id = rec["item_id"]
+        for u in (snap.tech_unlocks or []):
+            if u.int_cd == item_id:
+                return bool(getattr(u, "owned", False))
     except Exception:
         LOG_CURRENT_EXCEPTION()
     return False

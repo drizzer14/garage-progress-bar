@@ -21,7 +21,8 @@ const CAT = {                                           // domain/constants.py C
 const CMD = {                                           // bridge/view_models.py commands
     RESEARCH_UNLOCK: "researchUnlock", UNLOCK_FIELD_MOD: "unlockFieldMod",
     OPEN_SKILL_TREE: "openSkillTree", OPEN_RESEARCH: "openResearch",
-    OPEN_FIELD_MODS: "openFieldMods", SET_POSITION: "setPosition",
+    OPEN_FIELD_MODS: "openFieldMods", BUY_MOUNT: "buyMount",
+    SET_POSITION: "setPosition",
 };
 const GRADE = {                                         // domain/constants.py GradeFamily
     IRON: "iron", BRONZE: "bronze", SILVER: "silver", GOLD: "gold",
@@ -1340,7 +1341,12 @@ function render(model) {
         //  - tech-tree (vehicle/module): affordable + prereqs met -> research it.
         let cmd = null, arg;
         if (t.done) {
-            cmd = t.category === CAT.FIELDMOD ? CMD.OPEN_FIELD_MODS : CMD.OPEN_RESEARCH;
+            // Done markers complete their follow-up: a field-mod tick opens Field Mods,
+            // a MODULE tick buys + mounts the module (self-clears once owned), a VEHICLE
+            // tick (and any fallback) opens the Research screen -- you can't mount a tank.
+            if (t.category === CAT.FIELDMOD) cmd = CMD.OPEN_FIELD_MODS;
+            else if (t.category === CAT.MODULE && t.actionId) { cmd = CMD.BUY_MOUNT; arg = t.actionId; }
+            else cmd = CMD.OPEN_RESEARCH;
         } else if (mode === MODE.SKILL_TREE) {
             if (t.icon) cmd = CMD.OPEN_SKILL_TREE;
         } else if (t.category === CAT.FIELDMOD) {
