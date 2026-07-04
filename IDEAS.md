@@ -19,9 +19,3 @@ Five confirmed small gaps: deploy leaves .pyc shadows and never warns about the
 gameface overlay; build_debug_wotmod has no Py2.7 guard; the installer's cleanup glob
 eats the _debug.wotmod; check_version.py can't see dist/INSTALL.txt or prose refs.
 → Research: IDEAS/build-tooling-gaps.md
-
-### Post-refactor dead-code & stale-comment sweep (cleanup batch)
-Confirmed-dead wire fields (eliteMaxLevel/eliteSub), dead CSS rules, vestigial
-classes, and half a dozen false comments/docstrings left behind by shipped features
-and the refactor. Zero runtime impact; batch-fix to remove drift traps.
-→ Research: IDEAS/post-refactor-dead-code-sweep.md

@@ -579,7 +579,7 @@ function doneGlyph(t) {
 // right-side icon) -> FOOTER ("have / need XP", or the prerequisite line when
 // locked). A field-mod choice level puts its selectable variants (each with its
 // buffs) in place of a single title.
-function tooltipHtml(t, spendableXp, fillVehicle, est) {
+function tooltipHtml(t, spendableXp, fillVehicle, est, frontier) {
     const opts = splitLines(t.options);
     const optEffects = (t.optionEffects || "").split("\n");   // raw: index-aligned with opts
     let title = "", body = "", foot = "";
@@ -609,12 +609,14 @@ function tooltipHtml(t, spendableXp, fillVehicle, est) {
         // Session "done" marker: already researched -> show the credits buy price
         // (hidden once owned; 0 renders nothing), styled like the XP cost line.
         foot = creditsHtml(t.price);
-    } else if (t.category === CAT.UPGRADE && t.icon && t.xpRequired) {
-        // Skill-tree final (capstone) tick: only this tick carries a name + real XP
-        // cost (domain skilltree.py). It's "locked" on the COUNT axis, but the glyph
-        // is force-brightened and it's always OPEN_SKILL_TREE-clickable -- so show
-        // name + cost in every state, not the generic "Prerequisites not met". Uses
+    } else if (frontier && t.category === CAT.UPGRADE && t.icon && t.xpRequired) {
+        // Skill-tree final (capstone) tick, and ONLY when it's the purchasable frontier
+        // (the capstone-only state: every prior node unlocked, this is the lone
+        // available upgrade). Only this tick carries a name + real XP cost (domain
+        // skilltree.py) in every state, but it's genuinely locked until the frontier --
+        // so show name + cost only then, not the generic "Prerequisites not met". Uses
         // t.xpRequired (the real cost), not t.position (a node index); no fillVehicle.
+        // When it's NOT the frontier, fall through to the t.locked requirements branch.
         foot = xpFracHtml(spendableXp, t.xpRequired, XP_ICON, undefined, est);
     } else if (t.locked) {
         // Name the blocking prerequisites when known, else the generic line.
@@ -1436,7 +1438,7 @@ function render(model) {
             className: className,
             leftPct: leftPct,
             tip: tip,
-            body: tip ? tooltipHtml(t, spendableXp, fv, battleEst) : "",
+            body: tip ? tooltipHtml(t, spendableXp, fv, battleEst, onlyFinal) : "",
             cmd: cmd,
             arg: arg,
             glyph: linearGlyph(t, mode),
