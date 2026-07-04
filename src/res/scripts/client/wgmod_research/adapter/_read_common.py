@@ -143,8 +143,15 @@ def blueprint_effective_cost(int_cd, xp_full):
     Returns (int(xp_full), 0) when no fragments apply or on any failure -- so a
     degraded read never blanks or misprices the row. VEHICLE unlocks only: modules
     must keep their raw cost (WG's validator rejects a module unlocked at a differing
-    cost). Mirrors the game's own flow: getFragmentDiscountAndCost gives the current
-    discount percent, calculateCost turns full cost + percent into the paid cost.
+    cost). Mirrors the game's OWN tech-tree cost path byte-for-byte
+    (techtree_dp.getBlueprintDiscountData): getBlueprintDiscount gives the discount
+    for the fragments the player CURRENTLY HOLDS -- 0 when none are held / the vehicle
+    is already unlocked, scaling with the held fragment count, capped at 100 -- and
+    calculateCost turns full cost + percent into the paid cost. (Do NOT use
+    getFragmentDiscountAndCost: it delegates to getRequiredCountAndDiscount, a
+    conversion-dialog helper that returns the flat per-fragment CONFIG discount
+    regardless of how many fragments are held -- a phantom discount with zero
+    fragments, and not scaled by the held count. That mismatch was the regression.)
     Symbols verified live (EU 2.3): cache.items.blueprints (BlueprintsRequester)."""
     xp_full = int(xp_full or 0)
     try:
@@ -155,7 +162,7 @@ def blueprint_effective_cost(int_cd, xp_full):
         vlevel = int(getattr(cache.items.getItemByCD(int_cd), "level", 0) or 0)
         if not vlevel:
             return xp_full, 0
-        disc_pct = int(bp.getFragmentDiscountAndCost(int_cd, vlevel, xp_full)[0] or 0)
+        disc_pct = int(bp.getBlueprintDiscount(int_cd, vlevel) or 0)
         if disc_pct <= 0:
             return xp_full, 0
         return int(bp.calculateCost(xp_full, disc_pct)), disc_pct
