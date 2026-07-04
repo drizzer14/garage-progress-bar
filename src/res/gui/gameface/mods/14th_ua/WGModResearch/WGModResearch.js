@@ -854,6 +854,10 @@ function setActiveChip(hotEl, chip) {
 const TICKS_WIDTH_REM = 516;   // .wg-ticks span (root 520rem minus the track's 2rem borders)
 const LANE_STEP_REM = 30;      // vertical drop per extra lane -- clears a ~24-30rem glyph
 const MAX_LANES = 2;           // cap the stagger at two rows (lane 0 + one dropped row)
+// Baseline below-track drop for the tick tooltip -- mirrors `.wg-tooltip { margin-top:36rem }`
+// (the lane-0 anchor, clearing the track + lane-0 glyphs). clampTip adds lane*LANE_STEP_REM
+// on top of this when hovering a dropped (lane >= 1) glyph so the tooltip clears it too.
+const TOOLTIP_DROP_REM = 36;
 // .wg-hot bottom (track-relative) once a row is dropped, so a lane-1 glyph hung
 // ~37rem below the track + up to a 30rem-tall glyph still sits inside the hover
 // overlay and can be hovered directly. Only applied when something actually stacks
@@ -988,13 +992,19 @@ function applyPosition(root, data) {
 // screen-edge overflow), and flip it above the bar if it would spill past the viewport
 // bottom. Overrides are set inline and reset each call so a tooltip that now fits
 // returns to its centered, below-the-bar default. Reused for the tick + chip tooltips.
-function clampTip(tipEl) {
+function clampTip(tipEl, lane) {
     // reset prior overrides -> transform reverts to the CSS translateX(-50%) centering
     tipEl.style.transform = "";
     tipEl.style.top = "";
     tipEl.style.bottom = "";
     tipEl.style.marginTop = "";
     tipEl.style.marginBottom = "";
+    // Lane-aware below default: a de-crowded glyph is dropped lane*LANE_STEP_REM below the
+    // track, so push the tooltip past it. Only when lane >= 1 -- otherwise leave marginTop
+    // reset so each tip keeps its own CSS baseline (.wg-tooltip 36rem, .wg-chip-tip 6rem;
+    // chips never lane-stack). Set BEFORE measuring so the overflow flip below sees the real
+    // extent; the flip's marginTop:0 then cancels this (glyphs never stack upward).
+    if (lane) tipEl.style.marginTop = (TOOLTIP_DROP_REM + lane * LANE_STEP_REM) + "rem";
     const track = document.querySelector("#wgmod-root .wg-track");
     if (!track) return;
     const bar = track.getBoundingClientRect();
@@ -1041,7 +1051,8 @@ function renderTicks(ticksEl, ticks, n, spec) {
             // nearest-by-x fallback when it targets the bare layer.
             mark._wgBody = s.body;
             mark._wgLeft = s.leftPct;
-            tickMeta.push({ left: s.leftPct, body: s.body });
+            mark._wgLane = s.lane;   // de-crowding lane, so the tooltip can drop below a pushed-down glyph
+            tickMeta.push({ left: s.leftPct, body: s.body, lane: s.lane });
         }
         if (s.cmd) {
             mark.classList.add("wg-clickable");
@@ -1523,11 +1534,12 @@ function renderElite(root, data, isRewards) {
 function ensureHover(hotEl, tipEl) {
     if (hotEl._wgHoverBound) return;
     hotEl._wgHoverBound = true;
-    const show = (body, leftPct) => {
+    const show = (body, leftPct, lane) => {
         tipEl.innerHTML = body;
         tipEl.style.left = leftPct + "%";
         tipEl.style.display = "block";
-        clampTip(tipEl);   // keep it within the bar width / flip above near the bottom
+        // lane = the hovered glyph's de-crowding row; clampTip drops the tooltip below it
+        clampTip(tipEl, lane);   // keep it within the bar width / clear the glyph / flip above near the bottom
     };
     hotEl.addEventListener("mousemove", function (e) {
         // While Ctrl is held the bar is in reposition mode -> a move cursor, no matter
@@ -1549,7 +1561,7 @@ function ensureHover(hotEl, tipEl) {
         // (1) exact element under the cursor.
         let node = e.target;
         while (node && node !== hotEl) {
-            if (node._wgBody !== undefined) { show(node._wgBody, node._wgLeft); return; }
+            if (node._wgBody !== undefined) { show(node._wgBody, node._wgLeft, node._wgLane); return; }
             node = node.parentElement;
         }
         // (2) nearest tick by cursor x.
@@ -1559,7 +1571,7 @@ function ensureHover(hotEl, tipEl) {
         // gate it by proximity so it doesn't show across the whole empty bar. Other
         // modes keep nearest-anywhere (dense ticks make that the right behavior).
         const ok = hotEl._wgMode !== MODE.SKILL_TREE || near.dist <= 6;
-        if (ok) show(near.best.body, near.best.left); else tipEl.style.display = "none";
+        if (ok) show(near.best.body, near.best.left, near.best.lane); else tipEl.style.display = "none";
     });
     hotEl.addEventListener("mouseleave", function () {
         setActiveChip(hotEl, null);
