@@ -1,19 +1,21 @@
 ---
 name: wgmod-architecture
-description: Architecture and code conventions for the Garage Progress Bar WoT mod — the engine-free domain / adapter / Wulf-bridge layering, the mode state machine, and the Python-side data flows and gotchas (listener re-arming, Wulf MAP-arg, engine-free domain). Use whenever editing or extending the mod's Python, adding a new bar mode, tracing how a click becomes a research action, or debugging why the bar doesn't update. (For the JS/CSS widget rendering, see wgmod-widget; for live game symbols, see references/game-api.md.)
+description: Architecture of the Garage Progress Bar WoT mod specifically — its concrete wgmod_research file tree, the six bar modes + priority order, the resolvers, per-item tech-tree pricing, blueprint discount, done-marker reconcile, and the ResearchVM/TickVM/UpgradeVM shapes. Use when editing or extending THIS mod's Python, adding a bar mode, tracing a click→research action, or debugging why the bar doesn't update. (For the reusable engine-free domain/adapter/bridge discipline and the conventions that bite, see the wotmod-architecture harness skill; for the JS/CSS widget, wgmod-widget; for live game symbols, references/game-api.md.)
 ---
 
-# wgmod architecture & conventions
+# wgmod architecture (this mod's specifics)
 
-Strict layering with read/write separation; the domain layer is engine-free and
-unit-tested without the game.
+The reusable pattern — engine-free `domain/` vs `adapter/` (reads+writes) vs `bridge/`
+(Wulf/Gameface), and the conventions that bite (listeners re-arm every mount, Wulf MAP-arg,
+fail-soft reads, `_compat.py` shim, ModsSettingsAPI replace+saveState, hand-numbered VM
+indices, import≠ready) — lives in the **wotmod-architecture** harness skill. This skill is
+how the Garage Progress Bar realizes it.
 
 ```
 src/res/scripts/client/
   gui/mods/mod_wgmod.py               # ENTRY POINT — monkey-patches a hangar sub-view
   wgmod_research/
     _compat.py                        # engine shims: LOG_* fallbacks + _safe/_safe_int guards
-                                      #   (lets adapter/bridge modules import under pytest)
     adapter/engine_adapter.py         # READ orchestrator: build_snapshot() composes the readers
     adapter/tech_read.py              #   reader: tech-tree modules + next vehicles
     adapter/post_progression_read.py  #   reader: linear field modifications
@@ -34,126 +36,75 @@ src/res/scripts/client/
     domain/builder.py                 # MODE STATE MACHINE (build_model + bar_visible)
     domain/resolvers/{techtree,fieldmods,skilltree,elite}.py  # pure snapshot -> ticks
 src/res/gui/gameface/mods/14th_ua/WGModResearch/
-  WGModResearch.{js,css}              # widget: ModelObserver -> DOM render + click/hover (see wgmod-widget skill)
+  WGModResearch.{js,css}              # widget (see wgmod-widget skill)
 ```
 
-Refactor lineage: `engine_adapter.py` was a 593-LOC monolith; the reads were carved
-into the per-subsystem `*_read.py` modules, which engine_adapter re-imports under its
-old private aliases (`_read_tech_unlocks`, `_read_prestige`, …) so `build_snapshot()`
-call sites are unchanged. `read_purchase_price` is re-exported for the bridge.
-Similarly, the VMs moved from gameface_bridge into `view_models.py`, and arg parsing
-into `wulf_args.py` (bridge re-imports as `_cmd_int_arg` etc.).
+Refactor lineage: `engine_adapter.py` was a 593-LOC monolith; reads were carved into the
+per-subsystem `*_read.py` modules, which engine_adapter re-imports under its old private
+aliases (`_read_tech_unlocks`, `_read_prestige`, …) so `build_snapshot()` call sites are
+unchanged. `read_purchase_price` is re-exported for the bridge. Similarly the VMs moved from
+gameface_bridge into `view_models.py`, arg parsing into `wulf_args.py` (bridge re-imports as
+`_cmd_int_arg` etc.).
 
-## Forward flow (game -> bar)
-`mod_wgmod._install()` patches `HangarVehicleParamsPresenter._onLoading`. On each
-mount it injects JS/CSS via `openwg_gameface.gf_mod_inject`, hangs a `ResearchVM` on
-the sub-view model (property `wgResearch`), then `bridge.push()`:
-`engine_adapter.build_snapshot()` (delegates to the readers) →
-`builder.build_model(snapshot, enabled=mod_settings.enabled_modes())` (picks a `Mode`,
-calls the matching resolver) → the bridge writes the `ResearchProgressModel` into the
-`ResearchVM` inside a Wulf `transaction()`, plus the extra channel fields: `labels`
-(JSON bundle from `i18n.widget_labels()`), `colorBlind`
-(`engine_adapter.is_color_blind()`), `posX`/`posY` (saved bar position),
-`eliteCurrentIcon`, `spendableXp`, done-tick `price`
-(`engine_adapter.read_purchase_price`). JS `ModelObserver("WGModResearch")` re-renders.
+## Forward flow (game → bar)
+`mod_wgmod._install()` patches `HangarVehicleParamsPresenter._onLoading`. On each mount it
+injects JS/CSS via `openwg_gameface.gf_mod_inject`, hangs a `ResearchVM` on the sub-view model
+(property `wgResearch`), then `bridge.push()`: `engine_adapter.build_snapshot()` →
+`builder.build_model(snapshot, enabled=mod_settings.enabled_modes())` (picks a `Mode`, calls
+the matching resolver) → the bridge writes the `ResearchProgressModel` into `ResearchVM` in a
+Wulf `transaction()`, plus channel fields: `labels` (JSON from `i18n.widget_labels()`),
+`colorBlind`, `posX`/`posY`, `eliteCurrentIcon`, `spendableXp`, done-tick `price`. JS
+`ModelObserver("WGModResearch")` re-renders.
 
-## Reverse flow (clicks -> research)
-JS `invokeCommand()` calls a Wulf command on `wgResearch`. Six commands
-(`view_models.py`): `researchUnlock` (tech-tree int_cd) / `unlockFieldMod`
-(field-mod or skill-tree step_id) / `openSkillTree` / `openResearch` /
-`openFieldMods` (no arg — done-marker clicks open the native screen) /
-`setPosition` ({x, y} px from Ctrl+drag or first-run seed). Handlers parse args via
-`wulf_args.cmd_int_arg` / `cmd_xy_arg` and delegate to `actions.py` (research
-actions run WG's own unlock flow) or `mod_settings.set_position`. Before firing a
-research action the bridge calls `_record_click()` → `recent.record(...)` so the
-item can render as a "done" marker after it vanishes from the snapshot
-(optimistic-record; reconciled on the next sync). Handlers do NOT refresh — the
-game's resulting `onSyncCompleted` does.
+## Reverse flow (clicks → research)
+JS `invokeCommand()` calls a Wulf command on `wgResearch`. Six commands (`view_models.py`):
+`researchUnlock` (tech-tree int_cd) / `unlockFieldMod` (field-mod or skill-tree step_id) /
+`openSkillTree` / `openResearch` / `openFieldMods` (no arg — done-marker clicks open the
+native screen) / `setPosition` ({x, y} px). Handlers parse args via `wulf_args.cmd_int_arg` /
+`cmd_xy_arg` and delegate to `actions.py` or `mod_settings.set_position`. Before a research
+action the bridge calls `_record_click()` → `recent.record(...)` so the item can render as a
+"done" marker after it vanishes (optimistic-record; reconciled next sync). Handlers do NOT
+refresh — the game's `onSyncCompleted` does.
 
 ## Mode state machine (`builder.build_model`, priority order)
 TECH_TREE (any unlock remaining) → SKILL_TREE (tier-XI branching tree, count-based) →
-FIELD_MODS → ELITE_REWARDS (unearned tier-XI milestone rewards) → ELITE (prestige
-grade band) → COMPLETE. Each resolver returns ticks/dict the builder maps onto
-`ResearchProgressModel`.
+FIELD_MODS → ELITE_REWARDS (unearned tier-XI milestone rewards) → ELITE (prestige grade band)
+→ COMPLETE. `build_model` takes `enabled` (Mode strings left ON; None = all). If a vehicle
+RESOLVES to a mode toggled off, `_emit()` returns a `Mode.HIDDEN` placeholder — **no
+fall-through** to a lower-priority mode. `bar_visible(overlay_closed, hide_always,
+hide_when_complete, mode, in_garage)` combines that with the master hide switch, the
+hide-when-complete option, the tank-setup-overlay state, and the fail-closed garage allowlist
+(`in_garage` = only the plain `hangar/{root}` view).
 
-Per-mode user toggles: `build_model` takes `enabled` (set of Mode strings left ON;
-None = all on). If the vehicle RESOLVES to a mode that is toggled off, `_emit()`
-returns a `Mode.HIDDEN` placeholder — there is **no fall-through** to a
-lower-priority mode. `bar_visible(overlay_closed, hide_always, hide_when_complete,
-mode, in_garage)` combines that with the master hide switch, the hide-when-complete
-option, the tank-setup-overlay state, and the fail-closed garage allowlist
-(`in_garage` comes from the lobby state machine — only the plain `hangar/{root}`
-view shows the bar).
-
-## Conventions that bite if you miss them
-- **Listeners self-heal and re-arm on EVERY mount.** Battle exit tears down the hangar
-  and rebuilds the event lists with WG's presenters, dropping ours. The table-driven
-  `_LISTENERS` in gameface_bridge names **five** subscriptions: `vehicle`
-  (`g_currentVehicle.onChanged` → refresh), `loadout` (`onInteractorUpdated` → hide
-  while a tank-setup overlay is open), `lobby state` (`onVisibleRouteChanged` →
-  hide off the plain garage), `stats` (items-cache `onSyncCompleted` → live XP
-  updates), `colorblind` (`onSettingsChanged`, filtered to the color-blind flag).
-  `_arm()` checks actual list membership (not a "did we subscribe" flag) and MUST
-  store the augmented Event back onto the attribute (`event += h; setattr(...)`) —
-  WoT's `+=` doesn't reliably mutate in place. `install_all_listeners()` re-arms all
-  five each `_onLoading`.
-- **Sync refreshes are coalesced** onto the next tick via `BigWorld.callback(0.0, …)`
-  (`_refresh_pending`); clearly-irrelevant sync reasons (`shop`, `clan`) are skipped,
-  fail-open for unknown reasons.
-- **Wulf commands take a single MAP arg.** JS wraps a scalar id as `{value: id}`;
-  `wulf_args.cmd_int_arg` unwraps it (dict, Wulf-wrapped map, or bare scalar all
-  tolerated; 0 = nothing usable). `setPosition` carries `{x, y}` via `cmd_xy_arg`.
-  A bare scalar is rejected by Gameface as "not a map".
-- **Every game read fails soft.** Readers wrap reads in `_compat._safe`/`_safe_int`
-  (or local try/except) so one unreadable system degrades to a safe empty default and
-  the rest of the bar still renders. Never let a read raise into the bridge.
-- **actions.py never raises into JS** — every path falls back to opening WG's native
-  screen rather than a silent spend or crash.
-- **Tech-tree ticks are priced PER ITEM, not cumulatively.** `techtree.py` places each
-  tick at its own cost (`xp_position = cost`, `affordable = cost <= spendable`) because
-  tech-tree items are independently researchable (each has its own prereqs + cost) —
-  a cumulative running sum wrongly inflates a module's position and blocks its
-  affordability. Field mods are the exception (`fieldmods.py` stays cumulative — they
-  unlock in sequence). Cost is `getattr(u, "xp_cost_effective", u.xp_cost)`:
-  `xp_cost_effective` carries the blueprint-fragment-discounted price for a
-  next-VEHICLE unlock (set in `tech_read` via `_read_common.blueprint_effective_cost`;
-  modules keep raw cost — WG's validator rejects a module unlocked at a differing
-  cost), and `actions._do_research` mirrors it into `UnlockProps` (discounted xpCost +
-  discount% + raw xpFullCost) so the click unlocks at the shown price.
-- **Done-marker reconcile uses POSITIVE evidence, and expires.** `recent._is_done`
-  confirms a click by presence + a truthy flag (tech-tree: item still in `tech_unlocks`
-  with `researched=True`), NOT by absence — because the readers deliberately degrade to
-  `[]` on failure, and an absence test would turn one bad read into a permanent false
-  green check. Skill-tree has no per-node flag so it keeps the absence test but guards
-  the empty list (`bool(avail) and item_id not in avail`). A pending that never confirms
-  (cancelled/failed click) is dropped after `_PENDING_MAX_RECONCILES` (~5) reconciles
-  (count-based, no wall clock — engine-free/testable), and `veh_int_cd == 0` is rejected
-  in both `record()` and `decorate()` so a failing vehicle can't share the sentinel key.
-- **ModsSettingsAPI replaces, doesn't merge.** `updateModSettings` swaps the WHOLE
-  settings dict and doesn't persist by itself — every write (toggles, position,
-  reset) must pass the full dict and call `saveState()` (see
-  `mod_settings.set_position`). Settings template is versioned (`settingsVersion` 2).
-- **Domain layer is engine-free.** Resolvers/builder/types import no game symbols;
-  game symbols live ONLY in the adapter layer (`engine_adapter` + the `*_read`
-  modules, `actions.py`, `i18n.py`) and `bridge/` (catalogued in
-  `references/game-api.md`). `_compat.py` shims the `LOG_*` helpers so those modules
-  still import under pytest. `tests/conftest.py` puts `src/res/scripts/client` on
-  `sys.path`; add a resolver/builder test when you add behavior.
+## Conventions specific to this mod
+- **Tech-tree ticks are priced PER ITEM, not cumulatively.** `techtree.py` places each tick at
+  its own cost (`xp_position = cost`, `affordable = cost <= spendable`) — items are
+  independently researchable. Field mods are the exception (`fieldmods.py` stays cumulative —
+  they unlock in sequence). Cost is `getattr(u, "xp_cost_effective", u.xp_cost)`:
+  `xp_cost_effective` carries the blueprint-fragment-discounted price for a next-VEHICLE unlock
+  (set in `tech_read` via `_read_common.blueprint_effective_cost`; modules keep raw cost — WG's
+  validator rejects a module unlocked at a differing cost), and `actions._do_research` mirrors
+  it into `UnlockProps` (discounted xpCost + discount% + raw xpFullCost).
+- **Done-marker reconcile uses POSITIVE evidence, and expires.** `recent._is_done` confirms a
+  click by presence + a truthy flag (tech-tree: still in `tech_unlocks` with `researched=True`),
+  NOT by absence — the readers deliberately degrade to `[]` on failure, so an absence test would
+  turn one bad read into a permanent false check. Skill-tree has no per-node flag so it keeps
+  the absence test but guards the empty list. A pending that never confirms is dropped after
+  `_PENDING_MAX_RECONCILES` (~5, count-based/testable); `veh_int_cd == 0` is rejected in both
+  `record()` and `decorate()`.
+- Settings template is versioned (`settingsVersion` 2).
 
 ## Key data types
-`VehicleSnapshot` (adapter output / domain input), `ResearchProgressModel` (builder
-output → bridge writes into `ResearchVM`), `Tick` (one mark: `category` drives glyph +
-clickability; `action_id` = tech-tree int_cd / field-mod step_id, 0 = not clickable) —
-all in `domain/types.py`. The `ResearchVM`/`TickVM`/`UpgradeVM` Wulf shapes live in
-`bridge/view_models.py`: their numeric property indices are **hand-maintained** and
-must match the `_addXProperty` registration order (`_setNumber(i, v)` addresses the
-i-th registered property — reordering without renumbering silently mismaps fields).
-The JS reads properties by NAME, and the mode/category/grade/command **string values**
-are mirrored in the JS `MODE`/`CAT`/`CMD`/`GRADE` constants (top of WGModResearch.js)
-— keep `domain/types.py Mode`, `domain/constants.py`, and the `view_models.py`
-command names in lockstep with them (see the wgmod-widget skill).
+`VehicleSnapshot` (adapter output / domain input), `ResearchProgressModel` (builder output →
+bridge writes into `ResearchVM`), `Tick` (`category` drives glyph + clickability; `action_id`
+= tech-tree int_cd / field-mod step_id, 0 = not clickable) — all in `domain/types.py`. The
+`ResearchVM`/`TickVM`/`UpgradeVM` Wulf shapes live in `bridge/view_models.py`; their numeric
+property indices are hand-maintained and must match `_addXProperty` registration order. The JS
+reads by NAME, and the mode/category/grade/command string values are mirrored in the JS
+`MODE`/`CAT`/`CMD`/`GRADE` constants — keep `domain/types.py Mode`, `domain/constants.py`, and
+the `view_models.py` command names in lockstep (see wgmod-widget).
 
 ## Adding a new read or write?
-The concrete WoT/BigWorld symbols the adapter and actions depend on — and where they
-live in the decompiled client — are catalogued in `references/game-api.md`. Read it
-before adding a new game read (a `*_read.py` module) or unlock action (`actions.py`).
+The concrete WoT/BigWorld symbols this mod uses — and which reader/action each lives in — are
+in `references/game-api.md`. The full generic symbol catalogue is the **wotmod-architecture**
+harness skill's `references/game-api.md`. Read before adding a `*_read.py` or an `actions.py` path.

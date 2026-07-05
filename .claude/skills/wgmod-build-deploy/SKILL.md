@@ -1,14 +1,13 @@
 ---
 name: wgmod-build-deploy
-description: Build, deploy, test, and hot-reload the Garage Progress Bar WoT mod locally. Use whenever building the .wotmod package, deploying into a local World of Tanks install, running the pytest suite, hot-reloading JS/CSS changes, or verifying a change in-game — anything about getting a change running and observed in the game. Covers the Python 2.7-vs-3.13 split and the mods/ vs res_mods/ shadowing trap that silently hides your build. (For live in-client REPL introspection, see the wgmod-debug-repl skill.)
+description: Build, deploy, test, and hot-reload the Garage Progress Bar WoT mod locally — the exact scripts, install path, client version, and overlay path for THIS mod. Use whenever building the .wotmod package, deploying into a local World of Tanks install, running the pytest suite, hot-reloading JS/CSS changes, or verifying a change in-game. (For the generic packaging/deploy/hot-reload pattern behind these commands, see the wotmod-build-deploy harness skill; for live in-client REPL introspection, see wgmod-debug-repl.)
 ---
 
 # Building, deploying & testing the wgmod
 
-## Two Pythons (don't mix them)
-- **Python 2.7.18** `C:\Python27\python.exe` — packaging ONLY. The client runs the
-  `.pyc`, and bytecode magic numbers are version-locked. Python 3 `.pyc` won't load.
-- **Python 3.13** `%LOCALAPPDATA%\Programs\Python\Python313\python.exe` — pytest + dev tools.
+Generic mechanics (two Pythons, `.wotmod` stored-ZIP + `meta.xml`, the `res_mods` shadowing
+trap, the hot-reload overlay loop): see the **wotmod-build-deploy** harness skill. This
+skill is the concrete wiring for the Garage Progress Bar.
 
 ## Commands
 ```sh
@@ -26,31 +25,24 @@ description: Build, deploy, test, and hot-reload the Garage Progress Bar WoT mod
 # Hot-reload JS/CSS ONLY, no relaunch (Py 3.13) — then switch screens in-game to refresh
 & "<py3>" tools/dev/sync_gameface.py "D:/Games/World_of_Tanks_EU" 2.3.0.1
 ```
+`<py3>` = `%LOCALAPPDATA%\Programs\Python\Python313\python.exe`.
 
-## The shadowing trap (why your change "isn't loading")
-WoT 2.3 loads mods ONLY from `.wotmod` in `mods/<version>/`. Loose files in
-`res_mods/<version>/` OUTRANK `.wotmod`, so a stale loose copy silently shadows the
-package. `deploy_wotmod.py` exists precisely to clean both before building — always
-deploy through it, never hand-copy.
-
-`sync_gameface.py` writes a `res_mods` overlay for hot-reload. Consequences:
-- After EVERY `deploy_wotmod.py`, re-run `sync_gameface.py` (else the stale overlay
-  shadows the fresh package).
-- Before a clean ship-verification, REMOVE the overlay
-  (`res_mods/<ver>/gui/gameface/mods/14th_ua/`) so you test the packaged assets.
-  `deploy_wotmod.py` WARNS when the overlay is present; pass `--clean-overlay` to
-  have it removed as part of the deploy.
-- Only `WGModResearch.js`/`.css` hot-reload. Python (mount/data) changes need
-  build + deploy + full client relaunch.
-
-Other constraints: `.wotmod` is a STORED (uncompressed) ZIP with `meta.xml` at the
-root (the build script handles this); EU/global 2.3.0.1 only; OpenWG GameFace must
-be installed in the same `mods/<version>/` (hard dependency), and ModsSettingsAPI
-(`izeberg.modssettingsapi`) should be too — the settings panel, per-mode toggles,
-and drag-position persistence need it (the bar itself still renders without it).
+## This mod's specifics
+- **Package:** `dist/com.14th_ua.garageprogressbar_<version>.wotmod`. Build with Py 2.7 ONLY.
+- **Overlay path** (hot-reload): `res_mods/<ver>/gui/gameface/mods/14th_ua/WGModResearch/`.
+  `deploy_wotmod.py` cleans both `mods/` and `res_mods/` before building; it WARNS when the
+  overlay is present and takes `--clean-overlay` to remove it as part of the deploy. After
+  every `deploy_wotmod.py`, re-run `sync_gameface.py` (else the stale overlay shadows the
+  fresh package); before a clean ship-verification, REMOVE the overlay so you test the
+  packaged assets. Only `WGModResearch.js`/`.css` hot-reload — Python (mount/data) changes
+  need build + deploy + full relaunch.
+- **Target:** EU/global `2.3.0.1` only.
+- **Dependencies (same `mods/<version>/`):** OpenWG GameFace is a **hard** dependency; the
+  bar itself renders without ModsSettingsAPI (`izeberg.modssettingsapi`), but the settings
+  panel, per-mode toggles, and drag-position persistence need it.
 
 ## Verifying a change actually works
-Build+deploy+relaunch (or hot-reload for JS/CSS), open the Garage, select a vehicle
-with research/field-mods/elite remaining, confirm the bar renders, hover/click ticks,
-switch vehicles to confirm live update. For live introspection while verifying, use
-the **wgmod-debug-repl** skill.
+Build+deploy+relaunch (or hot-reload for JS/CSS), open the Garage, select a vehicle with
+research/field-mods/elite remaining, confirm the bar renders, hover/click ticks, switch
+vehicles to confirm live update. For live introspection while verifying, use the
+**wgmod-debug-repl** skill.
