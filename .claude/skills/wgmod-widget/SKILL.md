@@ -75,7 +75,13 @@ no-op; done markers always keep lane 0 — custom-positioned at the left edge).
   total-XP (`.wg-xp2-*`). The final tick is `locked` on the COUNT axis but IS clickable, so
   `tooltipHtml` has a dedicated branch (`t.category === CAT.UPGRADE && t.icon && t.xpRequired`,
   BEFORE the `t.locked` check) showing name + real XP cost. Chip cost lines use `xpFracHtml(...)`
-  with **no** `fillVehicle` arg (a node count-cost, not a two-currency XP figure).
+  with **no** `fillVehicle` arg (a node count-cost, not a two-currency XP figure). In the
+  `onlyFinal` state the lone available node is reachable ONLY via the bar tick's `OPEN_SKILL_TREE`
+  (screen) — the direct one-click `UNLOCK_FIELD_MOD` affordance is deliberately NOT restored on
+  the final tick (owner decision 2026-07-05: keep it screen-only). Don't "fix" this.
+- **potential_tier_xi** — opt-in speculative bar; ONE non-clickable tick pinned at 100%. Like
+  skill_tree's final tick it's a single far-from-left milestone, so the hover proximity gate
+  (below) covers `POTENTIAL_TIER_XI` too, else hovering the empty left half pops the tooltip.
 - **elite** — grade-band ticks with the tab badge. Vehicle fill grade-colored via inline
   `GRADE_COLOR[gradeFamily(curEmblem)]`, gated `!isRewards && !data.colorBlind`, and ALWAYS reset
   first (`vehEl.style.background = ""`) — the fill element persists across renders.
@@ -92,9 +98,18 @@ chip fires `CMD.OPEN_SKILL_TREE`.
 
 ## Hover & click hit-testing
 - **Hover** two-tier: exact element under cursor (`_wgBody` off ancestor `.wg-tick`) when Gameface
-  deep-targets, else nearest tick by cursor-x over `tickMeta`. skill_tree has only the final-tick
-  tooltip, gated by proximity (`bestD <= 6`). Tooltips edge-aware; reserved-column layout via
-  `tipMain(...)` (right-side, top-pinned icon column), sections joined by `joinSections`.
+  deep-targets, else nearest tick by cursor-x over `tickMeta`. Single-milestone modes (skill_tree's
+  final tick AND potential_tier_xi's 100% tick) gate the fallback by proximity (`near.dist <= 6`)
+  so a lone far-right tick doesn't pop across the empty bar; dense modes stay nearest-anywhere.
+  Tooltips edge-aware; reserved-column layout via `tipMain(...)` (right-side, top-pinned icon
+  column), sections joined by `joinSections`.
+- **Hover perf / stale-tooltip:** `show()` early-returns when the same body/left/lane is already
+  shown (skips the per-mousemove innerHTML+clampTip churn); `barRect()` is read once per mousemove
+  and threaded into `nearestByX`/`nearestClick` as an optional `rect`. `render()`/`renderElite()`
+  call `hideStaleTooltip(hotEl, tipEl, data)` — a `dataSig(data)` diff that HIDES a tooltip left
+  over from the previous vehicle on a genuine change, while leaving it alone on a repeat push (so a
+  still cursor keeps its tooltip). NB `render()` must never blanket-hide the tooltip — that made it
+  vanish whenever the cursor stopped. (The `renderTicks` skip-rebuild optimization is NOT done yet.)
 - **Click** (`.wg-hot`): `chipAt()` (exact chip box) first, else `nearestClick()` (nearest
   CLICKABLE tick within `CLICK_HIT_PCT`). `renderTicks` only pushes into `clickMeta` when a tick
   has a cmd, so `nearestClick` never returns a dead tick — but `chipAt` returns ANY chip, so guard

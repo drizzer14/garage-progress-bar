@@ -1,6 +1,22 @@
 # Research: Cache slow-moving adapter reads recomputed on every push
 
-_Submitted: bug hunt (2026-07-05) · Status: open_
+_Submitted: bug hunt (2026-07-05) · Status: PARTIALLY DONE (2026-07-05)_
+
+## Progress (2026-07-05) — micro-fixes done; the caching layer deferred
+- **DONE** `blueprint_effective_cost(int_cd, xp_full, vlevel=None)` — `tech_read` now passes the
+  tier it already read, skipping the redundant `getItemByCD` (actions.py still falls back to the
+  lookup). Behaviour-preserving.
+- **DONE** builder threads `est` + `spendable` into `_elite_model(...)` instead of recomputing
+  `_est(snapshot)` + `vehicle_xp + free_xp` a second time. Covered by the existing elite tests
+  (191→194 green).
+- **DEFERRED** the memoization LAYER (account-wide + per-vehicle caches invalidated on stats-sync).
+  It's a pure perf change ("no correctness problem" per the summary) to fail-soft adapter code
+  that imports live game symbols (not pytest-importable), so its cache-invalidation timing —
+  reserve expiry, reward art after a prestige level-up — can only be validated with the live
+  debug REPL. Left for a session that can profile + verify in-client.
+
+---
+_Original research below._
 
 ## Summary
 `build_snapshot()` runs on every coalesced `onSyncCompleted`/vehicle-change push, and

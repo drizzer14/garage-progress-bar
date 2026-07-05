@@ -1,6 +1,25 @@
 # Research: Widget hygiene nits (low-stakes JS/CSS cleanups)
 
-_Submitted: bug hunt (2026-07-05) · Status: open_
+_Submitted: bug hunt (2026-07-05) · Status: MOSTLY DONE (2026-07-05)_
+
+## Progress (2026-07-05) — behavioral/dead-code nits done; 2 verify-only CSS items remain
+- **DONE** phantom lane reservation: `computeLanes`' linear predicate now excludes done markers
+  (`!t.done && ...`), so a left-edge done marker no longer bumps a real near-left tick to lane 1.
+- **DONE** stale active-chip ref: `renderElite` now calls `setActiveChip(hotEl, null)` (alongside
+  the existing `_wgChips = []`).
+- **DONE** no-arg commands pass `{}`: `invokeCommand`'s no-arg branch now sends an empty MAP
+  (the Python `_on_open_*` handlers take `*args`, so it's ignored) for Wulf MAP-arg symmetry.
+- **DONE** dead CSS removed: `.wg-tip-icon-elite`'s `align-self: flex-start` (leftover from the
+  old flex-row tooltip; the icon is `position:absolute` under a `display:block` parent).
+- **SETTLED (no code change)** capstone-only direct-unlock: owner decision = keep screen-only
+  (`OPEN_SKILL_TREE`); documented in the wgmod-widget skill.
+- **DEFERRED (verify-only, not fixes):** normalize `.wg-tab-art`'s `background` shorthand to
+  longhand for Coherent consistency, and live-confirm the `.wg-tip-rem-veh + .wg-tip-battles`
+  adjacent-sibling combinator. Both render fine today; changing working CSS blind is risk-for-
+  no-gain, so they wait for a hot-reload check.
+
+---
+_Original research below._
 
 ## Summary
 A batch of small, verified oddities in WGModResearch.js/.css — none user-breaking, each

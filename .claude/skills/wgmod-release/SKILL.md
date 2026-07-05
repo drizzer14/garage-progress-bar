@@ -1,6 +1,6 @@
 ---
 name: wgmod-release
-description: Cut a release of the Garage Progress Bar WoT mod — the exact 7 files to bump, the concrete build scripts, artifact filenames, and vendor payloads for THIS mod. Use whenever bumping the version, building the Setup .exe installer, assembling the wgmods.net bundle, or publishing the GitHub release. (For the generic release shape and traps, see the wotmod-release harness skill.)
+description: Cut a release of the Garage Progress Bar WoT mod — the exact 6 files to bump, the concrete build scripts, artifact filenames, and vendor payloads for THIS mod. Use whenever bumping the version, building the Setup .exe installer, assembling the wgmods.net bundle, or publishing the GitHub release. (For the generic release shape and traps, see the wotmod-release harness skill.)
 ---
 
 # Releasing the wgmod
@@ -10,23 +10,27 @@ with bundled vendor deps, the don't-rename-the-.exe trap): see the **wotmod-rele
 skill. This skill is this mod's concrete file list and commands. `gh` CLI and Inno Setup are
 installed on this machine (paths at the bottom).
 
-## 1. Bump the version in ALL 7 files
+## 1. Bump the version in ALL 6 files
 `src/meta.xml` is canonical (`<version>`). Mirror the new `X.Y.Z` into:
 1. `src/meta.xml` — `<version>`
 2. `src/res/scripts/client/gui/mods/mod_wgmod.py` — `MOD_VERSION`
 3. `installer/wgmod-setup.iss` — `#define ModVersion` AND `#define ModWotmod`
 4. `installer/build_installer.ps1` — `$ModWotmod` path
-5. `README.md`
-6. `INSTALL.md` (multiple refs)
-7. `installer/README.md`
+5. `INSTALL.md` (multiple refs)
+6. `installer/README.md`
+
+`README.md` is deliberately NOT in this list — the consumer restructure removed its mod-version
+ref by design (it carries only the client + dependency versions), so `check_version.py` neither
+scans nor requires one. At release time also bump `dist\INSTALL.txt` (the consumer-zip readme,
+step 3).
 
 Then verify: `python build\check_version.py` (either Python) — fails on any reference that
-drifted from `src/meta.xml`. It matches five patterns (packaged filename, Setup filename,
-`MOD_VERSION`, `#define ModVersion`, prose `version <v>`), scans `dist\INSTALL.txt`
-explicitly, and fails a required file that has LOST its reference. It can't see arbitrary
-prose, so ALSO `grep -rn "<old version>"` (note: `README.md` deliberately carries no version
-ref). Changing `<id>` would also change the output filename + the cleanup glob in
-`deploy_wotmod.py`.
+drifted from `src/meta.xml`. It matches five mod-version patterns (packaged filename, Setup
+filename, `MOD_VERSION`, `#define ModVersion`, prose `version <v>`), scans `dist\INSTALL.txt`
+explicitly, and fails a required file that has LOST its reference. It ALSO checks the 4-part
+CLIENT version (canonical: `build_wgmods_zip.CLIENT_VERSION`) across the shipping/instruction
+files, failing on drift. It can't see arbitrary prose, so ALSO `grep -rn "<old version>"`.
+Changing `<id>` would also change the output filename + the cleanup glob in `deploy_wotmod.py`.
 
 ## 2. Commit & tag
 Conventional commits, landing directly on `main` (no branch). Fixes as their own `fix(...)`

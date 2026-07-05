@@ -1,6 +1,24 @@
 # Research: Widget hover/render perf batch (+ stale tooltip after push)
 
-_Submitted: bug hunt (2026-07-05) · Status: open_
+_Submitted: bug hunt (2026-07-05) · Status: PARTIALLY DONE (2026-07-05)_
+
+## Progress (2026-07-05) — code-complete except the rebuild-skip; NOT in-game verified
+- **DONE** `show()` early-return: caches `_wgShownBody/_wgShownLeft/_wgShownLane` on the
+  tooltip el and skips the innerHTML+clampTip churn when the same tip is already shown.
+- **DONE** single `barRect()` per mousemove: threaded as an optional `rect` param into
+  `nearestByX`/`nearestClick`, read once in the handler.
+- **DONE** stale-tooltip fix: new `dataSig(data)` + `hideStaleTooltip()` called at the top of
+  `render()`/`renderElite()` — hides a tooltip left over from the previous vehicle on a genuine
+  data change, while an unchanged repeat push leaves a still cursor's tooltip alone.
+- **DEFERRED** the `renderTicks` skip-rebuild on a per-mode signature. It interacts with
+  `computeLanes`' `hotEl.style.bottom` reset + the `_wgTickMeta`/`_wgClickMeta` preservation
+  and can only be validated by JS hot-reload in the client — not done blind. The stale-tooltip
+  half of that finding is already handled above (via dataSig), so only the CPU optimization remains.
+- Verified: raw + minified (`rjsmin`) JS both pass `node --check`. In-game hover-smoothness /
+  no-flicker / vehicle-switch checks still pending (JS hot-reloads via sync_gameface).
+
+---
+_Original research below._
 
 ## Summary
 Three verified hot-path inefficiencies in WGModResearch.js, plus one small user-visible

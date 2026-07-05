@@ -15,14 +15,22 @@ src/
   res/scripts/client/wgmod_research/               # domain (engine-free) + adapter + bridge
   res/gui/gameface/mods/14th_ua/WGModResearch/     # widget JS + CSS (rendered via OpenWG GameFace)
 build/
-  build_wotmod.py    # compile (.py->.pyc) + package -> dist/<id>_<version>.wotmod   (Python 2.7!)
-  deploy_wotmod.py   # clean + build + copy the .wotmod into a WoT install            (Python 2.7!)
+  build_wotmod.py      # compile (.py->.pyc) + package -> dist/<id>_<version>.wotmod  (Python 2.7!)
+  deploy_wotmod.py     # build + clean + copy the .wotmod into a WoT install           (Python 2.7!)
+  build_wgmods_zip.py  # assemble the wgmods.net bundle zip (mod + vendor deps + readme)
+  check_version.py     # assert the mod + client version references are consistent everywhere
+  clean_dist.py        # prune superseded release artifacts from dist/, keeping the current version
+  vendor/              # vendored pure-Python minifiers (rjsmin / rcssmin) used by build_wotmod
 installer/
   wgmod-setup.iss      # Inno Setup script -> dist/GarageProgressBar-Setup-<version>.exe
   build_installer.ps1  # locate ISCC + compile the installer
+  readme.wgmods.txt    # bilingual readme template for the wgmods.net bundle ({VERSION} stamped)
   vendor/              # bundled OpenWG GameFace + ModsSettingsAPI .wotmods (installed only if missing)
 tests/               # pytest (run with Python 3.13) for the domain layer
-tools/dev/           # debug REPL server/client (NOT shipped) + dev notes
+tools/dev/
+  sync_gameface.py       # hot-reload WGModResearch.js/.css into a running client (no relaunch)
+  build_debug_wotmod.py  # build + deploy the DEV debug-REPL .wotmod (NOT shipped)
+  mod_wgmod_debug.py     # the debug REPL server (TCP 127.0.0.1:2223)
 dist/                # build output (gitignored)
 ```
 

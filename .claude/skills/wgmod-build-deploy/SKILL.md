@@ -48,6 +48,20 @@ skill is the concrete wiring for the Garage Progress Bar.
   bar itself renders without ModsSettingsAPI (`izeberg.modssettingsapi`), but the settings
   panel, per-mode toggles, and drag-position persistence need it.
 
+## What's unit-testable vs in-game-only (plan verification around this)
+`pytest` (Py 3.13, no client) covers the ENGINE-FREE code only: everything under `domain/`
+(builder, resolvers, types) plus `adapter/recent.py`, `adapter/format.py`, `bridge/wulf_args.py`,
+and `bridge/mod_settings.py` (the test stubs `debug_utils`; MSA calls inside degrade to no-ops, so
+`clamp_pos`/`set_position`/`_on_reset`/`_full_settings_for_write` ARE testable). Everything that
+imports live game symbols is NOT pytest-importable and can only be checked in-client (debug REPL):
+`adapter/engine_adapter.py`, the `*_read.py` readers, `adapter/_read_common.py`, `adapter/actions.py`,
+`bridge/gameface_bridge.py`. ALL of `WGModResearch.js`/`.css` and the MSA settings PANEL (stepper
+labels/values, reset button) are in-game-only too. A packaged JS build can at least be
+syntax-checked headless: `node --check` the raw `.js` as a `.mjs`, and extract+`node --check` the
+minified copy from the built `.wotmod` (Py2 on Windows can't write to Git Bash `/tmp` — use a
+repo-relative path when extracting). So: a domain/adapter-recent/mod_settings fix ships behind
+green tests; a reader/bridge/JS/CSS/MSA change is code-complete only until an in-game pass.
+
 ## Verifying a change actually works
 Build+deploy+relaunch (or hot-reload for JS/CSS), open the Garage, select a vehicle with
 research/field-mods/elite remaining, confirm the bar renders, hover/click ticks, switch
