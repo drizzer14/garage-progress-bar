@@ -11,6 +11,7 @@ filenames** in both folders.
 | `elite.png` | An **Elite Levels (prestige)** vehicle — grade-band progression, with a tooltip. | "Every progression type". |
 | `elite-rewards.png` | A tier-XI vehicle showing the **exclusive-rewards** milestone roadmap, with a tooltip. | "Every progression type". |
 | `skill-tree.png` | A **tier-XI** vehicle — skill-tree upgrade progress, with a tooltip. | "Every progression type". |
+| `potential-tier-xi.png` | A fully-researched, field-mods-done **tier-X** tank with no real tier XI, with **"Show potential Tier XI"** enabled — the speculative Tier XI bar (banked XP vs. the fixed unlock cost) above Elite Levels, with the milestone tooltip visible. | "Every progression type". |
 
 Capture in-game in the Garage (WoT EU 2.3.0.1) with the client language set to match
 the folder (`en/` = English UI, `ua/` = Ukrainian UI). `research.png` is the hero, so

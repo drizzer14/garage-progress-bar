@@ -16,6 +16,7 @@ stock progress bars. It updates live as you switch vehicles or earn XP.
 - **Elite Levels (prestige)** — the current grade-band progression once a vehicle is elite.
 - **Tier XI exclusive rewards** — the milestone reward roadmap earned on Tier XI vehicles.
 - **Tier XI skill tree** — how many skill-tree upgrades you've unlocked out of the total.
+- **Potential Tier XI** — an opt-in projection on Tier X vehicles that have no Tier XI of their own, measuring your banked XP against the Tier XI unlock cost.
 
 **Click the bar** to research modules, unlock the next vehicle, or apply Tier XI
 upgrades without leaving the Garage. **Hover** any tick or icon for a tooltip.
@@ -37,6 +38,10 @@ upgrades without leaving the Garage. **Hover** any tick or icon for a tooltip.
 **Tier XI skill tree** — skill-tree upgrades unlocked out of the total on a Tier XI vehicle:
 
 ![The bar showing Tier XI skill-tree upgrades, with a tooltip](assets/img/en/skill-tree.png)
+
+**Potential Tier XI** — an opt-in projection for Tier X vehicles with no Tier XI, measuring banked XP against the unlock cost (off by default):
+
+![The bar showing the opt-in Potential Tier XI projection, with a tooltip](assets/img/en/potential-tier-xi.png)
 
 ## Compatibility
 
@@ -108,6 +113,7 @@ Building, deploying, testing, and the repo layout are documented in
 - **Елітні рівні (престиж)** — поточний прогрес за грейдами після досягнення елітності.
 - **Ексклюзивні нагороди XI рівня** — дорожня карта нагород для техніки XI рівня.
 - **Дерево навичок XI рівня** — скільки вдосконалень дерева навичок відкрито із загальної кількості.
+- **Потенційний XI рівень** — опційна проекція для техніки X рівня, яка не має власного XI рівня: показує накопичений досвід відносно вартості відкриття XI рівня.
 
 **Натисніть на смугу**, щоб досліджувати модулі, відкрити наступну техніку або
 застосувати вдосконалення XI рівня прямо з Ангара. **Наведіть** курсор на позначку
@@ -130,6 +136,10 @@ Building, deploying, testing, and the repo layout are documented in
 **Дерево навичок XI рівня** — відкриті вдосконалення із загальної кількості на техніці XI рівня:
 
 ![Смуга з вдосконаленнями дерева навичок XI рівня та підказкою](assets/img/ua/skill-tree.png)
+
+**Потенційний XI рівень** — опційна проекція для техніки X рівня без XI рівня: накопичений досвід відносно вартості відкриття (вимкнено за замовчуванням):
+
+![Смуга з опційною проекцією Потенційного XI рівня та підказкою](assets/img/ua/potential-tier-xi.png)
 
 ## Сумісність
 
