@@ -712,8 +712,10 @@ function invokeCommand(name, arg) {
         if (!host) { console.error("[wgmod] command missing: " + name); return; }
         // Wulf commands take a single MAP argument (a raw scalar is rejected by
         // Gameface as "not a map"). A scalar id is wrapped as {value: id}; an arg
-        // that's already a map (e.g. setPosition's {x, y}) is passed through as-is.
-        if (arg === undefined || arg === null) host[name]();
+        // that's already a map (e.g. setPosition's {x, y}) is passed through as-is; a
+        // no-arg command (openSkillTree/openResearch/openFieldMods) still passes an
+        // empty MAP for the same symmetry -- the Python handlers take *args and ignore it.
+        if (arg === undefined || arg === null) host[name]({});
         else if (typeof arg === "object") host[name](arg);
         else host[name]({ value: arg });
     } catch (e) {
@@ -740,9 +742,12 @@ const CLICK_HIT_PCT = 4;
 // (barRect), which defines the 0..100% basis. Returns {best, dist} (best null for an
 // empty list). Shared by the click resolver (clickMeta, gated by CLICK_HIT_PCT) and the
 // tick-hover fallback (tickMeta, gated per mode) so both agree on "which tick is nearest".
-function nearestByX(meta, hotEl, clientX) {
+function nearestByX(meta, hotEl, clientX, rect) {
     if (!meta || !meta.length) return { best: null, dist: 1e9 };
-    const rect = barRect(hotEl);
+    // `rect` (the bar TRACK rect) may be passed in so a single mousemove reads it ONCE
+    // and shares it across the cursor-affordance + tooltip hit-tests (a forced layout
+    // read per call otherwise); falls back to reading it here for other callers.
+    rect = rect || barRect(hotEl);
     const w = (rect && rect.width) || hotEl.clientWidth || 1;
     const left = rect ? rect.left : 0;
     const curPct = ((clientX - left) / w) * 100;
@@ -753,8 +758,8 @@ function nearestByX(meta, hotEl, clientX) {
     }
     return { best: best, dist: bestD };
 }
-function nearestClick(hotEl, clientX) {
-    const r = nearestByX(hotEl._wgClickMeta, hotEl, clientX);
+function nearestClick(hotEl, clientX, rect) {
+    const r = nearestByX(hotEl._wgClickMeta, hotEl, clientX, rect);
     return r.best && r.dist <= CLICK_HIT_PCT ? r.best : null;
 }
 
@@ -1037,6 +1042,43 @@ function cbClass(data) {
     return data && data.colorBlind ? " wg-colorblind" : "";
 }
 
+// A signature of everything a rendered tick + its tooltip consume, so render() can tell a
+// genuine data change (vehicle switch, XP/affordability move) from a spurious repeat push
+// (onSyncCompleted coalesces, and render() runs on every one). Used ONLY to hide a
+// now-stale tooltip on change: render() rebuilds the ticks but never re-runs the hover
+// hit-test, so a still cursor would otherwise keep showing the PREVIOUS vehicle's tooltip
+// until the pointer next moves. On an unchanged push the tooltip is left alone (which is
+// why render() must not blanket-hide it -- that made it vanish whenever the cursor stopped).
+function dataSig(data) {
+    const ticks = data.ticks;
+    const n = arrLen(ticks);
+    let s = (data.mode || "") + "|" + (data.spendableXp | 0) + "|" + (data.combatXp | 0) +
+        "|" + (data.fieldModsDone | 0) + "/" + (data.fieldModsTotal | 0) + "|" +
+        (data.avgBattleXp | 0) + "," + (data.battleCount | 0) + "," +
+        (data.accountAvgBattleXp | 0) + "," + (data.maxBattleXp | 0) + "," +
+        (data.reserveMult | 0) + "," + (data.dailyDoubleFactor | 0) + "||";
+    for (let i = 0; i < n; i++) {
+        const t = arrGet(ticks, i);
+        if (!t) continue;
+        s += (t.position | 0) + "," + (t.category || "") + "," + (t.done ? 1 : 0) + "," +
+            (t.locked ? 1 : 0) + "," + (t.affordable ? 1 : 0) + "," + (t.state || "") + "," +
+            (t.name || "") + "," + (t.icon || "") + "," + (t.level | 0) + "," +
+            (t.xpRequired | 0) + "," + (t.price | 0) + ";";
+    }
+    return s + "|chips:" + arrLen(data.availUpgrades);
+}
+
+// If the model's tick data changed since the last render, drop a tooltip that's still
+// showing the previous data (see dataSig). Clears the show() cache so it re-shows fresh on
+// the next mousemove. No-op when nothing changed -> a still cursor keeps its tooltip.
+function hideStaleTooltip(hotEl, tipEl, data) {
+    const sig = dataSig(data);
+    if (hotEl._wgDataSig === sig) return;
+    hotEl._wgDataSig = sig;
+    tipEl.style.display = "none";
+    tipEl._wgShownBody = null;
+}
+
 // Apply the user's dragged bar position (px), or fall back to the CSS default and seed
 // the settings fields from the live layout. posX = bar CENTER-x, posY = bar TOP (px),
 // both 0 == "auto". When auto, we clear the inline left/top (so the CSS default --
@@ -1067,9 +1109,10 @@ function applyPosition(root, data) {
         if (!r || !r.width) { root._wgSeedPending = false; return; }
         const cx = Math.round(r.left + r.width / 2);
         const cy = Math.round(r.top);
-        // seed:1 marks this as the DEFAULT position (measured at the CSS default spot), so
-        // Python records it as the reset target -> the panel's reset repaints X/Y to the
-        // real default coords, not 0/0.
+        // seed:1 marks this as the DEFAULT position (measured at the CSS default spot).
+        // Python records it ONLY as the panel's "default N" stepper label -- it does NOT
+        // persist it as posX/posY (Option 1 drift fix), so posX/posY stay 0 (auto) and the
+        // resolution-relative CSS default keeps applying. Reset returns to that auto default.
         if (cx > 0 && cy > 0) invokeCommand(CMD.SET_POSITION, { x: cx, y: cy, seed: 1 });
         else root._wgSeedPending = false;
     });
@@ -1327,7 +1370,10 @@ function render(model) {
     // steals hangar drag-to-rotate). It's sized in CSS to span the bar AND the
     // glyphs below it, so hovering an icon registers too.
     ensureHover(hotEl, tipEl);
-    hotEl._wgMode = mode;   // gates the tick-hover proximity (skill_tree only)
+    hotEl._wgMode = mode;   // gates the tick-hover proximity (single-milestone modes)
+    // Drop a tooltip left over from a previous vehicle/data on a genuine change (render()
+    // rebuilds the ticks but doesn't re-run the hover hit-test); kept on a repeat push.
+    hideStaleTooltip(hotEl, tipEl, data);
     // Default hover-overlay height (CSS); the tick loop below grows it only when a
     // glyph row is dropped. Reset here so a prior vehicle's stacked height doesn't
     // linger on this one (incl. the COMPLETE early-return just below).
@@ -1410,8 +1456,11 @@ function render(model) {
     // tick -- is ever clickable. Consumed on the first fieldmod the spec sees.
     let nextFieldMod = true;
     // Pre-pass: only glyph-bearing ticks (field mods + any icon tick) reserve a lane.
+    // Done markers are EXCLUDED: they're custom-positioned at the left edge in lane 0, so
+    // reserving a footprint at pct(0)=0% for them would wrongly bump a real near-left tick
+    // into lane 1 for no visual reason.
     const place = computeLanes(ticks, n, pct, mode, hotEl,
-        function (t) { return t.category === CAT.FIELDMOD || !!t.icon; });
+        function (t) { return !t.done && (t.category === CAT.FIELDMOD || !!t.icon); });
     const res = renderTicks(ticksEl, ticks, n, function (t, i) {
         // State class: locked -> dim, affordable -> bright. In the capstone-only state the
         // final (icon) skill_tree tick IS the available node, so force it bright (wg-aff)
@@ -1515,7 +1564,9 @@ function renderElite(root, data, isRewards) {
     const hotEl = root.querySelector(".wg-hot");
     ensureHover(hotEl, tipEl);
     hotEl._wgMode = data.mode;   // elite/elite_rewards -> nearest-anywhere tick hover
+    hideStaleTooltip(hotEl, tipEl, data);   // drop a previous vehicle's tooltip on a data change
     hotEl._wgChips = [];         // no upgrade chips in elite modes
+    setActiveChip(hotEl, null);  // clear any active chip ref from a prior skill_tree render
     // Null the chip signature too, else a skill_tree vehicle returned to after this
     // elite render keeps its stale _wgSig and render() takes the re-show-without-
     // rebuild branch -> chip DOM shows but _wgChips stays empty -> dead hover/click.
@@ -1634,6 +1685,16 @@ function ensureHover(hotEl, tipEl) {
     if (hotEl._wgHoverBound) return;
     hotEl._wgHoverBound = true;
     const show = (body, leftPct, lane) => {
+        // Skip the work when the exact same tooltip is already shown at the same spot: the
+        // mousemove fires this on EVERY pointer event over one tick, and rebuilding the
+        // innerHTML + running clampTip (which resets inline styles, reads getBoundingClientRect
+        // and may flip the tip) each time is pure churn. Re-show whenever it's hidden or the
+        // content/position/lane changed (a data change clears the cache -- see render()).
+        if (tipEl.style.display === "block" && tipEl._wgShownBody === body &&
+            tipEl._wgShownLeft === leftPct && tipEl._wgShownLane === lane) return;
+        tipEl._wgShownBody = body;
+        tipEl._wgShownLeft = leftPct;
+        tipEl._wgShownLane = lane;
         tipEl.innerHTML = body;
         tipEl.style.left = leftPct + "%";
         tipEl.style.display = "block";
@@ -1654,9 +1715,12 @@ function ensureHover(hotEl, tipEl) {
             return;
         }
         setActiveChip(hotEl, null);
+        // Read the bar TRACK rect ONCE for this event and share it across the affordance +
+        // tooltip hit-tests (each did its own forced layout read before).
+        const rect = barRect(hotEl);
         // Pointer affordance: a pointer cursor only while over a clickable tick.
         hotEl.style.cursor = dragMode ? "move"
-            : (nearestClick(hotEl, e.clientX) ? "pointer" : "");
+            : (nearestClick(hotEl, e.clientX, rect) ? "pointer" : "");
         // (1) exact element under the cursor.
         let node = e.target;
         while (node && node !== hotEl) {
@@ -1664,12 +1728,15 @@ function ensureHover(hotEl, tipEl) {
             node = node.parentElement;
         }
         // (2) nearest tick by cursor x.
-        const near = nearestByX(hotEl._wgTickMeta, hotEl, e.clientX);
+        const near = nearestByX(hotEl._wgTickMeta, hotEl, e.clientX, rect);
         if (!near.best) { tipEl.style.display = "none"; return; }
-        // In skill_tree mode the only tooltip-tick is the final upgrade (far right);
-        // gate it by proximity so it doesn't show across the whole empty bar. Other
-        // modes keep nearest-anywhere (dense ticks make that the right behavior).
-        const ok = hotEl._wgMode !== MODE.SKILL_TREE || near.dist <= 6;
+        // Single-milestone bars (skill_tree final upgrade; the speculative potential-Tier-XI
+        // tick, pinned at 100%) carry ONE tooltip-tick far from the bar's left, so gate it by
+        // proximity -- else it would pop across the whole empty bar. Other modes keep
+        // nearest-anywhere (dense ticks make that the right behavior).
+        const single = hotEl._wgMode === MODE.SKILL_TREE ||
+            hotEl._wgMode === MODE.POTENTIAL_TIER_XI;
+        const ok = !single || near.dist <= 6;
         if (ok) show(near.best.body, near.best.left, near.best.lane); else tipEl.style.display = "none";
     });
     hotEl.addEventListener("mouseleave", function () {

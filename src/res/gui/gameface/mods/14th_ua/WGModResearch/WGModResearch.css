@@ -938,7 +938,8 @@
    so the emblem renders at a known size and the level number centers reliably over it
    -- the same recipe as the below-bar tick emblem, just larger. */
 #wgmod-root .wg-tip-icon-elite {
-    align-self: flex-start;     /* fixed square, top-aligned (override stretch) */
+    /* (dead `align-self: flex-start` removed -- the icon is position:absolute under the
+       display:block .wg-tip-main, a leftover from the old flex-row tooltip layout.) */
     width: 44rem;
     height: 44rem;
     background-position: center;
