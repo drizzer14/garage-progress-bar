@@ -107,3 +107,37 @@ def test_on_reset_ignores_other_mods():
     mod_settings._on_reset("some.other.mod", {"posX": 0, "posY": 0})
     assert mod_settings._settings["posX"] == 999
     assert mod_settings._settings["posY"] == 888
+
+
+# --- position-seed drift fix (Option 1: never persist the seed as a position) --------
+
+def test_seed_does_not_persist_as_position():
+    # The widget's SEED (is_default=True) records the panel's default target / stepper
+    # label only -- it must NOT pin posX/posY. Leaving them 0 (auto) keeps the
+    # resolution-relative CSS default in force, so the bar never drifts when the game
+    # resolution changes. (MSA calls inside set_position degrade to no-ops in the test env.)
+    mod_settings._settings["posX"] = 0
+    mod_settings._settings["posY"] = 0
+    mod_settings.set_position(960, 190, is_default=True)
+    assert mod_settings._settings["posX"] == 0
+    assert mod_settings._settings["posY"] == 0
+
+
+def test_real_drag_persists_as_position():
+    # A real drag / stepper edit (is_default=False) DOES pin the chosen px.
+    mod_settings._settings["posX"] = 0
+    mod_settings._settings["posY"] = 0
+    mod_settings.set_position(700, 300, is_default=False)
+    assert mod_settings._settings["posX"] == 700
+    assert mod_settings._settings["posY"] == 300
+
+
+def test_reset_returns_to_auto_not_seeded_px():
+    # Reset -> AUTO (0/0) so the resolution-relative CSS default applies, even when the
+    # host's stored 'defaults' snapshot still carries a seeded px. (Pre-fix this pinned
+    # the stale seeded pixels, which is exactly the drift being removed.)
+    mod_settings._settings["posX"] = 700
+    mod_settings._settings["posY"] = 300
+    mod_settings._on_reset(mod_settings.LINKAGE, {"posX": 960, "posY": 190})
+    assert mod_settings._settings["posX"] == 0
+    assert mod_settings._settings["posY"] == 0

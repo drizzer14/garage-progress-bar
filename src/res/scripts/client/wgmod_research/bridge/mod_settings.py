@@ -19,9 +19,13 @@ Plus a draggable bar position, stored as two on-screen PIXEL coordinates:
 - posX -- the bar's CENTER-x in px (matches the CSS translateX(-50%) center-anchor).
 - posY -- the bar's TOP in px.
 Both default to 0, which means "auto" -- the bar keeps its CSS default position
-(centered, 17.6vh) and the widget JS seeds these fields once from the live layout so
-the numeric inputs always show real coordinates. Pixels have no resolution-independent
-default, so resetting just writes 0/0 back (re-seeds at the current resolution).
+(centered, 17.6vh, resolution-relative). posX/posY stay 0 until the user actually
+DRAGS the bar (or edits a stepper): a real drag pins the chosen px, but the widget's
+one-time SEED does NOT (is_default=True in set_position) -- it only feeds the panel's
+"default N" stepper label. This is deliberate: pixels have no resolution-independent
+meaning, so persisting the seeded px would freeze one resolution's layout and the bar
+would drift off-header after any resolution change. Leaving posX/posY at 0 keeps the
+CSS default live, so it re-derives correctly at every resolution. Reset returns to auto.
 The position round-trips 1:1: JS reports a dragged position via the `setPosition`
 command (see gameface_bridge) -> set_position() persists it here and re-pushes.
 
@@ -438,18 +442,20 @@ def _label_defaults(api, dx, dy):
 def _on_reset(linkage, defaults):
     """Panel 'reset to defaults' button. The settings host fires onResetMod (NOT
     onSettingsChanged) when the user resets a mod, so this hook is what makes the reset
-    button move our bar. `defaults` is the host's stored snapshot, which -- thanks to the
-    seed (see _store_default_position) -- carries the real default position px, so we just
-    apply it: posX/posY jump to the default spot and the bar follows. Fallback: if the
-    snapshot predates the seed (no posX/posY yet), drop to auto (0/0) so the widget
-    re-seeds. Guarded + linkage-scoped (the event is global across every mod)."""
+    button move our bar. `defaults` is the host's stored snapshot (hide flags + per-mode
+    toggles); we apply it, then force the position back to AUTO (0/0). Under the drift fix
+    the default position IS auto -- the resolution-relative CSS default, re-measured live --
+    so reset never pins a stale seeded px and is resolution-independent. The widget re-seeds
+    the panel's default label on the next mount. Guarded + linkage-scoped (the event is
+    global across every mod)."""
     try:
         if linkage != LINKAGE:
             return
         _apply(defaults if defaults else DEFAULTS)
-        if not defaults or "posX" not in defaults or "posY" not in defaults:
-            _settings["posX"] = 0   # not seeded yet -> auto; widget re-seeds to default
-            _settings["posY"] = 0
+        # Position always resets to auto (CSS default), regardless of any seeded px the
+        # host snapshot may still carry -- see the Option 1 drift fix in set_position.
+        _settings["posX"] = 0
+        _settings["posY"] = 0
         LOG_NOTE("[wgmod] onResetMod -> position reset: %s" % (_settings,))
         from wgmod_research.bridge import gameface_bridge as B
         B.refresh()
@@ -481,19 +487,24 @@ def _full_settings_for_write(g_modsSettingsApi):
 
 def set_position(x, y, is_default=False):
     """Persist a new bar position (px) and re-push it to the widget. Called from the JS
-    `setPosition` reverse command. `is_default` is True for the widget's SEED -- the px it
-    measures while the bar sits at its CSS default (fired on first mount and after a reset);
-    that value is also recorded as the host's reset 'defaults' (see _store_default_position)
-    so the reset button repaints the fields to the real default spot, not 0/0. A normal drag
-    passes is_default=False (updates the current position only).
+    `setPosition` reverse command.
+
+    `is_default` is True for the widget's SEED -- the px it measures while the bar sits at
+    its CSS default. Under the drift fix (Option 1) the seed is NOT stored as the applied
+    position: it only records the panel's default-target label (see _store_default_position),
+    leaving posX/posY at 0 (auto). Keeping them 0 means the resolution-relative CSS default
+    stays in force, so the bar never drifts to stale pixels when the game resolution changes.
+    Only a real drag / stepper edit (is_default=False) pins posX/posY to the chosen px.
 
     Writes the FULL settings through ModsSettingsAPI so the panel's numeric fields track the
     position; guarded so a missing/broken MSA never breaks the bar. updateModSettings only
     mutates in-memory state, so saveState() flushes it to disk (survives a client restart)."""
     x = clamp_pos(x)
     y = clamp_pos(y)
-    _settings["posX"] = x
-    _settings["posY"] = y
+    if not is_default:
+        # A real drag/stepper edit pins the chosen px; the seed leaves posX/posY at auto.
+        _settings["posX"] = x
+        _settings["posY"] = y
     try:
         from gui.modsSettingsApi import g_modsSettingsApi
         g_modsSettingsApi.updateModSettings(LINKAGE, _full_settings_for_write(g_modsSettingsApi))
