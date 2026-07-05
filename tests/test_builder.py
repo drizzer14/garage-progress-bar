@@ -508,3 +508,40 @@ def test_tech_tree_takes_priority_over_potential():
     snap = t.VehicleSnapshot(tier=10, is_elite=False, vehicle_xp=0, free_xp=0,
                              tech_unlocks=[_u(1, 5000)])
     assert build_model(snap, _WITH_PXI).mode == t.Mode.TECH_TREE
+
+
+def test_potential_excluded_when_real_tier_xi_researched():
+    # A tier-X whose real tech-tree Tier-XI successor is already RESEARCHED keeps that
+    # vehicle in tech_unlocks (researched=True, so it makes no tick). The speculative bar
+    # must NOT show -- a real Tier XI exists on this line. Falls through to COMPLETE.
+    snap = _done_tier_x(tech_unlocks=[_u(99, 325000, researched=True, kind="vehicle")])
+    assert build_model(snap, _WITH_PXI).mode == t.Mode.COMPLETE
+
+
+def test_potential_excluded_when_real_tier_xi_researched_with_prestige():
+    # Same exclusion with prestige data present -> falls through to the ELITE band.
+    snap = _done_tier_x(tech_unlocks=[_u(99, 325000, researched=True, kind="vehicle")],
+                        has_prestige=True, elite_level=10, elite_max_level=20,
+                        elite_grades=_grades(), elite_level_xp={10: 650000})
+    assert build_model(snap, _WITH_PXI).mode == t.Mode.ELITE
+
+
+def test_potential_still_shows_with_researched_module_in_unlocks():
+    # A researched MODULE left in tech_unlocks is NOT a successor vehicle -> only a
+    # VEHICLE entry signals a real Tier XI, so the speculative bar still applies.
+    snap = _done_tier_x(tech_unlocks=[_u(5, 1000, researched=True, kind="module")])
+    assert build_model(snap, _WITH_PXI).mode == t.Mode.POTENTIAL_TIER_XI
+
+
+def test_potential_model_carries_estimate_inputs_and_class():
+    # The POTENTIAL model must carry the same estimate inputs + vehicle_class every other
+    # mode does, so the tooltip's "~ M-N battles" range and the class badge render.
+    snap = _done_tier_x(vehicle_class="mediumTank", avg_battle_xp=740, battle_count=42,
+                        account_avg_battle_xp=560, reserve_mult=200,
+                        daily_double_factor=200, max_battle_xp=1900)
+    m = build_model(snap, _WITH_PXI)
+    assert m.mode == t.Mode.POTENTIAL_TIER_XI
+    assert m.vehicle_class == "mediumTank"
+    assert (m.avg_battle_xp, m.battle_count, m.account_avg_battle_xp,
+            m.reserve_mult, m.daily_double_factor, m.max_battle_xp) == (
+        740, 42, 560, 200, 200, 1900)

@@ -308,7 +308,8 @@ def _record_click(int_cd):
                                   name=s.name, icon=s.icon,
                                   category=getattr(s, "category", ""),
                                   effect=getattr(s, "description", ""),
-                                  xp_cost=getattr(s, "xp_cost", 0))
+                                  xp_cost=getattr(s, "xp_cost", 0),
+                                  done_count=getattr(snap, "skilltree_done", 0))
                     return
         # Field-mod step (per-vehicle step_id).
         for s in (snap.field_mod_steps or []):

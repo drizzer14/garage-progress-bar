@@ -74,8 +74,8 @@ def read_tech_unlocks(veh, unlocks):
                 # -- the tier word via i18n, the module type via the GUI item's own
                 # already-localized `userType` (covers wheels/dual-gun/etc. too).
                 if is_vehicle:
-                    tier = int(getattr(item, "level", 0) or 0)
-                    kind_label = i18n.tier_label(_roman(tier))
+                    vlevel = int(getattr(item, "level", 0) or 0)
+                    kind_label = i18n.tier_label(_roman(vlevel))
                     owned = False
                 else:
                     kind_label = getattr(item, "userType", "") or ""
@@ -99,7 +99,8 @@ def read_tech_unlocks(veh, unlocks):
             # must keep raw cost). Guarded: any failure falls back to the raw cost.
             xp_effective = int(xp_cost)
             if is_vehicle:
-                xp_effective = blueprint_effective_cost(int_cd, int(xp_cost))[0]
+                # Reuse the tier already read above to skip a redundant getItemByCD.
+                xp_effective = blueprint_effective_cost(int_cd, int(xp_cost), vlevel)[0]
             out.append(t.UnlockItem(
                 int_cd=int_cd, name=name, icon=icon, xp_cost=int(xp_cost),
                 kind=(Category.VEHICLE if is_vehicle else Category.MODULE),

@@ -20,12 +20,12 @@ def _step(sid, unlocked=False):
 
 
 def _snap(veh_int_cd, tech_unlocks=None, field_mod_steps=None, skilltree_available=None,
-          is_skill_tree=False):
+          is_skill_tree=False, skilltree_done=0):
     return t.VehicleSnapshot(
         tier=9, is_elite=False, vehicle_xp=0, free_xp=0,
         tech_unlocks=tech_unlocks, field_mod_steps=field_mod_steps,
         is_skill_tree=is_skill_tree, skilltree_available=skilltree_available,
-        vehicle_int_cd=veh_int_cd)
+        skilltree_done=skilltree_done, vehicle_int_cd=veh_int_cd)
 
 
 def _model(mode=t.Mode.TECH_TREE, ticks=None, avail=None):
@@ -158,6 +158,46 @@ def test_skilltree_cancel_leaves_no_chip():
     model = _model(mode=t.Mode.SKILL_TREE, avail=[])
     recent.decorate(model, _snap(100, is_skill_tree=True, skilltree_available=[_step(42)]))
     assert model.avail_upgrades == []
+
+
+def test_skilltree_empty_frontier_promotes_when_done_count_grows():
+    # The empty-frontier bug: unlocking node 42 leaves the frontier EMPTY while the tree
+    # is NOT complete (remaining nodes all prereq-locked). The absence test can't confirm
+    # an empty list, so promotion relies on positive evidence -- skilltree_done grew.
+    recent.record(recent.SKILLTREE, 100, 42, name="Perk", icon="p.png",
+                  category="Mechanic", done_count=5)
+    snap = _snap(100, is_skill_tree=True, skilltree_available=[], skilltree_done=6)
+    model = _model(mode=t.Mode.SKILL_TREE, avail=[])
+    recent.decorate(model, snap)
+    assert len(model.avail_upgrades) == 1
+    assert model.avail_upgrades[0].done is True
+    assert model.avail_upgrades[0].step_id == 42
+
+
+def test_skilltree_empty_frontier_unchanged_count_defers():
+    # A degraded read (empty frontier, done-count unchanged) must NOT promote -- neither
+    # the absence test (guards []) nor the count test (needs strict growth) confirms.
+    recent.record(recent.SKILLTREE, 100, 42, name="Perk", icon="p.png",
+                  category="Mechanic", done_count=5)
+    model = _model(mode=t.Mode.SKILL_TREE, avail=[])
+    recent.decorate(model, _snap(100, is_skill_tree=True, skilltree_available=[],
+                                 skilltree_done=5))
+    assert model.avail_upgrades == []
+
+
+def test_skilltree_cancel_with_count_unchanged_expires():
+    # Cancelled click: node still available AND done-count unchanged -> never confirms,
+    # expires after the reconcile cap (same as before, now via the count path too).
+    recent.record(recent.SKILLTREE, 100, 42, name="Perk", icon="p.png",
+                  category="Mechanic", done_count=5)
+    unconfirmed = _snap(100, is_skill_tree=True, skilltree_available=[_step(42)],
+                        skilltree_done=5)
+    for _ in range(recent._PENDING_MAX_RECONCILES + 1):
+        recent.decorate(_model(mode=t.Mode.SKILL_TREE, avail=[]), unconfirmed)
+    model = _model(mode=t.Mode.SKILL_TREE, avail=[])
+    recent.decorate(model, _snap(100, is_skill_tree=True, skilltree_available=[],
+                                 skilltree_done=6))
+    assert model.avail_upgrades == []   # pending already expired
 
 
 def test_pending_expires_after_max_reconciles_without_promotion():

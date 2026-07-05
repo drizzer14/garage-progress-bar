@@ -15,7 +15,19 @@ first, then global free XP. The view treats a scale_min == scale_max range as
 scale/ticks/fill axis with a single segment (fill_free = 0).
 """
 from wgmod_research.domain import types as t
+from wgmod_research.domain.constants import Category
 from wgmod_research.domain.resolvers import techtree, fieldmods, elite, skilltree, potential
+
+
+def _has_real_tier_xi(snapshot):
+    """True if the vehicle's tech tree carries a real Tier-XI successor vehicle. A
+    tier-X's only possible tech-tree VEHICLE unlock is its Tier XI, and a researched one
+    STAYS in tech_unlocks (researched=True) -- so any vehicle entry here means the real XI
+    exists regardless of researched state (an UNresearched one would already have won
+    TECH_TREE higher in the chain). Used to exclude the speculative POTENTIAL bar on lines
+    that actually have a Tier XI."""
+    return any(getattr(u, "kind", None) == Category.VEHICLE
+               for u in (snapshot.tech_unlocks or []))
 
 
 def _max_pos(ticks, default):
@@ -143,24 +155,30 @@ def build_model(snapshot, enabled=None):
             spendable_xp=spendable, **est))
 
     # Speculative "potential Tier XI" (opt-in, default off): a tier-X tank with NO
-    # real tier XI (not a skill-tree vehicle), fully researched + field mods done.
-    # Banked spendable XP (vehicle + free) filling toward the fixed price a real tier
-    # XI costs (potential.POTENTIAL_TIER_XI_XP). Sits above prestige so it REPLACES
-    # the Elite-Levels bar on these tanks when enabled.
+    # real tier XI, fully researched + field mods done. Banked spendable XP (vehicle +
+    # free) filling toward the fixed price a real tier XI costs (POTENTIAL_TIER_XI_XP).
+    # Sits above prestige so it REPLACES the Elite-Levels bar on these tanks when enabled.
+    # "No real Tier XI" needs THREE exclusions: not a skill-tree vehicle, AND no tech-tree
+    # Tier-XI successor vehicle in tech_unlocks (which stays there researched=True after
+    # being researched -- see _has_real_tier_xi; without this check a tier-X whose real
+    # Tier XI is already researched wrongly shows the ghost speculative bar).
     # NB: unlike the per-mode "show X" toggles this is gated at ENTRY (only entered
     # when explicitly enabled), so OFF falls THROUGH to elite/complete rather than
     # HIDING the bar. enabled is None (legacy/tests default = "all on") is treated as
     # NOT including this opt-in mode, so every existing test's resolved mode is
     # unchanged. Tier X == veh.level 10 (tier XI is level 11).
+    # bar_visible keeps this bar shown under hide_when_complete (it's POTENTIAL, not
+    # COMPLETE) -- the user opted into the speculative bar, so it overrides the hide.
     if (enabled is not None and t.Mode.POTENTIAL_TIER_XI in enabled
-            and snapshot.tier == 10 and not snapshot.is_skill_tree):
+            and snapshot.tier == 10 and not snapshot.is_skill_tree
+            and not _has_real_tier_xi(snapshot)):
+        # potential.resolve never returns None by contract, so no None-guard.
         pxi = potential.resolve(snapshot)
-        if pxi is not None:
-            return t.ResearchProgressModel(
-                mode=t.Mode.POTENTIAL_TIER_XI, scale_min=pxi["scale_min"],
-                scale_max=pxi["scale_max"], fill_vehicle=fill_vehicle,
-                fill_free=fill_free, ticks=pxi["ticks"],
-                vehicle_class=veh_class, spendable_xp=spendable, **est)
+        return t.ResearchProgressModel(
+            mode=t.Mode.POTENTIAL_TIER_XI, scale_min=pxi["scale_min"],
+            scale_max=pxi["scale_max"], fill_vehicle=fill_vehicle,
+            fill_free=fill_free, ticks=pxi["ticks"],
+            vehicle_class=veh_class, spendable_xp=spendable, **est)
 
     # Fully researched. If the vehicle has Elite-Levels (prestige) data, show
     # the prestige progression instead of the static "fully researched" badge.
@@ -170,10 +188,10 @@ def build_model(snapshot, enabled=None):
         reward = elite.resolve_reward_track(snapshot)
         if reward is not None and reward["any_unearned"]:
             return _emit(t.Mode.ELITE_REWARDS,
-                         _elite_model(t.Mode.ELITE_REWARDS, reward, snapshot))
+                         _elite_model(t.Mode.ELITE_REWARDS, reward, snapshot, est, spendable))
         band = elite.resolve_grade_band(snapshot)
         if band is not None:
-            return _emit(t.Mode.ELITE, _elite_model(t.Mode.ELITE, band, snapshot))
+            return _emit(t.Mode.ELITE, _elite_model(t.Mode.ELITE, band, snapshot, est, spendable))
 
     # nothing left to research and no prestige data: COMPLETE (elite badge).
     return t.ResearchProgressModel(
@@ -183,10 +201,12 @@ def build_model(snapshot, enabled=None):
         spendable_xp=spendable, **est)
 
 
-def _elite_model(mode, res, snapshot):
+def _elite_model(mode, res, snapshot, est, spendable):
     """Build an ELITE / ELITE_REWARDS model from a resolver result dict. The
     band uses a single fill segment (vehicle slot) so fill_free stays 0; the
-    readout is cumulative combat XP."""
+    readout is cumulative combat XP. `est` (the estimate inputs) and `spendable`
+    (vehicle + free XP) are threaded in from build_model so they aren't recomputed --
+    both equal what the caller already derived from the same snapshot."""
     # The prestige/Elite-Levels system tracks the vehicle's CUMULATIVE combat XP
     # (total earned toward Elite Levels), NOT the unspent research XP (vehicle_xp).
     # Reconstruct it from the snapshot: cumulative XP to reach the current level
@@ -207,5 +227,5 @@ def _elite_model(mode, res, snapshot):
         elite_grade=res.get("grade", ""), elite_sub=res.get("sub", 0),
         elite_current_icon=elite.current_grade_icon(snapshot),
         combat_xp=combat,
-        spendable_xp=snapshot.vehicle_xp + snapshot.free_xp,
-        **_est(snapshot))
+        spendable_xp=spendable,
+        **est)

@@ -136,9 +136,13 @@ def daily_double_factor(veh):
         return 100
 
 
-def blueprint_effective_cost(int_cd, xp_full):
+def blueprint_effective_cost(int_cd, xp_full, vlevel=None):
     """(effective_cost, discount_pct) for the VEHICLE unlock `int_cd` given its raw
     XP cost `xp_full`, applying any blueprint-fragment discount the player holds.
+
+    `vlevel` is the vehicle's tier; pass it when the caller already holds the item
+    (tech_read does) to skip a redundant getItemByCD lookup. Left None (actions.py) it
+    is read here.
 
     Returns (int(xp_full), 0) when no fragments apply or on any failure -- so a
     degraded read never blanks or misprices the row. VEHICLE unlocks only: modules
@@ -159,7 +163,7 @@ def blueprint_effective_cost(int_cd, xp_full):
         bp = getattr(cache.items, "blueprints", None)
         if bp is None or xp_full <= 0:
             return xp_full, 0
-        vlevel = int(getattr(cache.items.getItemByCD(int_cd), "level", 0) or 0)
+        vlevel = int(vlevel or 0) or int(getattr(cache.items.getItemByCD(int_cd), "level", 0) or 0)
         if not vlevel:
             return xp_full, 0
         disc_pct = int(bp.getBlueprintDiscount(int_cd, vlevel) or 0)

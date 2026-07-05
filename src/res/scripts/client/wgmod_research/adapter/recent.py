@@ -50,9 +50,14 @@ _TICK_MODES = (t.Mode.TECH_TREE, t.Mode.FIELD_MODS, t.Mode.SKILL_TREE)
 
 
 def record(kind, veh_int_cd, item_id, name="", icon="", category="",
-           level=0, effect="", xp_cost=0, kind_label=""):
+           level=0, effect="", xp_cost=0, kind_label="", done_count=0):
     """Optimistically stash the item just clicked. Display fields are captured now
-    because a researched item vanishes from every snapshot source afterwards."""
+    because a researched item vanishes from every snapshot source afterwards.
+
+    `done_count` is the snapshot's `skilltree_done` AT CLICK TIME (skill-tree only) --
+    kept as positive confirmation evidence: a later snapshot whose done-count GREW means
+    a node was received, so the click succeeded even when the frontier collapsed to empty
+    (which the absence test alone can't confirm). 0/ignored for non-skill-tree kinds."""
     global _pending, _pending_reconciles
     try:
         veh = int(veh_int_cd or 0)
@@ -71,6 +76,7 @@ def record(kind, veh_int_cd, item_id, name="", icon="", category="",
             "effect": effect or "",
             "xp_cost": int(xp_cost or 0),
             "kind_label": kind_label or "",
+            "done_count": int(done_count or 0),
         }
         _pending_reconciles = 0
     except Exception:
@@ -171,8 +177,17 @@ def _is_done(rec, snap):
                     return bool(getattr(s, "unlocked", False))
             return False
         if kind == SKILLTREE:
-            # No per-node researched flag, so keep the absence test -- but guard the
-            # empty list (a degraded [] read must NOT read as "done").
+            # Two independent confirmations, EITHER suffices (each guards its own degraded
+            # read, so neither false-promotes on missing data):
+            #   1) Positive count evidence: skilltree_done grew since the click -> a node
+            #      was received. This is the ONLY confirmation when unlocking the node
+            #      collapses the frontier to empty while the tree is still incomplete
+            #      (the absence test can't confirm an empty list).
+            #   2) Absence (legacy): the node left a NON-EMPTY frontier. Still valid for
+            #      the common case and covers a degraded done-count read.
+            done_now = int(getattr(snap, "skilltree_done", 0) or 0)
+            if done_now > int(rec.get("done_count", 0) or 0):
+                return True
             avail = [getattr(s, "step_id", None) for s in (snap.skilltree_available or [])]
             return bool(avail) and (item_id not in avail)
     except Exception:
