@@ -9,11 +9,17 @@ _Submitted: bug hunt (2026-07-05) · Status: PARTIALLY DONE (2026-07-05)_
 - **DONE** builder threads `est` + `spendable` into `_elite_model(...)` instead of recomputing
   `_est(snapshot)` + `vehicle_xp + free_xp` a second time. Covered by the existing elite tests
   (191→194 green).
-- **DEFERRED** the memoization LAYER (account-wide + per-vehicle caches invalidated on stats-sync).
-  It's a pure perf change ("no correctness problem" per the summary) to fail-soft adapter code
-  that imports live game symbols (not pytest-importable), so its cache-invalidation timing —
-  reserve expiry, reward art after a prestige level-up — can only be validated with the live
-  debug REPL. Left for a session that can profile + verify in-client.
+- **DEFERRED → likely NOT WORTH IT** the memoization LAYER (account-wide + per-vehicle caches
+  invalidated on stats-sync). It's a pure perf change ("no correctness problem" per the summary)
+  to fail-soft adapter code that imports live game symbols (not pytest-importable), so its
+  cache-invalidation timing — reserve expiry, reward art after a prestige level-up — can only be
+  validated with the live debug REPL.
+  **Profiled live 2026-07-05** (REPL): `build_snapshot()` ≈ **1.9 ms/call** on a tier-9 (no
+  prestige, no skill-tree — so the heavy `_read_reward_art` path did NOT run). Pushes fire only
+  on vehicle-change + coalesced syncs, so ~2 ms of garage-idle CPU is well below any smoothness
+  threshold. Recommendation: DON'T add the caching layer unless a prestige/elite-tier-XI vehicle
+  profile shows a real spike from the reward-art read (not measurable on the current account
+  state). The micro-fixes above stand.
 
 ---
 _Original research below._
