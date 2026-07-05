@@ -29,6 +29,12 @@ file silently LOSING its version reference also fails the check.
 The hand-bumped consumer readme (dist/INSTALL.txt) lives under gitignored dist/,
 which is otherwise skipped; it is scanned explicitly when present.
 
+It ALSO checks the supported CLIENT version (4-part, e.g. 2.3.0.1) -- a separate value
+from the mod version. The single canonical source is build_wgmods_zip.CLIENT_VERSION;
+a fixed set of shipping/instruction files (_CLIENT_REQUIRED) must each carry it and must
+not carry a differing 4-part client token, so a client patch that misses one file fails.
+IP-shaped tokens (the debug REPL's 127.0.0.1) are excluded so they never false-fail.
+
 Runs on Python 2.7 or 3.x (release tooling is 2.7; CI is 3.13).
 """
 from __future__ import print_function
@@ -40,6 +46,10 @@ import xml.etree.ElementTree as ET
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 META = os.path.join(ROOT, "src", "meta.xml")
+# build_wgmods_zip.py holds the single canonical CLIENT version (the mods/<ver>/ folder the
+# bundle extracts into). check_version parses it (not imports -- no side effects) and
+# verifies the shipping/instruction files agree, so a client patch can't leave a straggler.
+WGMODS_ZIP = os.path.join(ROOT, "build", "build_wgmods_zip.py")
 
 # Directories not worth scanning (build output, VCS, vendored binaries, editor cfg).
 _SKIP_DIRS = {".git", "dist", "__pycache__", "node_modules", ".idea", ".vscode",
@@ -77,8 +87,69 @@ _REQUIRED = (
 )
 
 
+# --- client version (4-part, e.g. 2.3.0.1) -----------------------------------
+# Canonical source: build_wgmods_zip.CLIENT_VERSION.
+_CLIENT_RE = re.compile(r'CLIENT_VERSION\s*=\s*["\'](\d+\.\d+\.\d+\.\d+)["\']')
+# A 4-part version token (the client version's shape). Loopback / IP-shaped tokens that are
+# NOT the client version are excluded so an unrelated address (the debug REPL's 127.0.0.1)
+# never trips the check.
+_CLIENT_TOKEN_RE = re.compile(r"\b\d+\.\d+\.\d+\.\d+\b")
+_CLIENT_TOKEN_EXCEPTIONS = frozenset(("127.0.0.1", "0.0.0.0"))
+# Files that state the supported CLIENT version as a real target / user instruction (NOT an
+# illustrative "e.g." example like wgmod-setup.iss's comments, where the installer resolves
+# the real version at runtime). Each MUST carry the canonical client version and must not
+# carry a DIFFERENT 4-part client token -- so a client bump that misses one fails here, just
+# like the mod-version checks. ROOT-relative, forward-slashed.
+_CLIENT_REQUIRED = (
+    "build/build_wgmods_zip.py",
+    "installer/readme.wgmods.txt",
+    "README.md",
+    "INSTALL.md",
+    "CONTRIBUTING.md",
+    "CLAUDE.md",
+    "tools/dev/README.md",
+)
+
+
 def _meta_version():
     return ET.parse(META).getroot().findtext("version").strip()
+
+
+def _client_version():
+    try:
+        with open(WGMODS_ZIP, "rb") as fh:
+            text = fh.read().decode("utf-8", "replace")
+    except (IOError, OSError):
+        return None
+    m = _CLIENT_RE.search(text)
+    return m.group(1) if m else None
+
+
+def _check_client_version():
+    """Return a list of client-version problems (empty = OK). Scoped to _CLIENT_REQUIRED so
+    it never false-fails on prose that merely mentions a version (this file's own examples,
+    skill docs, TASKS notes)."""
+    problems = []
+    client = _client_version()
+    if not client:
+        return ["could not parse CLIENT_VERSION from build/build_wgmods_zip.py"], None
+    for rel in _CLIENT_REQUIRED:
+        path = os.path.join(ROOT, rel.replace("/", os.sep))
+        try:
+            with open(path, "rb") as fh:
+                text = fh.read().decode("utf-8", "replace")
+        except (IOError, OSError):
+            problems.append("%s: unreadable / missing" % rel)
+            continue
+        tokens = [tok for tok in _CLIENT_TOKEN_RE.findall(text)
+                  if tok not in _CLIENT_TOKEN_EXCEPTIONS]
+        if client not in tokens:
+            problems.append("%s: missing the %s client reference" % (rel, client))
+        drift = sorted(set(tok for tok in tokens if tok != client))
+        if drift:
+            problems.append("%s: stale client version(s) %s (expected %s)"
+                            % (rel, ", ".join(drift), client))
+    return problems, client
 
 
 def _iter_files():
@@ -121,23 +192,34 @@ def main():
                and (not rel.startswith("dist/")
                     or os.path.isfile(os.path.join(ROOT, rel.replace("/", os.sep))))]
 
+    client_problems, client = _check_client_version()
+
+    rc = 0
     if mismatches:
         print("Version mismatch (src/meta.xml says %s):" % expected)
         for rel, lineno, got, line in mismatches:
             print("  %s:%d  found %s  ->  %s" % (rel, lineno, got, line))
-        return 1
+        rc = 1
     if missing:
         print("Missing version reference (src/meta.xml says %s) in required files:"
               % expected)
         for rel in missing:
             print("  %s  (expected at least one %s reference)" % (rel, expected))
-        return 1
+        rc = 1
     if not found_any:
         print("WARNING: no version references matched any pattern -- "
               "check_version.py may be stale.")
-        return 1
-    print("OK: all version references match src/meta.xml (%s)." % expected)
-    return 0
+        rc = 1
+    if client_problems:
+        print("Client-version problems (build_wgmods_zip.py says %s):"
+              % (client or "?"))
+        for p in client_problems:
+            print("  " + p)
+        rc = 1
+    if rc == 0:
+        print("OK: mod version %s consistent everywhere; client %s consistent."
+              % (expected, client))
+    return rc
 
 
 if __name__ == "__main__":

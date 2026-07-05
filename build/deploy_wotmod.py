@@ -111,11 +111,17 @@ def main():
         sys.exit(1)
 
     mod_id, mod_version = build_wotmod._read_meta()
-    _clean(mods_dir, res_mods_dir, mod_id)
 
+    # Build FIRST, into the repo's dist/, and verify the artifact exists BEFORE touching
+    # the install. A build failure (e.g. a missing minifier vendor file) then leaves the
+    # currently-installed mod intact instead of cleaning it away and leaving nothing.
     build_wotmod.main()  # builds dist/<id>_<version>.wotmod
-
     built = os.path.join(ROOT, "dist", "{0}_{1}.wotmod".format(mod_id, mod_version))
+    if not os.path.isfile(built):
+        print("ERROR: build did not produce", built)
+        sys.exit(1)
+
+    _clean(mods_dir, res_mods_dir, mod_id)
     shutil.copy2(built, mods_dir)
     print("deployed:", os.path.join(mods_dir, os.path.basename(built)))
     _handle_overlay(res_mods_dir, clean_overlay)

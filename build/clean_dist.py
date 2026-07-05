@@ -53,7 +53,10 @@ def _artifact_patterns(mod_id):
     bundle pattern accepts both the current 'GarageProgressBar_<ver>.zip' and the
     superseded 'GarageProgressBar-<ver>.zip' naming so stale copies get swept."""
     return [
-        re.compile(r"^" + re.escape(mod_id) + r"_.+\.wotmod$"),
+        # Require a DIGIT right after the underscore so this matches versioned packages
+        # (<id>_0.6.1.wotmod) but never the dev debug package (<id>_debug.wotmod), which
+        # is not a release artifact and must not be swept if it ever lands in dist/.
+        re.compile(r"^" + re.escape(mod_id) + r"_\d.*\.wotmod$"),
         re.compile(r"^GarageProgressBar-Setup-.+\.exe$"),
         re.compile(r"^Research-Progress-Bar_.+\.zip$"),
         re.compile(r"^GarageProgressBar[-_].+\.zip$"),

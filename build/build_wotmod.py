@@ -44,6 +44,24 @@ DIST = os.path.join(ROOT, "dist")
 # Vendored pure-Python minifiers (rjsmin / rcssmin, Apache-2.0).
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "vendor"))
 
+# OS / editor cruft that must never ship inside the .wotmod even if it appears under
+# src/res/. Names matched case-insensitively; suffixes matched on the lower-cased name.
+_CRUFT_NAMES = frozenset(("thumbs.db", ".ds_store", "desktop.ini"))
+_CRUFT_SUFFIXES = (".swp", ".swo", ".orig", ".bak", "~")
+
+
+def _is_cruft(name):
+    low = name.lower()
+    return low in _CRUFT_NAMES or low.endswith(_CRUFT_SUFFIXES)
+
+
+def _preflight_minifiers():
+    """Fail fast if a vendored minifier is missing/broken BEFORE any build output is
+    written -- otherwise a lazy per-file import blows up mid-build with dist/_build/
+    half-populated (build_wotmod docstring / build-tooling hardening)."""
+    import rjsmin  # noqa: F401
+    import rcssmin  # noqa: F401
+
 
 def _check_python():
     if sys.version_info[0] != 2 or sys.version_info[1] != 7:
@@ -100,6 +118,8 @@ def _compile_tree(src_root, out_root):
                 py_compile.compile(src_file, cfile=pyc, doraise=True)
             elif name.endswith(".pyc"):
                 continue  # skip stray/foreign bytecode; we compile fresh from .py
+            elif _is_cruft(name):
+                continue  # never ship OS/editor cruft (Thumbs.db, .DS_Store, *.swp, ...)
             else:
                 _minify_or_copy(src_file, os.path.join(target_dir, name))
 
@@ -119,6 +139,7 @@ def main():
         if rc != 0:
             raise SystemExit(rc)
         return
+    _preflight_minifiers()  # fail fast before writing any build output
     mod_id, version = _read_meta()
 
     build_dir = os.path.join(DIST, "_build")

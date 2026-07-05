@@ -39,6 +39,14 @@ def main():
     if len(sys.argv) < 3:
         print('Usage: python tools/dev/build_debug_wotmod.py "<wot_path>" <version>')
         sys.exit(1)
+    if sys.flags.optimize < 2:
+        # Match the release build (build_wotmod.py): compile the .pyc under -OO so
+        # docstrings are stripped and the debug bytecode stays aligned with the shipped
+        # mod. py_compile has no optimize arg on Py2.7, so re-exec in an -OO child
+        # (subprocess, not os.execv, keeps stdout visible on Windows), forwarding argv.
+        import subprocess
+        raise SystemExit(subprocess.call(
+            [sys.executable, "-OO", os.path.abspath(__file__)] + sys.argv[1:]))
     wot_path, version = sys.argv[1], sys.argv[2]
     out = os.path.join(wot_path, "mods", version, "com.14th_ua.garageprogressbar_debug.wotmod")
 
