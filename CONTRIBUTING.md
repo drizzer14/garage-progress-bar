@@ -62,7 +62,13 @@ python tools/dev/sync_gameface.py "<install>" 2.3.0.1
 - **`.pyc` must be built with Python 2.7.18.** Bytecode is version-locked (not
   OS-locked). Python 3 bytecode will not load in the client. Tests run on Python 3.13.
 - `.wotmod` is a **stored (uncompressed) ZIP** with `meta.xml` at the root —
-  `build_wotmod.py` handles this.
+  `build_wotmod.py` handles this. Because the archive can't be compressed, the
+  build instead shrinks its *contents*, all packaging-only (behaviour/UI
+  unchanged): it re-execs under `-OO` to strip docstrings from every `.pyc`, and
+  minifies `WGModResearch.js`/`.css` via the vendored `build/vendor/rjsmin.py` /
+  `rcssmin.py` (comment + whitespace removal only, no name mangling). The source
+  stays commented; only the packaged copy is minified. Hot-reload
+  (`sync_gameface.py`) intentionally ships the raw, readable assets.
 - **WoT 2.3 loads mods only from `.wotmod` in `mods/<version>/`.** `res_mods/<version>/`
   outranks `.wotmod`, so a stale loose copy silently shadows the package — always
   deploy via `deploy_wotmod.py` and keep `res_mods` clean for ship verification.

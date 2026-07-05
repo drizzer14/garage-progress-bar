@@ -6,14 +6,26 @@ Build a distributable .wotmod package from src/.
 
 What it does:
   1. Reads <id> and <version> from src/meta.xml.
-  2. Compiles every .py under src/res/ to .pyc bytecode.
-  3. Zips meta.xml + res/ (with .pyc, NOT .py) into dist/<id>_<version>.wotmod
+  2. Compiles every .py under src/res/ to .pyc bytecode, with docstrings stripped
+     (the build re-execs itself under -OO — see below).
+  3. Minifies WGModResearch.js / .css (vendored rjsmin / rcssmin: comment +
+     whitespace removal only, NO name mangling) so the packaged assets are ~1/3
+     their source size. Source stays commented; hot-reload ships the raw files.
+  4. Zips meta.xml + res/ (with .pyc, NOT .py) into dist/<id>_<version>.wotmod
      using ZIP_STORED (no compression) — WoT rejects compressed archives.
+
+All three are packaging-only transforms: they change NOTHING about the mod's
+behaviour or UI, only the byte size of the shipped .wotmod.
 
 IMPORTANT: run this with **Python 2.7.18**. The game executes the .pyc, and
 bytecode is tied to the Python version (magic number). Compiling under Python 3
 produces bytecode the WoT client cannot load. OS does not matter — 2.7 .pyc is
 portable across macOS/Windows/Linux — only the Python *version* matters.
+
+The build re-execs itself under -OO so every shipped .pyc has its docstrings
+stripped (~1/3 of the bytecode). The .pyc magic number is identical for
+optimized bytecode, so the (non-optimized) client loads it unchanged; the source
+has no asserts and no runtime __doc__ use, so stripping is behaviour-neutral.
 """
 from __future__ import print_function
 
@@ -29,6 +41,8 @@ SRC = os.path.join(ROOT, "src")
 RES = os.path.join(SRC, "res")
 META = os.path.join(SRC, "meta.xml")
 DIST = os.path.join(ROOT, "dist")
+# Vendored pure-Python minifiers (rjsmin / rcssmin, Apache-2.0).
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "vendor"))
 
 
 def _check_python():
@@ -45,6 +59,29 @@ def _read_meta():
     mod_id = root.findtext("id").strip()
     version = root.findtext("version").strip()
     return mod_id, version
+
+
+def _minify_or_copy(src_file, target_file):
+    """Copy a non-Python asset, minifying .js/.css on the way (packaging only).
+
+    rjsmin / rcssmin strip comments and redundant whitespace but never rename
+    identifiers or alter string literals, so the Python<->JS wire contract and the
+    ES-module `import` statements survive verbatim. Everything else is copied as-is.
+    """
+    if src_file.endswith(".js"):
+        import rjsmin
+        with open(src_file, "rb") as fh:
+            data = fh.read()
+        with open(target_file, "wb") as fh:
+            fh.write(rjsmin.jsmin(data))
+    elif src_file.endswith(".css"):
+        import rcssmin
+        with open(src_file, "rb") as fh:
+            data = fh.read()
+        with open(target_file, "wb") as fh:
+            fh.write(rcssmin.cssmin(data))
+    else:
+        shutil.copy2(src_file, target_file)
 
 
 def _compile_tree(src_root, out_root):
@@ -64,11 +101,24 @@ def _compile_tree(src_root, out_root):
             elif name.endswith(".pyc"):
                 continue  # skip stray/foreign bytecode; we compile fresh from .py
             else:
-                shutil.copy2(src_file, os.path.join(target_dir, name))
+                _minify_or_copy(src_file, os.path.join(target_dir, name))
 
 
 def main():
     _check_python()
+    if sys.flags.optimize < 2:
+        # The .pyc must be compiled under -OO so docstrings are stripped (~1/3
+        # smaller bytecode). We can't toggle the optimize flag mid-process, so run
+        # THIS build in an -OO child, then return so any caller (e.g. deploy, which
+        # imports and calls main()) proceeds normally. Target build_wotmod.py
+        # explicitly (not sys.argv) so it works whether run directly or imported.
+        # A child process (not os.execv, which detaches stdio on Windows) keeps the
+        # "Built:" line visible.
+        import subprocess
+        rc = subprocess.call([sys.executable, "-OO", os.path.abspath(__file__)])
+        if rc != 0:
+            raise SystemExit(rc)
+        return
     mod_id, version = _read_meta()
 
     build_dir = os.path.join(DIST, "_build")
@@ -96,7 +146,7 @@ def main():
                 zf.write(full, arc)
 
     shutil.rmtree(build_dir)
-    print("Built: {0}".format(out_path))
+    print("Built: {0} ({1:,} bytes)".format(out_path, os.path.getsize(out_path)))
 
 
 if __name__ == "__main__":

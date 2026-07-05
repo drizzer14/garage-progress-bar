@@ -29,6 +29,13 @@ skill is the concrete wiring for the Garage Progress Bar.
 
 ## This mod's specifics
 - **Package:** `dist/com.14th_ua.garageprogressbar_<version>.wotmod`. Build with Py 2.7 ONLY.
+- **The packaged build is size-optimized (behaviour/UI unchanged).** `build_wotmod.py`
+  self-re-execs under `-OO` (strips `.pyc` docstrings) and minifies `WGModResearch.js`/`.css`
+  through the vendored `build/vendor/rjsmin.py` / `rcssmin.py` (comment + whitespace only,
+  no name mangling). Source stays commented; **`sync_gameface.py` deploys the RAW assets**
+  for readable in-client debugging. Net effect: ~357 KB → ~199 KB. If a JS edit ever renders
+  differently packaged-vs-hot-reloaded, suspect the minifier and syntax-check the packaged
+  file (`node --check` on the extracted `.js` as a `.mjs`).
 - **Overlay path** (hot-reload): `res_mods/<ver>/gui/gameface/mods/14th_ua/WGModResearch/`.
   `deploy_wotmod.py` cleans both `mods/` and `res_mods/` before building; it WARNS when the
   overlay is present and takes `--clean-overlay` to remove it as part of the deploy. After
