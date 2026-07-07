@@ -1,7 +1,42 @@
 # Isolated Gameface view for the Garage Progress Bar
 
 **Date:** 2026-07-07
-**Status:** Approved (design) — pending implementation plan
+**Status:** SUPERSEDED (2026-07-07) — the own-view/window approach below was implemented and
+then abandoned after a live spike. See "Resolution" immediately below.
+
+## Resolution (what actually shipped)
+
+The own-view registered-window approach (the bulk of this doc) was built and tested live,
+then **abandoned**. Two findings from the spike:
+
+1. Opening the window inside the hangar presenter's `_onLoading` left the view stuck at
+   `ViewStatus.CREATED` (never loaded); it only loaded when opened a tick later. (Fixable
+   with a deferred `BigWorld.callback` open.)
+2. **Fatal:** a full-screen lobby `WindowImpl` **steals all mouse input** — CSS
+   `pointer-events:none` on the document does NOT let events fall through to the hangar
+   beneath the window, and there is no window-level input-transparency `WindowFlags` bit.
+   (Battle composites differently, which is why the MoE **battle** overlay is input-
+   transparent there.) Any own-view window therefore creates an input dead-zone over the
+   hangar; Option B (bbox window) only shrinks the dead-zone at the cost of a
+   dead-patch-over-the-vehicle + tooltip-clipping + drag-tracking rework.
+
+**What shipped instead (commit `ce642c6`):** keep the proven `gf_mod_inject` model, but move
+this bar onto a **different always-mounted hangar sub-view** — the crew panel
+(`CrewPresenter`) — while the sibling MoE Calculator keeps `HangarVehicleParamsPresenter`.
+OpenWG stores one `ModInjectModel` **per sub-view VM**, so two mods on *different* sub-views
+no longer collide; both still inject into the shared hangar document, and each widget's JS
+self-locates its data by feature name across sub-views (OpenWG `model.js`), so no JS/CSS
+change was needed. In-game verified: both bars render together, hangar input unaffected.
+
+Trade-off accepted: this is robust for the two 14th_ua mods but not immune to a hypothetical
+third mod that also picks `CrewPresenter` (the "any third-party mod" ideal below is not met).
+Still-open follow-ups: the debug-REPL port split (2223/2224) and the harness-skill note.
+
+---
+
+_Original design (superseded) follows._
+
+**Original Status:** Approved (design) — pending implementation plan
 **Scope (all folded into one plan):**
 1. Convert the **Garage Progress Bar** (this repo) to an isolated own-view widget.
 2. Convert the **MoE Calculator** garage bar (sibling repo
