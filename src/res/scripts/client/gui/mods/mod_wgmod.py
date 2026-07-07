@@ -2,9 +2,13 @@
 """WGMod research-progress bar — entry point (EU 2.3).
 
 Mount path (verified in-game): WoT 2.3 loads only packaged .wotmod. OpenWG's JS
-injector only acts on hangar SUB-views, so we patch a hangar sub-view
-(HangarVehicleParamsPresenter) to inject our widget assets and expose our data
-model; the widget JS renders from that model. We recompute on vehicle change.
+injector only acts on hangar SUB-views (it reads ONE `ModInjectModel` per sub-view,
+last-writer-wins), so two mods must not share a sub-view. The sibling MoE Calculator
+injects onto HangarVehicleParamsPresenter, so this bar injects onto a DIFFERENT
+always-mounted hangar sub-view -- the crew panel (CrewPresenter) -- to avoid the
+collision. The widget JS self-locates its data by feature name ("WGModResearch") across
+all sub-views (OpenWG model.js), so the sub-view choice is transparent to the front-end.
+We recompute on vehicle change.
 
 OpenWG Gameface is a hard dependency. Python 2.7 (BigWorld) runtime.
 """
@@ -16,8 +20,10 @@ MOD_VERSION = "0.6.2"
 
 def _install():
     import openwg_gameface  # noqa: F401  (hard dependency; raises if absent)
-    from gui.impl.lobby.hangar.presenters.hangar_vehicle_params_presenter import (
-        HangarVehicleParamsPresenter as P)
+    # Inject onto the crew panel sub-view (NOT HangarVehicleParamsPresenter, which the
+    # sibling MoE Calculator uses -- one ModInjectModel per sub-view, last writer wins).
+    from gui.impl.lobby.hangar.presenters.crew_presenter import (
+        CrewPresenter as P)
     from wgmod_research.bridge import gameface_bridge as bridge
     from wgmod_research.bridge import mod_settings
 
@@ -50,7 +56,7 @@ def _install():
     # Arm once now (for the install that happens while already in the hangar);
     # _onLoading re-arms on every subsequent mount.
     bridge.install_all_listeners()
-    LOG_NOTE("[%s] v%s installed (sub-view inject + data)" % (MOD_NAME, MOD_VERSION))
+    LOG_NOTE("[%s] v%s installed (crew sub-view inject + data)" % (MOD_NAME, MOD_VERSION))
 
 
 try:
