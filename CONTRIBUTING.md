@@ -30,7 +30,7 @@ tests/               # pytest (run with Python 3.13) for the domain layer
 tools/dev/
   sync_gameface.py       # hot-reload WGModResearch.js/.css into a running client (no relaunch)
   build_debug_wotmod.py  # build + deploy the DEV debug-REPL .wotmod (NOT shipped)
-  mod_wgmod_debug.py     # the debug REPL server (TCP 127.0.0.1:2223)
+  mod_wgmod_debug.py     # the debug REPL server (TCP 127.0.0.1:2223; MoE Calculator uses 2224)
 dist/                # build output (gitignored)
 ```
 

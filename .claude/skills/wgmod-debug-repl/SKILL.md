@@ -10,7 +10,8 @@ navigation, the general "isn't loading" checklist): see the **wotmod-debug-repl*
 skill. This skill is this mod's concrete REPL + snippets.
 
 ## The debug REPL
-A separate debug package runs a TCP REPL on **127.0.0.1:2223** inside the client.
+A separate debug package runs a TCP REPL on **127.0.0.1:2223** inside the client (the sibling
+MoE Calculator's debug REPL uses **2224**, so both mods' debug servers can run simultaneously).
 ```sh
 # Build/deploy the debug package (Py 2.7, client CLOSED)
 & "C:\Python27\python.exe" tools/dev/build_debug_wotmod.py "D:\Games\World_of_Tanks_EU" 2.3.0.1

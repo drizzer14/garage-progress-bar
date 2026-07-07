@@ -40,7 +40,8 @@ Unit tests (engine-free domain layer, Python 3):
 ```
 
 ## Debug REPL (live introspection)
-`com.14th_ua.garageprogressbar_debug.wotmod` runs a TCP REPL on **127.0.0.1:2223** in the client.
+`com.14th_ua.garageprogressbar_debug.wotmod` runs a TCP REPL on **127.0.0.1:2223** in the client
+(the sibling MoE Calculator's debug REPL uses **2224**, so both can run at once).
 - Build/deploy it (client closed):
   `& "C:\Python27\python.exe" tools\dev\build_debug_wotmod.py "D:\Games\World_of_Tanks_EU" 2.3.0.1`
 - Drive it from the host (client running, in Garage):
