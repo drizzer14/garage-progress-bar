@@ -1,0 +1,142 @@
+# Isolated Gameface view for the Garage Progress Bar
+
+**Date:** 2026-07-07
+**Status:** Approved (design) — pending implementation plan
+**Scope:** This repo (Garage Progress Bar). The MoE Calculator mod gets the same
+pattern in its own repo/session; the reusable rule is added to the `wotmod-*`
+harness skills.
+
+## Problem
+
+The bar is installed and its Python is fully alive (listeners arm, `push … ok=True`),
+but it renders nothing once the sibling **MoE Calculator** mod is also installed. It
+was visible before MoE existed.
+
+### Root cause (confirmed, live + static)
+
+Both mods attach their widget to the **same** hangar sub-view,
+`HangarVehicleParamsPresenter`, via `openwg_gameface.gf_mod_inject(host_vm, …)`.
+
+- Live REPL probe: both bridges' `_active[0]` point at the **same** ViewModel object
+  (`wg_host_id == moe_host_id == 4656310088`, `same_host_object: true`).
+- OpenWG's injector (decompiled `openwg_gameface.pyc` + `res/gui/gameface/js/index.js`):
+  `gf_mod_inject` adds a **single** property named `ModInjectModel` to the target
+  ViewModel; the JS injector reads exactly one `model?.ModInjectModel` per sub-view and
+  injects it **once** (guarded by an `injectedResIds` Set). The `name` argument is only a
+  JS-side label — it does **not** namespace the property.
+- Therefore two mods on one sub-view cannot coexist: the second `gf_mod_inject` overwrites
+  the first's `ModInjectModel`, so only the last attacher's assets are injected. The loser's
+  Python still runs and `push()` returns `ok=True` (it set `_active` and cannot tell the JS
+  is absent), which is exactly the observed symptom.
+
+Ruled out along the way: the `res_mods` overlay / MoE dev workflow, the OpenWG-generated
+`res_map.json` (the bar never used res_map), CSS/class collision (`.wg-*` vs `.moe-*`,
+disjoint), saved position (`posX:1920` is screen-centre at 4K), and the stale 0.5.0 deploy.
+
+### Requirement
+
+Both mods must be **fully isolated** — non-interfering with each other **and with any
+third-party mod**. Since `gf_mod_inject` shares one `ModInjectModel` per sub-view, sharing
+any sub-view can never satisfy this. Each widget must own its own Gameface view.
+
+## Approach (chosen)
+
+**Standalone registered hangar-overlay window per mod** (OpenWG res_map registration —
+"mechanism B"). Proven in-repo: the MoE **battle** overlay already uses it
+(`moe_calculator/bridge/battle_view.py` + `mods/configs/res_map/MoEBattleView.json`).
+
+Each widget registers its own view: a unique res_map `itemID` → `layoutID` (via
+`ModDynAccessor`) → its own Gameface **document** and **root ViewModel**. Nothing is
+shared, so nothing can collide.
+
+Rejected alternatives:
+- **Dedicated per-mod sub-view via `gf_mod_inject`** — no OpenWG API to create a
+  mod-owned sub-view; the surface is only `gf_mod_inject` (shared) + res_map registration.
+- **Different existing game sub-views per mod** — fails the "any mod" requirement (a third
+  mod on the same sub-view still collides) and depends on finding a second always-mounted
+  sub-view.
+
+## Architecture & components
+
+Domain and adapter layers are **unchanged**. Only the binding surface changes.
+
+| Layer | File | Change |
+|---|---|---|
+| domain/ | builder, resolvers, types | Unchanged; still `pytest`-covered |
+| adapter/ | `engine_adapter`, `*_read`, `format`, `recent`, `i18n` | Unchanged |
+| bridge | `bridge/research_view.py` | **NEW** — `WGModResearchView(ViewImpl)` with `_layoutID = ModDynAccessor("WGModResearchView")`, root VM = `ResearchVM`; `WGModResearchWindow(WindowImpl)` full-screen lobby-layer window, `show(focus=False)`; `open_window()` / `close_window()` singleton. Mirrors `MoEBattleView`. In-client only. |
+| bridge | `bridge/gameface_bridge.py` | **MODIFIED** — remove `attach(host_vm)` / `gf_mod_inject` / `_addViewModelProperty`. Keep listeners (vehicle / loadout / stats / colorblind / lobby-state / settings). Lifecycle → `open_window()` / `close_window()` driven by the existing garage allowlist. `push()` writes into `view.viewModel` (root VM) instead of the injected sub-view property. |
+| bridge | `bridge/view_models.py` | Minor — `ResearchVM` becomes the view's **root** VM (shape unchanged). |
+| config | `src/res/mods/configs/res_map/WGModResearchView.json` | **NEW** — `Layout` itemID `WGModResearchView` → `coui://gui/gameface/mods/14th_ua/WGModResearch/WGModResearchView.html`. |
+| front-end | `WGModResearchView.html` | **NEW** — full-screen root document hosting the bar markup. |
+| front-end | `WGModResearch.js` | **MODIFIED** — root `ModelObserver()` instead of the sub-view-property observer. **Render logic unchanged.** |
+| front-end | `WGModResearch.css` | **MODIFIED** — root `pointer-events:none`; bar container `pointer-events:auto`; same visual styling / px positioning. |
+| entry | `mod_wgmod.py` | **MODIFIED** — no longer patches `HangarVehicleParamsPresenter`; arms the open/close lifecycle on hangar enter/exit. |
+
+## Data flow
+
+`vehicle / settings / stats change` → existing listener → `engine_adapter.build_snapshot()`
+→ `domain.builder.build_model()` → `push()` into the **open window's root VM** → JS root
+`ModelObserver` re-renders. Identical to today except the VM write target is the view's root
+VM rather than a property hung on a shared sub-view.
+
+## Lifecycle
+
+- Enter the plain garage (allowlist leaf `hangar/{root}`) → `open_window()` → initial `push()`.
+- Leave garage / open tank-setup / ammo overlay → `close_window()`.
+- Vehicle / stats / colorblind / settings change while open → `push()`.
+- `layoutID` unresolved on first launch (res_map not yet rebuilt) → log once, no-op until
+  the one-time OpenWG restart resolves it (accepted). Same handling as `MoEBattleView`.
+
+## Input handling (primary risk)
+
+The battle overlay is info-only (`pointer-events:none` throughout); the garage bar is
+**interactive** (click ticks/chips → `invokeCommand({value:…})`; Ctrl-drag reposition;
+hover tooltips). Plan:
+
+- Full-screen window, `show(focus=False)`, at a lobby `WindowLayer` **below** modal dialogs
+  — never become the keyboard/mouse sink (the trap documented in `MoEBattleView`).
+- Root document `pointer-events:none`; only the bar container `pointer-events:auto`. Clicks
+  on the bar route to it and fire the existing commands; clicks elsewhere pass through to the
+  hangar. Ctrl-drag and hover work because they target the `auto` element.
+
+**Validation-first:** the implementation plan's FIRST step is a live spike — open a minimal
+interactive standalone lobby window and confirm (a) a button inside receives a click and
+(b) hangar controls under the transparent area still receive clicks/hover. If Gameface will
+not pass clicks through a windowed document, fall back to sizing/positioning the window to
+the bar's bounding box (or an input-region approach) — decided from spike evidence, not
+guessed. All other design elements are low-risk (proven by `MoEBattleView`).
+
+## Error handling
+
+Fail-soft throughout (existing convention): unresolved `layoutID` → log + no-op; window
+open/close failure → log via `LOG_CURRENT_EXCEPTION`, never crash the hangar; `push()` with
+no open window → no-op.
+
+## Testing
+
+- **Automated:** domain/adapter unchanged → existing `pytest` suite stays green as the model
+  correctness gate.
+- **In-client (REPL + in-game):** `research_view.py` and the modified bridge import live
+  Wulf/OpenWG symbols → not `pytest`-importable. Verify via the debug REPL + garage: window
+  opens, bar renders, tick click fires its command, drag repositions, vehicle switch
+  live-updates, and the passthrough check from the spike.
+
+## Harness update (reusable lesson)
+
+Add to `wotmod-gameface-widget` (referenced from `wotmod-architecture`):
+
+> A standalone mod widget must register its **own** view (res_map config JSON +
+> `ViewImpl`/`WindowImpl` + root `ModelObserver`). Use `gf_mod_inject` **only** to
+> deliberately augment an existing WG view — never for a standalone widget: every mod that
+> injects onto the same sub-view shares one `ModInjectModel` and the last writer wins, so
+> two such mods silently blank each other.
+
+Include the interactive-lobby-window notes (layer choice below modal dialogs,
+`show(focus=False)`, `pointer-events` layering for click passthrough).
+
+## Out of scope (this spec)
+
+- The MoE Calculator's own conversion (same pattern, its own repo/session).
+- The duplicate debug-REPL port 2223 across both mods (separate minor fix).
+- The stale 0.5.0 → 0.6.2 redeploy (independent).
