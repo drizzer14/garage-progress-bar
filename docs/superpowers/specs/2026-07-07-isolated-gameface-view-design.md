@@ -2,9 +2,13 @@
 
 **Date:** 2026-07-07
 **Status:** Approved (design) — pending implementation plan
-**Scope:** This repo (Garage Progress Bar). The MoE Calculator mod gets the same
-pattern in its own repo/session; the reusable rule is added to the `wotmod-*`
-harness skills.
+**Scope (all folded into one plan):**
+1. Convert the **Garage Progress Bar** (this repo) to an isolated own-view widget.
+2. Convert the **MoE Calculator** garage bar (sibling repo
+   `C:/Users/Dmytro Vasylkivskyi/14th_ua-moe-calculator`) to the same pattern.
+3. Resolve the duplicate **debug-REPL port 2223** clash (both mods hardcode it).
+4. **Redeploy** both mods clean (this repo is stale at 0.5.0 vs 0.6.2) and verify in-game.
+5. Capture the reusable rule in the `wotmod-*` **harness skills**.
 
 ## Problem
 
@@ -155,8 +159,41 @@ Add to `wotmod-gameface-widget` (referenced from `wotmod-architecture`):
 Include the interactive-lobby-window notes (layer choice below modal dialogs,
 `show(focus=False)`, `pointer-events` layering for click passthrough).
 
-## Out of scope (this spec)
+## Also in scope (folded in)
 
-- The MoE Calculator's own conversion (same pattern, its own repo/session).
-- The duplicate debug-REPL port 2223 across both mods (separate minor fix).
-- The stale 0.5.0 → 0.6.2 redeploy (independent).
+### MoE Calculator conversion (sibling repo)
+
+Apply the identical own-view pattern to the MoE **garage** bar
+(`moe_calculator/bridge/gameface_bridge.py`, which today `gf_mod_inject`s onto the same
+`HangarVehicleParamsPresenter`): new `mods/configs/res_map/MoECalculatorView.json`, a
+`MoECalculatorView(ViewImpl)` + window (mirroring its own `MoEBattleView`), root VM =
+`moeData`'s VM, JS switched to a root `ModelObserver`, lifecycle open/close on the garage
+allowlist. The MoE **battle** overlay already uses mechanism B and is untouched. Same input
+non-interference requirement and windowing decision (A vs B) apply. This repo's conversion
+is completed and validated first; MoE reuses the proven choice.
+
+### Debug-REPL port clash
+
+Both `mod_wgmod_debug` and `mod_moe_calculator_debug` bind `127.0.0.1:2223`, so only one can
+start when both are installed. Assign distinct ports — Garage Progress Bar keeps **2223**,
+MoE moves to **2224** — updating each repo's `tools/dev/mod_*_debug.py` (`PORT`),
+`repl_client.py` (`PORT`), the debug `meta.xml` description, and any skill/docs references.
+Dev-only; not shipped.
+
+### Clean redeploy + in-game verification
+
+After each mod's conversion, build (Py 2.7) and deploy clean into
+`D:/Games/World_of_Tanks_EU` `2.3.0.1`, removing any stale `res_mods` overlay, then verify
+in-game **with both mods installed together**: both bars render, both are interactive, and
+neither interferes with the other, the hangar, or the Esc/modal menus. This also clears the
+stale 0.5.0 package (this repo is at 0.6.2). Version bump handled per `wgmod-release` when
+shipping.
+
+## Sequencing
+
+1. Input spike (this repo) → pick windowing Option A or B.
+2. Convert this repo; verify in-game solo.
+3. Convert MoE (reuse the chosen option); verify in-game solo.
+4. Fix the debug-REPL port clash in both repos.
+5. Redeploy both; verify **together** (rendering + input non-interference).
+6. Update the `wotmod-*` harness skills with the rule + input notes.
