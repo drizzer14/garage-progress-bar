@@ -36,8 +36,15 @@ disjoint), saved position (`posX:1920` is screen-centre at 4K), and the stale 0.
 ### Requirement
 
 Both mods must be **fully isolated** — non-interfering with each other **and with any
-third-party mod**. Since `gf_mod_inject` shares one `ModInjectModel` per sub-view, sharing
-any sub-view can never satisfy this. Each widget must own its own Gameface view.
+third-party mod**. This applies to **two** surfaces:
+
+1. **Rendering** — a widget must never blank or restyle another. Since `gf_mod_inject`
+   shares one `ModInjectModel` per sub-view, sharing any sub-view can never satisfy this;
+   each widget must own its own Gameface view.
+2. **Input** — the bar may receive its own clicks / Ctrl-drag / hover, but must be
+   **provably incapable** of blocking or stealing pointer or keyboard input from the hangar
+   or any other mod/window. This is a hard acceptance criterion, not best-effort, and it
+   **gates the windowing choice** (below).
 
 ## Approach (chosen)
 
@@ -92,20 +99,33 @@ VM rather than a property hung on a shared sub-view.
 
 The battle overlay is info-only (`pointer-events:none` throughout); the garage bar is
 **interactive** (click ticks/chips → `invokeCommand({value:…})`; Ctrl-drag reposition;
-hover tooltips). Plan:
+hover tooltips). The bar must take *its own* input while being provably incapable of
+interfering with anything else (see requirement 2 above).
 
-- Full-screen window, `show(focus=False)`, at a lobby `WindowLayer` **below** modal dialogs
-  — never become the keyboard/mouse sink (the trap documented in `MoEBattleView`).
-- Root document `pointer-events:none`; only the bar container `pointer-events:auto`. Clicks
-  on the bar route to it and fire the existing commands; clicks elsewhere pass through to the
-  hangar. Ctrl-drag and hover work because they target the `auto` element.
+**Non-interference is the deciding criterion, not UX convenience.** Two windowing options,
+chosen by the spike below:
 
-**Validation-first:** the implementation plan's FIRST step is a live spike — open a minimal
-interactive standalone lobby window and confirm (a) a button inside receives a click and
-(b) hangar controls under the transparent area still receive clicks/hover. If Gameface will
-not pass clicks through a windowed document, fall back to sizing/positioning the window to
-the bar's bounding box (or an input-region approach) — decided from spike evidence, not
-guessed. All other design elements are low-risk (proven by `MoEBattleView`).
+- **Option A — full-screen, input-transparent-except-the-bar.** `show(focus=False)`, lobby
+  `WindowLayer` **below** modal dialogs (never the keyboard/mouse sink — the trap documented
+  in `MoEBattleView`); root document `pointer-events:none`, only the bar container
+  `pointer-events:auto`. Cleaner UX (drag range and tooltip overflow are unconstrained), but
+  depends on Gameface honouring `pointer-events:none` at the window level so clicks/hover
+  pass through the transparent area to the hangar.
+- **Option B — window sized to the bar's bounding box.** Physically covers only the bar's
+  rectangle, so it is *structurally incapable* of interfering outside it — the strongest
+  non-interference guarantee. Cost: the window must track the bar on Ctrl-drag, and be
+  padded so hover tooltips are not clipped.
+
+**Decision rule:** prefer whichever passes the strict non-interference check; if both pass,
+prefer A for UX. If A cannot *guarantee* non-interference, use B — physical isolation wins
+over convenience.
+
+**Validation-first:** the implementation plan's FIRST step is a live spike. Pass criteria
+(all required): (a) a button inside the bar receives a click and fires its command;
+(b) with the bar open, hangar controls under/around it behave **exactly** as with the bar
+absent — clicks, hover, tooltips, and drag all unaffected; (c) opening the Esc/in-game menu
+and any modal dialog is fully unaffected (no starved keyboard/mouse). The choice between A
+and B is made from this evidence, not guessed.
 
 ## Error handling
 
