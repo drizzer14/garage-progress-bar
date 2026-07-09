@@ -2,13 +2,18 @@
 """Bridge: attach our Gameface widget to a hangar sub-view and push the model.
 
 OpenWG's JS injector (gui/gameface/js/index.js) scans hangar SUB-views for a
-`ModInjectModel` and loads the listed assets into the hangar document. So we
-inject onto a sub-view's ViewModel (HangarVehicleParamsPresenter) and also hang
-our own data model on it (property `wgResearch`), which the widget JS reads via
-ModelObserver("WGModResearch").
+`ModInjectModel` and loads the listed assets into the hangar document. It keeps ONE
+such model per sub-view (last-writer-wins), so we place our widget COLLISION-AWARE:
+inject onto the highest-priority FREE candidate sub-view (see note_mount + the domain
+placement helper) instead of clobbering a mod that claimed it first, and hang our own
+data model on the chosen VM (property `wgResearch`), which the widget JS reads via
+ModelObserver("WGModResearch"). The JS self-locates across all sub-views, so which
+candidate we land on is transparent to the front-end.
 
 ViewModel API (string/number/array, transaction, addViewModel, _addViewModelProperty)
-was verified live in the EU 2.3 client.
+was verified live in the EU 2.3 client. There is no name-based getter for a child
+model, but the native proxy's toString() serializes field names to JSON, which is how
+has_inject_model() detects an already-present ModInjectModel (also verified live).
 """
 import json
 
@@ -25,6 +30,7 @@ from wgmod_research.adapter import i18n
 from wgmod_research.adapter import recent
 from wgmod_research.domain.builder import build_model, bar_visible
 from wgmod_research.domain.constants import Category
+from wgmod_research.domain.placement import choose_placement, INJECT, BLOCKED
 from wgmod_research.domain.types import Mode
 from wgmod_research.bridge import mod_settings
 from wgmod_research.bridge.view_models import ResearchVM, TickVM, UpgradeVM
@@ -36,9 +42,26 @@ WIDGET_NAME = "WGModResearch"
 DATA_PROP = "wgResearch"
 COUI = "coui://gui/gameface/mods/14th_ua/WGModResearch"
 
+# The fixed ViewModel field OpenWG's gf_mod_inject writes its ModInjectModel to (the
+# `name` arg is only a JS-side discriminator, NOT the field). Every mod's injection
+# lands here, so its presence on a sub-view VM means that sub-view is already claimed.
+INJECT_FIELD = "ModInjectModel"
+
 # (host_vm, rvm) for the currently-mounted widget. Importable so the entry point
 # and the dev REPL can drive refreshes without poking module-private state.
 _active = None
+
+# Collision-aware placement across candidate hangar sub-views. OpenWG keeps ONE
+# ModInjectModel per sub-view (last-writer-wins), so instead of overwriting a mod that
+# already claimed our target sub-view we inject onto the highest-priority FREE candidate
+# and leave the rest alone. `_candidate_order` (preferred first) is set by the entry
+# point; `_candidate_vms` caches each candidate's latest VM at mount; `_placed_name` /
+# `_placed_vm` record the sub-view we committed to. We never migrate once placed -- that
+# would inject a second, duplicate widget onto another sub-view.
+_candidate_order = []
+_candidate_vms = {}
+_placed_name = None
+_placed_vm = None
 
 # Engine events we subscribe to. WoT's Events store STRONG refs to their delegates,
 # but the battle entry/exit teardown rebuilds the hangar space -- repopulating the
@@ -427,6 +450,77 @@ def _connect_commands(rvm):
 
 
 # TickVM / UpgradeVM / ResearchVM live in bridge/view_models.py (imported above).
+
+
+def set_candidate_order(names):
+    """Set the priority-ordered candidate sub-view names (preferred first). Called
+    once by the entry point after it decides which presenters to patch."""
+    global _candidate_order
+    _candidate_order = list(names)
+
+
+def has_inject_model(vm):
+    """True if `vm` already carries an OpenWG ModInjectModel (ours or another mod's).
+
+    Wulf VMs expose no name-based getter for a child model, but the native proxy's
+    toString() serializes the model tree (field names included) to JSON, so we detect
+    the fixed INJECT_FIELD there. Fails soft to False, so a read error never blocks
+    injection (we'd rather risk a collision than never show the bar)."""
+    try:
+        return ('"%s"' % INJECT_FIELD) in vm.proxy.toString()
+    except Exception:
+        return False
+
+
+def note_mount(name, vm):
+    """Record candidate sub-view `name`'s ViewModel at mount and (re)place the widget
+    on the best FREE sub-view. Returns (host_vm, rvm) to push into, or None if there is
+    nothing to do this mount. Never overwrites another mod's ModInjectModel."""
+    global _placed_name, _placed_vm
+    if vm is None:
+        return None
+    _candidate_vms[name] = vm
+
+    if _placed_name is not None:
+        # Already committed: only act when OUR sub-view (re)mounts. We never migrate to
+        # a different candidate -- injecting onto a second sub-view would load a
+        # duplicate widget (the JS injects per sub-view).
+        if name != _placed_name:
+            return None
+        if vm is _placed_vm:
+            # Same VM we already injected onto -> just refresh (re-adding an existing
+            # field is unsafe); the caller pushes fresh data.
+            return (vm, _active[1]) if _active is not None else None
+        # Our sub-view re-mounted with a fresh VM (e.g. after a battle). If a foreign
+        # mod claimed it first this mount, yield rather than clobber; else re-inject.
+        if has_inject_model(vm):
+            LOG_NOTE("[wgmod] sub-view '%s' claimed by another mod this mount -- yielding" % name)
+            return None
+        rvm = attach(vm)
+        if rvm is not None:
+            _placed_vm = vm
+            return (vm, rvm)
+        return None
+
+    # Not yet committed: choose the highest-priority free sub-view.
+    action, chosen = choose_placement(_candidate_order, _candidate_vms, has_inject_model)
+    if action == INJECT:
+        target = _candidate_vms[chosen]
+        rvm = attach(target)
+        if rvm is not None:
+            _placed_name = chosen
+            _placed_vm = target
+            if _candidate_order and chosen != _candidate_order[0]:
+                LOG_NOTE("[wgmod] preferred sub-view occupied by another mod; "
+                         "widget placed on fallback sub-view '%s'" % chosen)
+            else:
+                LOG_NOTE("[wgmod] widget placed on sub-view '%s'" % chosen)
+            return (target, rvm)
+        return None
+    if action == BLOCKED:
+        LOG_NOTE("[wgmod] WARNING: all candidate sub-views are claimed by other mods; "
+                 "bar hidden (injecting would clobber them -- last-writer-wins)")
+    return None
 
 
 def attach(host_vm):
