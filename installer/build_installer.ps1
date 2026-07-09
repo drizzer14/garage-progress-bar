@@ -21,7 +21,7 @@ $ErrorActionPreference = 'Stop'
 $InstallerDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RepoRoot     = Split-Path -Parent $InstallerDir
 $Iss          = Join-Path $InstallerDir 'wgmod-setup.iss'
-$ModWotmod    = Join-Path $RepoRoot 'dist\com.14th_ua.garageprogressbar_0.6.2.wotmod'
+$ModWotmod    = Join-Path $RepoRoot 'dist\com.14th_ua.garageprogressbar_0.6.3.wotmod'
 $OpenWg       = Join-Path $InstallerDir 'vendor\net.openwg.gameface_1.1.6.wotmod'
 $Msa          = Join-Path $InstallerDir 'vendor\izeberg.modssettingsapi_1.7.0.wotmod'
 
