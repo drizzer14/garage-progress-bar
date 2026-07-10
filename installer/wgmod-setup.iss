@@ -13,8 +13,8 @@
 ;         .wotmod already built into ..\dist by build\build_wotmod.py).
 
 #define ModId         "com.14th_ua.garageprogressbar"
-#define ModVersion    "0.6.4"
-#define ModWotmod     "com.14th_ua.garageprogressbar_0.6.4.wotmod"
+#define ModVersion    "0.6.5"
+#define ModWotmod     "com.14th_ua.garageprogressbar_0.6.5.wotmod"
 #define OpenWgWotmod  "net.openwg.gameface_1.1.6.wotmod"
 #define MsaWotmod     "izeberg.modssettingsapi_1.7.0.wotmod"
 ; Used by the GitHub update check (see [Code]): the Atom feed + release-asset URLs
