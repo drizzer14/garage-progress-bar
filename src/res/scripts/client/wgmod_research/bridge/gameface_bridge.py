@@ -321,7 +321,8 @@ def _record_click(int_cd):
                 recent.record(recent.TECHTREE, veh, int_cd,
                               name=u.name, icon=u.icon, category=u.kind,
                               kind_label=getattr(u, "kind_label", ""),
-                              xp_cost=getattr(u, "xp_cost", 0))
+                              xp_cost=getattr(u, "xp_cost_effective",
+                                              getattr(u, "xp_cost", 0)))
                 return
         # Tier-XI upgrade node (frontier chip; per-vehicle step_id)?
         if getattr(snap, "is_skill_tree", False):

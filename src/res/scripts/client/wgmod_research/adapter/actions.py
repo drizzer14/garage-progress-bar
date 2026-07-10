@@ -146,25 +146,65 @@ def _do_research(veh, int_cd, row):
         LOG_CURRENT_EXCEPTION()
         return False
     try:
-        unlock_idx, xp_cost, _item_cd, required = row[0], row[1], row[2], row[3]
-        xp_full = int(xp_cost)
-        # UnlockProps(parentID, unlockIdx, xpCost, required, discount, xpFullCost):
-        # xpCost is the EFFECTIVE (paid) cost. For a next-vehicle unlock the player
-        # holds blueprint fragments for, pass the discounted cost + percent + raw full
-        # cost, so WG unlocks it at the same price the bar showed (no exchange-XP dialog
-        # / silent post-confirm failure). Modules keep the raw cost, discount 0 -- WG's
-        # validator rejects a module unlocked at a differing cost.
-        xp_eff, discount = xp_full, 0
-        if _is_vehicle_cd(int_cd):
-            from wgmod_research.adapter._read_common import blueprint_effective_cost
-            xp_eff, discount = blueprint_effective_cost(int_cd, xp_full)
-        props = UnlockProps(veh.intCD, int(unlock_idx), int(xp_eff),
-                            set(required), int(discount), xp_full)
+        # ALL tech-tree unlocks (vehicles AND modules): let the GAME build the
+        # UnlockProps, exactly as its own research/context-menu handlers do, instead
+        # of hand-building from the selected vehicle's edge. See _native_unlock_props.
+        # This keeps the bar's confirm dialog + the actual unlock byte-identical to
+        # native -- crucially for a convergent (multi-parent) vehicle node whose
+        # per-parent edge costs differ (SU-152: 93000 from KV-2 vs 31500 from SU-100),
+        # where the selected-edge cost was higher than native AND would overcharge.
+        props = _native_unlock_props(veh, int_cd)
+        if props is None:
+            # Safety fallback only (game data provider unreachable, or a not-currently-
+            # available item): build props from the selected vehicle's own unlock-graph
+            # row. Modules keep the raw cost (discount 0) -- WG's validator rejects a
+            # module unlocked at a differing cost; a fallen-back vehicle still gets the
+            # held-fragment discount.
+            unlock_idx, xp_cost, _item_cd, required = row[0], row[1], row[2], row[3]
+            xp_full = int(xp_cost)
+            xp_eff, discount = xp_full, 0
+            if _is_vehicle_cd(int_cd):
+                from wgmod_research.adapter._read_common import blueprint_effective_cost
+                xp_eff, discount = blueprint_effective_cost(int_cd, xp_full)
+            props = UnlockProps(veh.intCD, int(unlock_idx), int(xp_eff),
+                                set(required), int(discount), xp_full)
         actions_factory.doAction(actions_factory.UNLOCK_ITEM, int_cd, props)
         return True
     except Exception:
         LOG_CURRENT_EXCEPTION()
         return False
+
+
+def _native_unlock_props(veh, int_cd):
+    """The game's OWN UnlockProps for unlocking `int_cd` from `veh`, so the bar unlocks
+    at exactly the game's price/parent. Returns None on any failure or if the item isn't
+    a currently-valid unlock (DEFAULT_UNLOCK_PROPS has parentID 0), so the caller falls
+    back to the selected-vehicle edge.
+
+      * VEHICLE -> g_techTreeDP.getUnlockProps(cd, level): the CHEAPEST AVAILABLE parent
+        + blueprint-fragment discount, matching research_cm_handlers.unlockVehicle. This
+        is what stops a convergent node (SU-152) being mispriced to the selected edge.
+      * MODULE  -> g_techTreeDP.getAllPossibleItems2Unlock(veh, unlocks)[cd]: the game's
+        own per-item props. getUnlockProps is vehicle-tree-only (returns the default for
+        a module). A module has a single parent (this vehicle) and no discount, so its
+        props equal the hand-built ones -- verified live, 0 mismatches -- but sourcing
+        them from the game keeps every item on one authoritative path."""
+    try:
+        from gui.Scaleform.daapi.view.lobby.techtree.techtree_dp import g_techTreeDP
+        from wgmod_research.adapter._read_common import _items_cache
+        cache = _items_cache()
+        if _is_vehicle_cd(int_cd):
+            level = getattr(cache.items.getItemByCD(int_cd), "level", 0)
+            props = g_techTreeDP.getUnlockProps(int_cd, level)
+        else:
+            unlocks = cache.items.stats.unlocks
+            props = g_techTreeDP.getAllPossibleItems2Unlock(veh, unlocks).get(int_cd)
+        if props is None or not getattr(props, "parentID", 0):
+            return None
+        return props
+    except Exception:
+        LOG_CURRENT_EXCEPTION()
+        return None
 
 
 def _is_vehicle_cd(int_cd):

@@ -44,6 +44,27 @@ def _unlock_name(cache, int_cd):
         return ""
 
 
+def _native_vehicle_cost(int_cd, vlevel, xp_cost):
+    """The XP price the game's OWN tech-tree dialog shows for unlocking this vehicle:
+    g_techTreeDP.getOldAndNewCost(cd, level)[0] -- the cheapest-available-parent cost
+    with any blueprint-fragment discount already applied (a fully-fragmented vehicle
+    legitimately returns 0). This matches the native dialog exactly, incl. on a
+    convergent multi-parent node whose per-parent edge costs differ (e.g. SU-152:
+    93000 from KV-2 vs 31500 from SU-100 -- the selected-vehicle edge would mis-show
+    the wrong one). Falls back to the selected-vehicle edge (blueprint_effective_cost),
+    then to the raw cost, if the tech-tree data provider is unreachable."""
+    try:
+        from gui.Scaleform.daapi.view.lobby.techtree.techtree_dp import g_techTreeDP
+        return int(g_techTreeDP.getOldAndNewCost(int_cd, vlevel)[0])
+    except Exception:
+        LOG_CURRENT_EXCEPTION()
+        try:
+            return blueprint_effective_cost(int_cd, xp_cost, vlevel)[0]
+        except Exception:
+            LOG_CURRENT_EXCEPTION()
+            return xp_cost
+
+
 def read_tech_unlocks(veh, unlocks):
     """Tech-tree unlocks: modules + next vehicles (incl. Tier XI) via the
     vehicle's unlock graph. getUnlocksDescrs() yields (idx, xpCost, intCD, prereqs)."""
@@ -95,12 +116,17 @@ def read_tech_unlocks(veh, unlocks):
             # in the tooltip. Only resolved when something is actually missing.
             missing = [p for p in prereqs if p not in unlocks]
             prereq_names = [nm for nm in (_unlock_name(cache, p) for p in missing) if nm]
-            # Blueprint-fragment discount applies to next-vehicle unlocks only (modules
-            # must keep raw cost). Guarded: any failure falls back to the raw cost.
+            # Show the exact price the game charges, for every item. For a VEHICLE that
+            # is the cheapest-available-parent cost + blueprint discount from the game's
+            # own getOldAndNewCost (see _native_vehicle_cost) -- so the bar never diverges
+            # from native, incl. on a convergent multi-parent node. For a MODULE the raw
+            # edge cost already IS the game's cost (single parent, no discount -- verified
+            # live) and getOldAndNewCost is vehicle-tree-only (returns 0 for a module), so
+            # modules keep the raw cost. Guarded: any vehicle failure falls back through
+            # the selected-edge cost to the raw cost.
             xp_effective = int(xp_cost)
             if is_vehicle:
-                # Reuse the tier already read above to skip a redundant getItemByCD.
-                xp_effective = blueprint_effective_cost(int_cd, int(xp_cost), vlevel)[0]
+                xp_effective = _native_vehicle_cost(int_cd, vlevel, int(xp_cost))
             out.append(t.UnlockItem(
                 int_cd=int_cd, name=name, icon=icon, xp_cost=int(xp_cost),
                 kind=(Category.VEHICLE if is_vehicle else Category.MODULE),
