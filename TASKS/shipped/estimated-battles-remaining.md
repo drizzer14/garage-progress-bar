@@ -45,7 +45,7 @@ Likely source — the per-vehicle dossier via `IItemsCache` (confine to
   `.getRandomStats().getBattlesCount()` / `.getXP()` / `.getAvgXP()`).
 - Compute `avg = total_xp / battles` (or use `getAvgXP()` directly), guard `battles > 0`.
 
-**This API surface is unverified — probe it live before coding** (wgmod-debug-repl):
+**This API surface is unverified — probe it live before coding** (gpb-debug-repl):
 confirm the dossier accessor name on `IItemsCache.items`, confirm the random-stats block
 method, and confirm `intCD` is the right key (the snapshot already has `vehicle_int_cd`).
 If `getVehicleDossier` doesn't exist, the account dossier / profile stats controller is

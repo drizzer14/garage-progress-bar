@@ -18,5 +18,5 @@ mods, kept current there). This file keeps only what's specific to this mod.
 - **Distribution:** packaged `.wotmod` (+ Inno Setup installer). Loose `res_mods` does
   NOT load in 2.3 and is used only as a dev hot-reload overlay.
 
-See `CLAUDE.md` and the `.claude/skills/wgmod-*` skills for this mod's build/deploy,
+See `CLAUDE.md` and the `.claude/skills/gpb-*` skills for this mod's build/deploy,
 architecture, widget, and release specifics.

@@ -77,7 +77,7 @@ open question below.
   under bar width.
 
 ## Verification
-- Hot-reload JS/CSS per the **wgmod-build-deploy** skill (overlay must exist at
+- Hot-reload JS/CSS per the **gpb-build-deploy** skill (overlay must exist at
   client launch — see [[dev-loop-no-midsession-overlay]]).
 - Hover a tier-XI upgrade **chip** with long content and a tick with a long
   name/effect; confirm the box wraps to multiple lines and never exceeds the cap.

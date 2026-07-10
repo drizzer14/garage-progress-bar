@@ -86,7 +86,7 @@ python tools/dev/sync_gameface.py "<install>" 2.3.0.1
 
 Bumping the version touches several files (meta, entry point, INSTALL, installer,
 build strings) and then tags, builds the installer, and publishes the GitHub
-release. Follow the `wgmod-release` skill for the exact steps.
+release. Follow the `gpb-release` skill for the exact steps.
 
 ## Renaming the mod
 

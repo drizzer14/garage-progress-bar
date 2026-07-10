@@ -7,7 +7,7 @@ call/return shape, where it lives in the decompiled client, and the gotchas) is 
 This file records only *which module in THIS mod uses which symbol* — the mapping the harness
 catalogue is deliberately generic about. All reads are wrapped in try/except so an API drift
 degrades one category to a safe default instead of blanking the bar. To inspect anything live,
-use the **wgmod-debug-repl** skill.
+use the **gpb-debug-repl** skill.
 
 ## Entry / mount / listeners (`gui/mods/mod_wgmod.py`, `bridge/gameface_bridge.py`)
 - Patched sub-view: `HangarVehicleParamsPresenter` (`_onLoading` mount hook, `getViewModel()` host).

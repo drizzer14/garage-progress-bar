@@ -121,7 +121,7 @@ default to the confirmed glow techniques.
   `fillVehicle`/`fillFree`/`scaleMin`/`scaleMax` VM fields.
 
 ## Verification
-- Hot-reload JS/CSS (`wgmod-build-deploy`; overlay must exist at client launch per
+- Hot-reload JS/CSS (`gpb-build-deploy`; overlay must exist at client launch per
   `dev-loop-no-midsession-overlay`) and check the marker sits exactly at the fill edge
   in every mode (tech_tree, field_mods, skill_tree count-based, both elite modes) and is
   hidden in complete mode.

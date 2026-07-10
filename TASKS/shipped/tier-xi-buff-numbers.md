@@ -76,7 +76,7 @@ This is a natural extension of commit 35996e7, which already broadened the handl
 beyond `mul` to accept `add`. Isolated to one ~40-line function; skill-tree only,
 does not touch field mods.
 
-## Live probe before coding (wgmod-debug-repl)
+## Live probe before coding (gpb-debug-repl)
 On a tier-XI vehicle with a signature perk (agent suggested Hirschkäfer):
 `g_currentVehicle.item.postProgression.iterOrderedSteps()` → a final/major node →
 inspect `step.action._descriptor.kpi[0]`: read `.type`, `.name`, `.value`,

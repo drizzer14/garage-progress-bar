@@ -1,5 +1,5 @@
 ---
-name: wgmod-release
+name: gpb-release
 description: Cut a release of the Garage Progress Bar WoT mod — the exact 6 files to bump, the concrete build scripts, artifact filenames, and vendor payloads for THIS mod. Use whenever bumping the version, building the Setup .exe installer, assembling the wgmods.net bundle, or publishing the GitHub release. (For the generic release shape and traps, see the wotmod-release harness skill.)
 ---
 
@@ -82,4 +82,4 @@ filename, or older installers can't fetch the new build.
 - `gh` at `C:\Program Files\GitHub CLI\gh`, authed as 14th_ua.
 - `ISCC.exe` at `%LOCALAPPDATA%\Programs\Inno Setup 6\` (Find-ISCC checks there).
 
-For build/deploy/verify mechanics see the **wgmod-build-deploy** skill.
+For build/deploy/verify mechanics see the **gpb-build-deploy** skill.

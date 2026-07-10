@@ -116,7 +116,7 @@ so the price has to be captured then and threaded through the recent store):
 - `WGModResearch.css` — `.wg-tip-xp`/`.wg-tip-xp-ico` (reuse or clone).
 
 ## Verification
-- REPL (wgmod-debug-repl): on a researched-but-unowned module/vehicle item, confirm
+- REPL (gpb-debug-repl): on a researched-but-unowned module/vehicle item, confirm
   the `item.buyPrices.itemPrice.price.getSignValue(Currency.CREDITS)` chain returns
   a sane credits figure; confirm `img://gui/maps/icons/components/tooltip/credits.png`
   loads.

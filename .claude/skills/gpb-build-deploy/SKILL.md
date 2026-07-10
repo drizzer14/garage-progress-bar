@@ -1,6 +1,6 @@
 ---
-name: wgmod-build-deploy
-description: Build, deploy, test, and hot-reload the Garage Progress Bar WoT mod locally — the exact scripts, install path, client version, and overlay path for THIS mod. Use whenever building the .wotmod package, deploying into a local World of Tanks install, running the pytest suite, hot-reloading JS/CSS changes, or verifying a change in-game. (For the generic packaging/deploy/hot-reload pattern behind these commands, see the wotmod-build-deploy harness skill; for live in-client REPL introspection, see wgmod-debug-repl.)
+name: gpb-build-deploy
+description: Build, deploy, test, and hot-reload the Garage Progress Bar WoT mod locally — the exact scripts, install path, client version, and overlay path for THIS mod. Use whenever building the .wotmod package, deploying into a local World of Tanks install, running the pytest suite, hot-reloading JS/CSS changes, or verifying a change in-game. (For the generic packaging/deploy/hot-reload pattern behind these commands, see the wotmod-build-deploy harness skill; for live in-client REPL introspection, see gpb-debug-repl.)
 ---
 
 # Building, deploying & testing the wgmod
@@ -66,4 +66,4 @@ green tests; a reader/bridge/JS/CSS/MSA change is code-complete only until an in
 Build+deploy+relaunch (or hot-reload for JS/CSS), open the Garage, select a vehicle with
 research/field-mods/elite remaining, confirm the bar renders, hover/click ticks, switch
 vehicles to confirm live update. For live introspection while verifying, use the
-**wgmod-debug-repl** skill.
+**gpb-debug-repl** skill.

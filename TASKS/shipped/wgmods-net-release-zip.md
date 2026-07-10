@@ -9,11 +9,11 @@ Add ONE new deliverable to the release process: a wgmods.net-oriented `.zip` bun
 the mod `.wotmod`, its required dependency payload(s), and a short bilingual (EN + UA)
 `readme.txt`. The GitHub release is unchanged — it keeps its three assets (Setup `.exe`,
 bare `.wotmod`, and the existing GitHub consumer zip `Research-Progress-Bar_X.Y.Z.zip`).
-This is a **process/packaging** change (the `wgmod-release` skill + a build step), not a
+This is a **process/packaging** change (the `gpb-release` skill + a build step), not a
 code change to the mod itself.
 
 ## What exists today
-- Release process lives in the **`wgmod-release`** skill (`.claude/skills/wgmod-release/
+- Release process lives in the **`gpb-release`** skill (`.claude/skills/gpb-release/
   SKILL.md`). §3 already hand-assembles a consumer zip via `Compress-Archive` (flat root:
   the `.wotmod` + `dist\INSTALL.txt`), with **no committed generator**.
 - The current consumer readme is `dist\INSTALL.txt` — English-only, ASCII-box style,
@@ -55,7 +55,7 @@ All three `.wotmod`s already live under `installer\vendor\` (GameFace + MSA) and
 4. **Commit a template** so the bilingual readme isn't lost like `INSTALL.txt` is:
    put `installer\readme.wgmods.txt` (or a small generator) under version control with a
    `{VERSION}` placeholder; the release step stamps the version into `dist\readme.txt`.
-5. **Add the build step to `wgmod-release` §3**, e.g.:
+5. **Add the build step to `gpb-release` §3**, e.g.:
    ```powershell
    Compress-Archive -Path <staged tree> -DestinationPath dist\GarageProgressBar-wgmods_X.Y.Z.zip
    ```
@@ -67,7 +67,7 @@ All three `.wotmod`s already live under `installer\vendor\` (GameFace + MSA) and
    `check_version.py` should also assert the readme's mod-version line.
 
 ## Touch points
-- Edit: `.claude/skills/wgmod-release/SKILL.md` (new §3 sub-step + mention the manual
+- Edit: `.claude/skills/gpb-release/SKILL.md` (new §3 sub-step + mention the manual
   wgmods.net upload; add the readme to the version-bump list).
 - New (committed): `installer\readme.wgmods.txt` template (EN + UA) — or a tiny
   `build\build_wgmods_zip.py` that stamps version + assembles the zip (nicer than

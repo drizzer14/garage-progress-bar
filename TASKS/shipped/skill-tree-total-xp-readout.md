@@ -100,7 +100,7 @@ Feasibility: high — a handful of JS lines + minor CSS for the two-figure layou
 - No Python / domain / bridge / i18n changes.
 
 ## Verification
-- Hot-reload JS/CSS (`wgmod-build-deploy`; overlay at launch per
+- Hot-reload JS/CSS (`gpb-build-deploy`; overlay at launch per
   `dev-loop-no-midsession-overlay`). Switch to a Tier-XI vehicle in skill_tree mode:
   both the "N/M" counter and total XP appear, XP matches the tech-tree readout for the
   same tank, and the number equals `vehicle_xp + free_xp` (not the node count).

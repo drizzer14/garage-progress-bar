@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Register THIS session as the active planner session.
 #
-# Run by the wgmod-planner skill when it activates. It copies the current
+# Run by the gpb-planner skill when it activates. It copies the current
 # session id (stashed by sync-ideas.sh into .git/.current-session on this same
 # turn — UserPromptSubmit hooks run before the model) into
 # .git/.plan-saver-session. From then on, sync-ideas.sh will nudge only this

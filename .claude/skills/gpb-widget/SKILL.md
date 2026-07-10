@@ -1,6 +1,6 @@
 ---
-name: wgmod-widget
-description: Front-end specifics of the Garage Progress Bar widget (WGModResearch.js/.css) — its #wgmod-root DOM tree, wire-contract constants, the unified tick-render loop, per-mode render branches, elite grade badges, done markers, lane de-crowding, hover/click hit-testing, and the Ctrl+drag y-floor sentinel. Use when editing this mod's widget, changing how the bar/ticks/tooltips/chips look or behave, or wiring a new tick category. (For the generic Gameface/Wulf front-end conventions and CSS quirks, see the wotmod-gameface-widget harness skill; for the Python side, wgmod-architecture.)
+name: gpb-widget
+description: Front-end specifics of the Garage Progress Bar widget (WGModResearch.js/.css) — its #wgmod-root DOM tree, wire-contract constants, the unified tick-render loop, per-mode render branches, elite grade badges, done markers, lane de-crowding, hover/click hit-testing, and the Ctrl+drag y-floor sentinel. Use when editing this mod's widget, changing how the bar/ticks/tooltips/chips look or behave, or wiring a new tick category. (For the generic Gameface/Wulf front-end conventions and CSS quirks, see the wotmod-gameface-widget harness skill; for the Python side, gpb-architecture.)
 ---
 
 # wgmod widget (this mod's front-end)

@@ -59,7 +59,7 @@ Two windowing options exist; **Task 1 (the live input spike) picks one** and tha
 - **Modify** `moe_calculator/bridge/gameface_bridge.py`, `gui/mods/mod_moe_calculator.py`, `.../MoECalculator/MoECalculator.js`, `.../MoECalculator/MoECalculator.css`.
 - **Modify (port fix)** `tools/dev/mod_moe_calculator_debug.py`, `tools/dev/repl_client.py`, `tools/dev/build_debug_wotmod.py`, `tools/dev/README.md`, and MoE `TASKS/*.md` references: `2223` → `2224`.
 
-**Docs/skills (Task 12):** `wotmod-gameface-widget` + `wotmod-architecture` harness skills; this repo's `wgmod-debug-repl` skill / `tools/dev/README.md` / `CONTRIBUTING.md` port note.
+**Docs/skills (Task 12):** `wotmod-gameface-widget` + `wotmod-architecture` harness skills; this repo's `gpb-debug-repl` skill / `tools/dev/README.md` / `CONTRIBUTING.md` port note.
 
 ---
 
@@ -71,7 +71,7 @@ Two windowing options exist; **Task 1 (the live input spike) picks one** and tha
 
 **Approach (cheapest first):** The MoE **battle** overlay already proves a full-screen `pointer-events:none` registered window is input-transparent *in battle*. The open question is specifically the **garage/lobby layer** with an **interactive** sub-region. Probe that directly.
 
-- [ ] **Step 1: Establish the dev overlay + relaunch** (per `wgmod-build-deploy` / the "hot-reload needs overlay-at-launch" memory). The `res_mods` overlay must exist WHEN the client launches. Deploy the current build once and relaunch so the REPL + overlay are live.
+- [ ] **Step 1: Establish the dev overlay + relaunch** (per `gpb-build-deploy` / the "hot-reload needs overlay-at-launch" memory). The `res_mods` overlay must exist WHEN the client launches. Deploy the current build once and relaunch so the REPL + overlay are live.
 
 - [ ] **Step 2: From the debug REPL, open a full-screen input-transparent registered probe window in the garage.** Use the MoE battle view class as a ready-made registered full-screen `pointer-events:none` window (its layoutID resolves once registered), opened while sitting in the plain garage:
 
@@ -630,7 +630,7 @@ git commit -m "style(widget): root-document input passthrough for the own-view w
 Run: `C:\Python27\python.exe build/build_wotmod.py`
 Expected: `dist/com.14th_ua.garageprogressbar_<version>.wotmod` written; JSON/HTML/JS/CSS + `.pyc` (no `.py`) inside.
 
-- [ ] **Step 2: Clean-deploy — remove any stale `res_mods` overlay first** (per `wgmod-build-deploy` + the "hot-reload needs overlay-at-launch" memory). Deploy the packaged `.wotmod` into `D:/Games/World_of_Tanks_EU/mods/2.3.0.1/`, deleting the prior `com.14th_ua.garageprogressbar_*.wotmod` and any `res_mods` overlay for this mod.
+- [ ] **Step 2: Clean-deploy — remove any stale `res_mods` overlay first** (per `gpb-build-deploy` + the "hot-reload needs overlay-at-launch" memory). Deploy the packaged `.wotmod` into `D:/Games/World_of_Tanks_EU/mods/2.3.0.1/`, deleting the prior `com.14th_ua.garageprogressbar_*.wotmod` and any `res_mods` overlay for this mod.
 
 Run: `python build/deploy_wotmod.py --clean-overlay` (per the deploy script's flags).
 
@@ -644,7 +644,7 @@ Run: `python build/deploy_wotmod.py --clean-overlay` (per the deploy script's fl
   - Hover tooltips show and are not clipped.
   - **Passthrough (the spike criterion, re-confirmed in real use):** hangar buttons/carousel/tiles under and around the bar behave exactly as normal; the Esc menu and a modal dialog open and take input normally.
 
-- [ ] **Step 5: Record the result.** If any check fails, STOP and debug via the REPL (`wgmod-debug-repl`) before proceeding to MoE. Do not convert MoE on top of an unverified conversion.
+- [ ] **Step 5: Record the result.** If any check fails, STOP and debug via the REPL (`gpb-debug-repl`) before proceeding to MoE. Do not convert MoE on top of an unverified conversion.
 
 ---
 
@@ -777,7 +777,7 @@ git -C "C:/Users/Dmytro Vasylkivskyi/14th_ua-moe-calculator" \
 Run (MoE repo): `grep -rn "2223" tools/ TASKS/`
 Expected: no matches remain (all moved to 2224).
 
-- [ ] **Step 5: Update THIS repo's docs to note the split (no port value change).** In `tools/dev/README.md`, `CONTRIBUTING.md`, and `.claude/skills/wgmod-debug-repl/SKILL.md`, add a one-line note that Garage Progress Bar uses **2223** and the sibling MoE Calculator uses **2224** so both debug REPLs can run simultaneously.
+- [ ] **Step 5: Update THIS repo's docs to note the split (no port value change).** In `tools/dev/README.md`, `CONTRIBUTING.md`, and `.claude/skills/gpb-debug-repl/SKILL.md`, add a one-line note that Garage Progress Bar uses **2223** and the sibling MoE Calculator uses **2224** so both debug REPLs can run simultaneously.
 
 - [ ] **Step 6: Commit both repos**
 
@@ -785,7 +785,7 @@ Expected: no matches remain (all moved to 2224).
 git -C "C:/Users/Dmytro Vasylkivskyi/14th_ua-moe-calculator" add -A
 git -C "C:/Users/Dmytro Vasylkivskyi/14th_ua-moe-calculator" \
   commit -m "chore(dev): move debug REPL to port 2224 (avoid clash with the research bar)"
-git add tools/dev/README.md CONTRIBUTING.md .claude/skills/wgmod-debug-repl/SKILL.md
+git add tools/dev/README.md CONTRIBUTING.md .claude/skills/gpb-debug-repl/SKILL.md
 git commit -m "docs(dev): note the 2223/2224 debug-REPL port split between the two mods"
 ```
 

@@ -8,7 +8,7 @@ Prune old release artifacts from dist/, keeping only the current version.
 
 dist/ is gitignored local scratch; the full release history lives on the GitHub
 Releases page, so there is no reason to hoard superseded binaries here. This is a
-release step (see the wgmod-release skill): tidy dist/ so it holds exactly one
+release step (see the gpb-release skill): tidy dist/ so it holds exactly one
 release's worth of artifacts.
 
 Runs on ANY Python (2.7 or 3.x): pure filesystem + XML, no bytecode. It only

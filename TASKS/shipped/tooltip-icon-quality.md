@@ -102,7 +102,7 @@ Category-by-category (source native res → 52rem box):
   (`.wg-tip-icon`) + a per-category class hook.
 
 ## Verification
-- REPL (wgmod-debug-repl): for a module unlock item, print `item.icon` to confirm
+- REPL (gpb-debug-repl): for a module unlock item, print `item.icon` to confirm
   the exact `img://gui/maps/icons/modules/<type>.png` string and that the `Big`
   sibling loads (`gunBig.png` etc. verified present in `gui-part*.pkg`). For
   rewards, resolve a `c11n` bonus item that falls through to the bonus-icon branch

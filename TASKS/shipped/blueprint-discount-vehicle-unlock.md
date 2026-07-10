@@ -62,7 +62,7 @@ not availability).
 - `src/res/scripts/client/wgmod_research/adapter/actions.py:111-127`
 - `src/res/scripts/client/wgmod_research/domain/resolvers/techtree.py` (if a
   discounted-cost field is added to the tick)
-- `.claude/skills/wgmod-architecture/references/game-api.md` (record the new symbols)
+- `.claude/skills/gpb-architecture/references/game-api.md` (record the new symbols)
 
 ## Verification
 Live only (needs an account state with fragments): hold blueprint fragments on a

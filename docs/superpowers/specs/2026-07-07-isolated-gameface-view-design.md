@@ -221,7 +221,7 @@ After each mod's conversion, build (Py 2.7) and deploy clean into
 `D:/Games/World_of_Tanks_EU` `2.3.0.1`, removing any stale `res_mods` overlay, then verify
 in-game **with both mods installed together**: both bars render, both are interactive, and
 neither interferes with the other, the hangar, or the Esc/modal menus. This also clears the
-stale 0.5.0 package (this repo is at 0.6.2). Version bump handled per `wgmod-release` when
+stale 0.5.0 package (this repo is at 0.6.2). Version bump handled per `gpb-release` when
 shipping.
 
 ## Sequencing

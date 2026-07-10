@@ -6,7 +6,7 @@
 `src/meta.xml` <version> is the source of truth. This scans the repo for every
 version reference that must track it and fails (exit 1) on any mismatch, printing
 each offending file:line. It exists because the version is hand-edited in several
-places at release time (see the wgmod-release skill) and drift has slipped through
+places at release time (see the gpb-release skill) and drift has slipped through
 before (a stale CONTRIBUTING.md filename).
 
 To avoid false positives on the *other* version numbers in the repo (the target

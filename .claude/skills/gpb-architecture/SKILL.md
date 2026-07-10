@@ -1,6 +1,6 @@
 ---
-name: wgmod-architecture
-description: Architecture of the Garage Progress Bar WoT mod specifically — its concrete wgmod_research file tree, the six bar modes + priority order, the resolvers, per-item tech-tree pricing, blueprint discount, done-marker reconcile, and the ResearchVM/TickVM/UpgradeVM shapes. Use when editing or extending THIS mod's Python, adding a bar mode, tracing a click→research action, or debugging why the bar doesn't update. (For the reusable engine-free domain/adapter/bridge discipline and the conventions that bite, see the wotmod-architecture harness skill; for the JS/CSS widget, wgmod-widget; for live game symbols, references/game-api.md.)
+name: gpb-architecture
+description: Architecture of the Garage Progress Bar WoT mod specifically — its concrete wgmod_research file tree, the six bar modes + priority order, the resolvers, per-item tech-tree pricing, blueprint discount, done-marker reconcile, and the ResearchVM/TickVM/UpgradeVM shapes. Use when editing or extending THIS mod's Python, adding a bar mode, tracing a click→research action, or debugging why the bar doesn't update. (For the reusable engine-free domain/adapter/bridge discipline and the conventions that bite, see the wotmod-architecture harness skill; for the JS/CSS widget, gpb-widget; for live game symbols, references/game-api.md.)
 ---
 
 # wgmod architecture (this mod's specifics)
@@ -36,7 +36,7 @@ src/res/scripts/client/
     domain/builder.py                 # MODE STATE MACHINE (build_model + bar_visible)
     domain/resolvers/{techtree,fieldmods,skilltree,elite}.py  # pure snapshot -> ticks
 src/res/gui/gameface/mods/14th_ua/WGModResearch/
-  WGModResearch.{js,css}              # widget (see wgmod-widget skill)
+  WGModResearch.{js,css}              # widget (see gpb-widget skill)
 ```
 
 Refactor lineage: `engine_adapter.py` was a 593-LOC monolith; reads were carved into the
@@ -102,7 +102,7 @@ bridge writes into `ResearchVM`), `Tick` (`category` drives glyph + clickability
 property indices are hand-maintained and must match `_addXProperty` registration order. The JS
 reads by NAME, and the mode/category/grade/command string values are mirrored in the JS
 `MODE`/`CAT`/`CMD`/`GRADE` constants — keep `domain/types.py Mode`, `domain/constants.py`, and
-the `view_models.py` command names in lockstep (see wgmod-widget).
+the `view_models.py` command names in lockstep (see gpb-widget).
 
 ## Adding a new read or write?
 The concrete WoT/BigWorld symbols this mod uses — and which reader/action each lives in — are

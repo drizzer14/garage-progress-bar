@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# UserPromptSubmit hook for the wgmod-planner skill.
+# UserPromptSubmit hook for the gpb-planner skill.
 #
 # Two jobs, both keyed on the planner session registered in
 # .git/.plan-saver-session (written by plan-saver-register.sh when the skill

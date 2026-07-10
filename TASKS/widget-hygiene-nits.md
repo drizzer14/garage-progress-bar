@@ -12,7 +12,7 @@ _Submitted: bug hunt (2026-07-05) · Status: MOSTLY DONE (2026-07-05)_
 - **DONE** dead CSS removed: `.wg-tip-icon-elite`'s `align-self: flex-start` (leftover from the
   old flex-row tooltip; the icon is `position:absolute` under a `display:block` parent).
 - **SETTLED (no code change)** capstone-only direct-unlock: owner decision = keep screen-only
-  (`OPEN_SKILL_TREE`); documented in the wgmod-widget skill.
+  (`OPEN_SKILL_TREE`); documented in the gpb-widget skill.
 - **DEFERRED (verify-only, not fixes):** normalize `.wg-tab-art`'s `background` shorthand to
   longhand for Coherent consistency, and live-confirm the `.wg-tip-rem-veh + .wg-tip-battles`
   adjacent-sibling combinator. Both render fine today; changing working CSS blind is risk-for-
@@ -60,7 +60,7 @@ Confidence: per-item below; severity low across the board.
   the suppressed chip's one-click unlock (`UNLOCK_FIELD_MOD`) is unavailable — the lone
   final node is reachable only via the bar tick's `OPEN_SKILL_TREE` (screen)
   (`js:1442-1443` vs `868-872`). Likely deliberate (the aabcb80 capstone-tooltip work
-  gated this state); confirm with the owner and either document it in wgmod-widget or
+  gated this state); confirm with the owner and either document it in gpb-widget or
   restore the direct-unlock affordance on the final tick when it IS the frontier.
 
 ## Root cause

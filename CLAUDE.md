@@ -30,11 +30,11 @@ dev dependency, installed via the local `wotmod-harness` marketplace):
 `wotmod-build-deploy` · `wotmod-debug-repl` · `wotmod-gameface-widget` · `wotmod-release` ·
 `wotmod-planner`.
 
-**This mod's specifics — the in-repo `wgmod-*` skills** (each references its `wotmod-*`
+**This mod's specifics — the in-repo `gpb-*` skills** (each references its `wotmod-*`
 counterpart for the shared pattern):
-- **wgmod-build-deploy** — this mod's exact build/deploy/test/hot-reload commands + paths.
-- **wgmod-release** — the exact 7 files to bump, artifact names, vendor payloads.
-- **wgmod-architecture** — the `wgmod_research` tree, the six modes, resolvers, done-marker reconcile (+ `references/game-api.md` usage map).
-- **wgmod-widget** — the `WGModResearch` widget: DOM, icon URLs, render branches, hover/click.
-- **wgmod-debug-repl** — this mod's debug REPL package + probe snippets.
-- **wgmod-planner** — the `TASKS.md`/`TASKS/` backlog workflow + cross-session sync hooks.
+- **gpb-build-deploy** — this mod's exact build/deploy/test/hot-reload commands + paths.
+- **gpb-release** — the exact 7 files to bump, artifact names, vendor payloads.
+- **gpb-architecture** — the `wgmod_research` tree, the six modes, resolvers, done-marker reconcile (+ `references/game-api.md` usage map).
+- **gpb-widget** — the `WGModResearch` widget: DOM, icon URLs, render branches, hover/click.
+- **gpb-debug-repl** — this mod's debug REPL package + probe snippets.
+- **gpb-planner** — the `TASKS.md`/`TASKS/` backlog workflow + cross-session sync hooks.

@@ -1,5 +1,5 @@
 ---
-name: wgmod-debug-repl
+name: gpb-debug-repl
 description: Live in-client introspection for the Garage Progress Bar WoT mod via its debug TCP REPL — the specific debug package, tools, and probe snippets for THIS mod. Use whenever you need to inspect live game state, force a widget refresh, or debug why the bar isn't loading/updating in the running client. (For the generic probe technique and decompiled-source navigation, see the wotmod-debug-repl harness skill.)
 ---
 
@@ -45,7 +45,7 @@ new formula inline in the probe.
 ## "The bar isn't loading / not updating" — this mod's specifics
 Beyond the generic checklist in the harness skill:
 1. **Listener dropped after a battle** — the bar stops updating only after entering/exiting a
-   battle → a listener didn't re-arm. See the re-arming convention in **wgmod-architecture**;
+   battle → a listener didn't re-arm. See the re-arming convention in **gpb-architecture**;
    check `python.log` for the `[wgmod] ... (re)armed` and `[wgmod] push ...` LOG_NOTE markers
    the bridge emits.
 2. **OpenWG missing** — the entry point raises if `openwg_gameface` is absent; confirm the

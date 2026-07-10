@@ -26,5 +26,5 @@ clears the active-chip ref; no-arg commands pass `{}`; dead `align-self` rule re
 remains are two low-value CSS-consistency items that need a live hot-reload check, not a fix:
 normalize `.wg-tab-art`'s `background` shorthand to longhand, and confirm the
 `.wg-tip-rem-veh + .wg-tip-battles` adjacent-sibling combinator renders in Coherent. The
-capstone direct-unlock question was settled (keep screen-only; documented in wgmod-widget).
+capstone direct-unlock question was settled (keep screen-only; documented in gpb-widget).
 → Research: `TASKS/widget-hygiene-nits.md`
