@@ -107,10 +107,42 @@ def test_fmt_signed():
     assert f.fmt_signed(2.5) == "+2.5"
 
 
+def test_fmt_signed_keeps_small_fractional_deltas():
+    # 'add' KPIs are absolute quantities on wildly different scales: a top-reverse-
+    # speed delta is +3, but a dispersion delta is -0.01. The old integer-rounding
+    # swallowed the dispersion-scale ones to "" (their number vanished from the
+    # tooltip, leaving only the qualitative sentence). Keep two decimals for sub-unit
+    # deltas so the figure survives.
+    assert f.fmt_signed(-0.01) == "-0.01"
+    assert f.fmt_signed(-0.009999999776482582) == "-0.01"  # the live gunDispersion KPI
+    assert f.fmt_signed(-0.02) == "-0.02"
+    assert f.fmt_signed(0.1) == "+0.1"                     # no trailing zero
+    assert f.fmt_signed(-0.5) == "-0.5"
+
+
+def test_fmt_signed_only_true_zero_is_empty():
+    # genuinely-negligible values (round to 0.00 even at two decimals) stay empty;
+    # a real sub-unit delta does not.
+    assert f.fmt_signed(0.0) == ""
+    assert f.fmt_signed(0.001) == ""
+    assert f.fmt_signed(-0.004) == ""
+    assert f.fmt_signed(0.01) == "+0.01"
+
+
 def test_fmt_num_unsigned_and_never_empty_for_zero():
     assert f.fmt_num(10.0) == "10"
     assert f.fmt_num(0.0) == "0"       # unlike fmt_pct/fmt_signed, keeps "0"
     assert f.fmt_num(2.5) == "2.5"
+
+
+def test_fmt_num_keeps_small_fractional_magnitudes():
+    # {value} fills carry absolute magnitudes too (skilltree_value's 'add' path),
+    # which can be dispersion-scale hundredths. The old integer-rounding collapsed
+    # those to "0", so a template read "...by 0" instead of "...by 0.01". Keep two
+    # decimals (trailing zeros trimmed); a true ~zero still reads "0".
+    assert f.fmt_num(0.01) == "0.01"
+    assert f.fmt_num(0.1) == "0.1"
+    assert f.fmt_num(0.001) == "0"
 
 
 # --- KPI readers ------------------------------------------------------------

@@ -76,24 +76,43 @@ def fmt_pct(pct):
 
 
 def fmt_signed(v):
-    """A raw additive KPI delta as a signed magnitude ("+3", "-3", "+2.5"). "" if it
-    rounds to zero. No percent/unit suffix -- 'add' KPIs are absolute quantities
-    (e.g. +3 km/h top reverse speed) and the phrase carries the stat name."""
+    """A raw additive KPI delta as a signed magnitude ("+3", "-3", "+2.5", "-0.01").
+    No percent/unit suffix -- 'add' KPIs are absolute quantities and the phrase carries
+    the stat name. "" only when the value is negligible even at two decimals (rounds to
+    0.00).
+
+    'add' deltas span very different scales: +3 km/h top reverse speed, but -0.01 to
+    gun dispersion (measured in hundredths). The old integer-rounding treated any
+    sub-0.05 value as zero and returned "", so dispersion-scale deltas lost their
+    number and the tooltip showed only the qualitative sentence. Now: snap to a clean
+    integer only when actually near a NON-zero integer; otherwise render two decimals
+    (trailing zeros trimmed) so a -0.01 survives while a genuine ~zero stays empty."""
     r = round(v)
-    if abs(v - r) < 0.05:
-        n = int(r)
-        return "" if n == 0 else ("%+d" % n)
-    return "%+.1f" % v
+    if r and abs(v - r) < 0.05:
+        return "%+d" % int(r)
+    s = "%+.2f" % v
+    if s in ("+0.00", "-0.00"):
+        return ""
+    return s.rstrip("0").rstrip(".")
 
 
 def fmt_num(pct):
     """A bare magnitude for a tier-XI description template's {value} slot: an int
-    when it rounds clean, else one decimal (no sign -- the template's wording
-    carries the direction, e.g. 'Reduces ... by {value}%')."""
+    when it rounds clean to a NON-zero integer, else up to two decimals (trailing
+    zeros trimmed). No sign -- the template's wording carries the direction (e.g.
+    'Reduces ... by {value}%').
+
+    {value} fills carry absolute magnitudes too (skilltree_value's 'add' path), which
+    can be dispersion-scale hundredths; snapping any sub-0.05 value to an int collapsed
+    those to "0" ('...by 0'). Keeping two decimals preserves a 0.01. Unlike fmt_signed,
+    a true ~zero reads "0" (never empty) -- a filled template always wants a figure."""
     r = round(pct)
-    if abs(pct - r) < 0.05:
+    if r and abs(pct - r) < 0.05:
         return str(int(r))
-    return "%.1f" % pct
+    s = "%.2f" % pct
+    if s in ("0.00", "-0.00"):
+        return "0"
+    return s.rstrip("0").rstrip(".")
 
 
 def kpi_objs(action):
