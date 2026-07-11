@@ -16,6 +16,7 @@ from helpers import dependency
 from skeletons.gui.shared import IItemsCache
 
 from wgmod_research._compat import LOG_CURRENT_EXCEPTION
+from wgmod_research.adapter import format as _fmt
 from wgmod_research.adapter.format import kpi_objs as _kpi_objs, kpi_prefix as _kpi_prefix
 
 
@@ -175,13 +176,64 @@ def blueprint_effective_cost(int_cd, xp_full, vlevel=None):
         return xp_full, 0
 
 
+def _param_icon(kpi_name):
+    """Full img:// URL of the vehParams icon for a KPI, or "" when the art doesn't
+    resolve. The KPI name is remapped to a vehParams param basename (format
+    .param_icon_name) and looked up through the game's OWN resource accessor, so an
+    unknown/feature KPI (e.g. the signature 'value' KPI) validates to "" and never
+    yields a broken icon box. Small (24x24) variant -- sized to the tooltip's body
+    font. Verified live (EU 2.3): R.images.gui.maps.icons.vehParams.small.dyn(name)
+    -> backport.image -> 'img://gui/maps/icons/vehParams/small/<name>.png'. Guarded."""
+    try:
+        name = _fmt.param_icon_name(kpi_name)
+        if not name:
+            return ""
+        from gui.impl.gen import R
+        from gui.impl import backport
+        acc = R.images.gui.maps.icons.vehParams.small.dyn(name)
+        if acc is not None and acc.isValid():
+            return backport.image(acc()) or ""
+    except Exception:
+        LOG_CURRENT_EXCEPTION()
+    return ""
+
+
+def _param_unit(kpi_name):
+    """The bare unit for an 'add' KPI ('HP', 's', 'm', 'deg/s', 'km/h', 'mm',
+    'h.p.'), or "" when the parameter carries no unit / is unmapped. Reuses the
+    game's own measure-units table so the glyph matches the native params panel:
+    measureUnitsForParameter(<vehParams param>) -> '#menu:tank_params/*' key ->
+    makeString -> strip the wrapping parens. 'mul' KPIs never call this (they are a
+    percent). Verified live (EU 2.3): avgDamage/maxHealth -> 'HP', aimingTime -> 's'.
+    Guarded -- measureUnitsForParameter raises KeyError for a name it doesn't know."""
+    try:
+        name = _fmt.param_icon_name(kpi_name)
+        if not name:
+            return ""
+        import gui.shared.items_parameters.formatters as PF
+        from helpers.i18n import makeString
+        key = PF.measureUnitsForParameter(name)
+        return _fmt.strip_unit(makeString(key)) if key else ""
+    except Exception:
+        # KeyError for unmapped params is expected -> no unit (not an error).
+        return ""
+
+
 def _kpi_lines(action, numbers_only=False):
     """The effect/bonus lines for a post-progression action, from its KPI list:
-    one "<signed %> <stat phrase>" string per KPI that carries a description (e.g.
-    "+10% to concealment after firing"). Empty list for actions with no KPI
+    one enriched RECORD per KPI that carries a description (e.g. an icon + a green
+    "+10% " + "to concealment after firing"). Empty list for actions with no KPI
     (features / role slots) or only the generic unlabeled 'value' KPI (signature
-    mechanic perks -- effect not exposed as text). The signed numeric prefix comes
-    from _kpi_prefix ('mul' -> percent, 'add' -> raw delta). Best-effort, never raises.
+    mechanic perks -- effect not exposed as text). Best-effort, never raises.
+
+    Each line is packed by format.kpi_record into an icon/color/value/phrase record
+    (the widget splits it and renders the game's native perk-tooltip look): the
+    signed numeric prefix comes from _kpi_prefix ('mul' -> percent, 'add' -> raw
+    delta), the unit is appended for 'add' KPIs (_param_unit -> "+10 HP"), the
+    parameter icon from _param_icon, and the buff/nerf color from KPI.isDebuff
+    (NOT the sign -- a beneficial reduction like -25% fire chance is isDebuff=False
+    -> green). A line without the record separator would render as plain text
+    (back-compat), but every KPI line here is a record.
 
     With numbers_only=True, keep ONLY KPIs that carry a real signed magnitude
     (_kpi_prefix non-empty) -- used to append a figure to a tier-XI skill-tree
@@ -191,11 +243,11 @@ def _kpi_lines(action, numbers_only=False):
     keeps a bare prefix when the KPI has no description).
 
     KPI shape verified live (EU 2.3): action._descriptor.kpi -> [KPI], each with
-    getDescriptionR() (DynAccessor -> backport.text -> phrase), .type, .value.
-    A MultiModsItem variant (a `modification`) carries its KPI the same way. Types seen:
-    'mul' (percent bonuses) and 'add' (absolute deltas, e.g. Kranvagn's top reverse
-    speed) -- an 'add' KPI whose number was dropped by a mul-only gate was the
-    "buff missing its number" bug."""
+    getDescriptionR() (DynAccessor -> backport.text -> phrase), .type, .value, .name,
+    .isDebuff. A MultiModsItem variant (a `modification`) carries its KPI the same
+    way. Types seen: 'mul' (percent bonuses) and 'add' (absolute deltas, e.g.
+    Kranvagn's top reverse speed) -- an 'add' KPI whose number was dropped by a
+    mul-only gate was the "buff missing its number" bug."""
     lines = []
     try:
         from gui.impl import backport
@@ -208,10 +260,15 @@ def _kpi_lines(action, numbers_only=False):
                 desc = backport.text(acc() if callable(acc) else acc) or ""
             except Exception:
                 desc = ""
-            if numbers_only:
-                lines.append((prefix + " " + desc).strip() if desc else prefix)
-            elif desc:  # default mode skips the generic unlabeled 'value' KPI
-                lines.append((prefix + " " + desc) if prefix else desc)
+            if not numbers_only and not desc:
+                continue  # default mode skips the generic unlabeled 'value' KPI
+            name = getattr(k, "name", "") or ""
+            unit = _param_unit(name) if (getattr(k, "type", "") or "") == "add" else ""
+            value_str = (prefix + " " + unit).strip() if unit else prefix
+            record = _fmt.kpi_record(
+                _param_icon(name), bool(getattr(k, "isDebuff", False)),
+                value_str, desc)
+            lines.append(record)
     except Exception:
         LOG_CURRENT_EXCEPTION()
     return lines

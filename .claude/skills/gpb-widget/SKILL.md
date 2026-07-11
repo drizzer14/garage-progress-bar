@@ -89,6 +89,21 @@ no-op; done markers always keep lane 0 — custom-positioned at the left edge).
   coloring via `wg-state-*`; keeps rarity purple fill.
 - **complete** — no ticks; full green bar + class elite badge.
 
+## Buff lines (tooltip KPI rows)
+Each buff/KPI line in `effect` / `optionEffects` is an ENRICHED RECORD from Python
+(`icon \x1f cls \x1f value \x1f desc`, `cls` = `pos`/`neg`) so a tooltip buff renders like the
+game's native perk tooltip: the vehParams param icon, the value+unit colored green (buff) / red
+(nerf), then the dim phrase — e.g. `[icon] +50 HP  to vehicle hit points`. `buffLineHtml(line,
+baseCls)` splits on `\x1f`; `<4` fields → plain `.wg-tip-effect` fallback (non-KPI text).
+`effectHtml` and `variantsHtml` both route through it. The row is **FLEXBOX**
+(`.wg-tip-buff`): Coherent stacks bare inline/inline-block spans, so a flex row is the only way
+to keep icon + value + phrase on one line (icon `flex:0 0 auto`; `.wg-tip-buff-desc`
+`flex:1 1 auto; min-width:0` wraps internally). Colors: `.wg-buff-pos #64ba21` / `.wg-buff-neg
+#f31201` (native tokens), color-blind `#wgmod-root.wg-colorblind .wg-buff-neg` → orange
+`#ffaa4c`. Title↔description and inter-buff spacing share one value: `.wg-tip-effect` /
+`.wg-tip-variant-eff` `margin-top` (every line, incl. the first, carries it). The Python side
+that builds the record is `adapter/_read_common._kpi_lines` (see gpb-architecture).
+
 ## Done markers
 A tick/chip with `t.done`/`u.done` renders the green-check treatment (`wg-done`, `doneGlyph()` /
 `doneBadge()`). Done ticks ride the bar's LEFT EDGE (`leftPct=0`). Tooltip shows a credits price

@@ -459,14 +459,47 @@ function creditsHtml(price) {
         xpIco(CREDITS_ICON) + "</div>";
 }
 
+// One buff/bonus row. The Python side packs each KPI line into a record
+//   icon \x1f cls \x1f value \x1f desc      (cls = "pos" | "neg")
+// so we render it like the game's native perk tooltip: the parameter icon, the
+// signed value+unit colored green (buff) / red (nerf), then the dim stat phrase.
+// A line WITHOUT the separators (any non-KPI body text) falls back to the plain
+// tertiary row. All fields are escaped; the icon URL is only ever a background and
+// is gated on the img:// prefix (same guard as tickIconHtml).
+const BUFF_SEP = "\x1f";
+function buffLineHtml(line, baseCls) {
+    baseCls = baseCls || "wg-tip-effect";
+    const f = (line || "").split(BUFF_SEP);
+    if (f.length < 4) {
+        return '<div class="' + baseCls + '">' + escapeHtml(line) + "</div>";
+    }
+    const icon = f[0], cls = f[1], value = f[2], desc = f[3];
+    let h = '<div class="' + baseCls + ' wg-tip-buff">';
+    if (icon && icon.indexOf("img://") === 0) {
+        h += '<span class="wg-tip-buff-ico" style="background-image:url(\'' +
+            icon + '\')"></span>';
+    }
+    if (value) {
+        h += '<span class="wg-tip-buff-val ' +
+            (cls === "neg" ? "wg-buff-neg" : "wg-buff-pos") + '">' +
+            escapeHtml(value) + "</span>";
+    }
+    if (desc) {
+        h += (value ? " " : "") +
+            '<span class="wg-tip-buff-desc">' + escapeHtml(desc) + "</span>";
+    }
+    return h + "</div>";
+}
+
 // Effect/bonus lines (field-mod & skill-tree KPI text, e.g. "+1% to concealment"),
-// one tertiary-body row per line. The Python side joins multiple KPIs with "\n".
-// Empty string -> nothing rendered (features / mechanic perks carry no KPI text).
+// one row per line. The Python side joins multiple KPIs with "\n"; each is an
+// enriched record (see buffLineHtml). Empty string -> nothing rendered (features /
+// mechanic perks carry no KPI text).
 function effectHtml(effect) {
     const parts = splitLines(effect);
     let h = "";
     for (let i = 0; i < parts.length; i++) {
-        h += '<div class="wg-tip-effect">' + escapeHtml(parts[i]) + "</div>";
+        h += buffLineHtml(parts[i]);
     }
     return h;
 }
@@ -483,10 +516,11 @@ function variantsHtml(opts, optEffects) {
         if (i > 0) h += '<div class="wg-tip-or">' + escapeHtml(L("sepOr", "or")) + "</div>";
         h += '<div class="wg-tip-variant">';
         h += '<div class="wg-tip-variant-name">' + escapeHtml(opts[i]) + "</div>";
-        // Each variant's buffs are TAB-separated (Python); render one row each.
+        // Each variant's buffs are TAB-separated (Python); render one enriched row
+        // each (icon + colored value + phrase), keyed off the variant body class.
         const buffs = splitLines(optEffects[i], "\t");
         for (let j = 0; j < buffs.length; j++) {
-            h += '<div class="wg-tip-variant-eff">' + escapeHtml(buffs[j]) + "</div>";
+            h += buffLineHtml(buffs[j], "wg-tip-variant-eff");
         }
         h += "</div>";
     }

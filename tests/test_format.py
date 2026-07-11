@@ -191,3 +191,47 @@ def test_skilltree_value_add_magnitude():
 def test_skilltree_value_none_usable_is_empty():
     a = _Action([_KPI(value="x"), _KPI(value=None)])
     assert f.skilltree_value(a) == ""
+
+
+# --- enriched buff-line records ---------------------------------------------
+
+def test_param_icon_name_remaps_known_kpi():
+    assert f.param_icon_name("vehicleStrength") == "maxHealth"
+    assert f.param_icon_name("nonHEShellDamage") == "avgDamage"
+    assert f.param_icon_name("vehicleGunAimSpeed") == "aimingTime"
+
+
+def test_param_icon_name_unknown_used_verbatim():
+    # some KPI names are already a valid vehParams file (e.g. vehicleFireChance)
+    assert f.param_icon_name("vehicleFireChance") == "vehicleFireChance"
+
+
+def test_param_icon_name_empty():
+    assert f.param_icon_name("") == ""
+    assert f.param_icon_name(None) == ""
+
+
+def test_strip_unit_drops_wrapping_parens():
+    assert f.strip_unit("(HP)") == "HP"
+    assert f.strip_unit("(km/h)") == "km/h"
+    assert f.strip_unit(" (s) ") == "s"
+
+
+def test_strip_unit_without_parens_unchanged():
+    assert f.strip_unit("HP") == "HP"
+    assert f.strip_unit("") == ""
+    assert f.strip_unit(None) == ""
+
+
+def test_kpi_record_field_order_and_pos_neg():
+    sep = f.KPI_FIELD_SEP
+    buff = f.kpi_record("img://x.png", False, "+10 HP", "to damage")
+    assert buff == sep.join(["img://x.png", "pos", "+10 HP", "to damage"])
+    nerf = f.kpi_record("img://y.png", True, "-0.10 s", "to aiming speed")
+    assert nerf == sep.join(["img://y.png", "neg", "-0.10 s", "to aiming speed"])
+
+
+def test_kpi_record_coerces_missing_fields_to_empty():
+    sep = f.KPI_FIELD_SEP
+    assert f.kpi_record("", False, "+25%", "") == sep.join(["", "pos", "+25%", ""])
+    assert f.kpi_record(None, True, None, None) == sep.join(["", "neg", "", ""])

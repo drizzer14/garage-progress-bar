@@ -92,6 +92,18 @@ hide-when-complete option, the tank-setup-overlay state, and the fail-closed gar
   the absence test but guards the empty list. A pending that never confirms is dropped after
   `_PENDING_MAX_RECONCILES` (~5, count-based/testable); `veh_int_cd == 0` is rejected in both
   `record()` and `decorate()`.
+- **Buff/KPI tooltip lines are enriched records, not plain text.** `_read_common._kpi_lines`
+  emits one `format.kpi_record` per KPI (`icon \x1f cls \x1f value \x1f desc`) so the widget can
+  render the game's native perk-tooltip look. Three resolutions, all live-verified (EU 2.3):
+  **color** = `KPI.isDebuff` (NOT the number's sign — a beneficial reduction like a −25% fire
+  chance is `isDebuff=False` → green); **unit** (`add` KPIs only) = `items_parameters.formatters
+  .measureUnitsForParameter(<param>)` → `#menu:tank_params/*` key → `helpers.i18n.makeString` →
+  `format.strip_unit` drops the parens (`avgDamage`→`HP`, `aimingTime`→`s`, …); **icon** =
+  `R.images.gui.maps.icons.vehParams.small.dyn(<param>).isValid()` → `backport.image`. The
+  KPI name → vehParams param basename remap is `format.KPI_PARAM_ICON` (ported from the client's
+  perk-tooltip bundle; unknown names used verbatim, unresolved → no icon/unit, never a broken
+  box). `format.py` holds the pure helpers (unit-tested); the game-symbol lookups live in
+  `_read_common` (live-only). Widget rendering: see gpb-widget "Buff lines".
 - Settings template is versioned (`settingsVersion` 2).
 
 ## Key data types

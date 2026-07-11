@@ -1156,11 +1156,57 @@
    tertiary parchment, normal weight, wrapping. Sits between the title and the XP
    cost, mirroring the native parameter rows. One row per KPI. */
 #wgmod-root .wg-tip-effect {
-    margin-top: 2rem;
+    margin-top: 5rem;
     font-size: 12rem;
     font-weight: 400;
     color: #8e867d;
     line-height: 1.25;
+}
+/* An enriched buff row: the game's own parameter icon, the signed value+unit
+   colored green (buff) / red (nerf), then the dim stat phrase -- matching the
+   native perk tooltip's buff rows, sized to our 12rem body font. Laid out with
+   FLEXBOX (as every horizontal row in this widget is): Coherent blockifies bare
+   inline/inline-block spans, so `display:inline` alone stacks them -- a flex row
+   is the only reliable way to keep icon + value + phrase on one line. The icon and
+   value hold their size; the phrase takes the rest and wraps INTERNALLY (min-width:0)
+   so a long phrase stays beside the value instead of dropping below it. */
+#wgmod-root .wg-tip-buff {
+    display: flex;
+    align-items: baseline;
+}
+#wgmod-root .wg-tip-buff-ico {
+    flex: 0 0 auto;
+    align-self: center;
+    width: 15rem;
+    height: 15rem;
+    margin-right: 3rem;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+}
+#wgmod-root .wg-tip-buff-val {
+    flex: 0 0 auto;
+    margin-right: 3rem;
+    font-weight: 600;
+}
+#wgmod-root .wg-tip-buff-desc {
+    flex: 1 1 auto;
+    min-width: 0;
+    color: #8e867d;
+}
+/* Native perk-tooltip buff colors: positive #64ba21 (--color-status-done),
+   negative #f31201 (--color-status-error). */
+#wgmod-root .wg-buff-pos {
+    color: #64ba21;
+}
+#wgmod-root .wg-buff-neg {
+    color: #f31201;
+}
+/* Color-blind: the mod follows WoT's isColorBlind toggle -- red is unreliable, so
+   swap the negative to the same orange the shortfall figure uses (.wg-tip-short's
+   #ffaa4c override); positive green stays legible. */
+#wgmod-root.wg-colorblind .wg-buff-neg {
+    color: #ffaa4c;
 }
 /* Section divider -- the SAME divider art WG's carousel vehicle tooltip uses to
    split its sections (its .Tooltip_section::after draws
@@ -1182,7 +1228,7 @@
 /* A choice variant's own buffs, listed under its name (tertiary body, wrapping).
    The variant NAME keeps the title weight it inherits from .wg-tip-variant. */
 #wgmod-root .wg-tip-variant-eff {
-    margin-top: 1rem;
+    margin-top: 5rem;
     font-size: 12rem;
     font-weight: 400;
     color: #8e867d;

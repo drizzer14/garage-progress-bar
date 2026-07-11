@@ -157,3 +157,88 @@ def skilltree_value(action):
         if ktype == "add":
             return fmt_num(abs(v))
     return ""
+
+
+# --- Enriched buff-line records (icon + color + unit) -----------------------
+#
+# A KPI buff line is packed into a single delimited RECORD so the widget can
+# render it like the game's native perk tooltip: the parameter icon, the delta
+# value colored green/red, and the (dim) stat phrase. The record travels inside
+# the existing `effect` / `optionEffects` string fields (no Wulf VM schema
+# change): lines are still joined by "\n" and variant buffs by "\t"; this
+# separator splits the fields WITHIN one line. U+001F (unit separator) never
+# appears in localized text, so it is unambiguous. The JS effectHtml mirrors
+# this exact shape; a line WITHOUT the separator is rendered as plain text
+# (back-compat for any non-KPI body line).
+KPI_FIELD_SEP = u"\x1f"
+
+
+# KPI name -> vehParams param file name (the icon basename AND the key the game's
+# measureUnitsForParameter uses). Ported from the client's own perk-tooltip
+# bundle remap; a KPI name absent here is used verbatim (some, e.g.
+# 'vehicleFireChance', are already a valid vehParams file). Verified live (EU 2.3).
+KPI_PARAM_ICON = {
+    "vehicleEnginePower": "enginePower",
+    "vehicleStrength": "maxHealth",
+    "vehicleAllGroundRotationSpeed": "chassisRotationSpeed",
+    "vehicleGunReloadTime": "reloadTimeSecs",
+    "reloadTimeSalvo": "reloadTimeSecs",
+    "reloadTimeSingle": "reloadTimeSecs",
+    "reloadTimeInClip": "clipFireRate",
+    "vehicleGunAimSpeed": "aimingTime",
+    "vehicleTurretOrCuttingRotationSpeed": "turretRotationSpeed",
+    "specialShellPenetration": "avgPiercingPower",
+    "standardShellPenetration": "avgPiercingPower",
+    "HEShellPenetration": "avgPiercingPower",
+    "nonHEShellDamage": "avgDamage",
+    "standardShellDamage": "avgDamage",
+    "specialShellDamage": "avgDamage",
+    "allShellDamage": "avgDamage",
+    "basicShellDamage": "avgDamage",
+    "gunDepression": "pitchLimits",
+    "gunElevation": "pitchLimits",
+    "vehicleGunShotFullDispersion": "shotDispersionAngle",
+    "gunStabilization": "shotDispersionAngle",
+    "standardShellVelocity": "shellVelocity",
+    "specialShellVelocity": "shellVelocity",
+    "shellVelocity": "shellVelocity",
+    "allShellsVelocity": "shellVelocity",
+    "HEshellVelocity": "shellVelocity",
+    "vehicleForwardMaxSpeed": "speedLimits",
+    "vehicleBackwardMaxSpeed": "speedLimits",
+    "gunTraverse": "gunYawLimits",
+    "turretTraverse": "turretYawLimits",
+    "vehicleCircularVisionRadius": "circularVisionRadius",
+    "hullElevationSpeed": "hullElevationSpeed",
+}
+
+
+def param_icon_name(kpi_name):
+    """The vehParams param/icon basename for a KPI name (via KPI_PARAM_ICON, else
+    the name verbatim). "" for a falsy name."""
+    if not kpi_name:
+        return ""
+    return KPI_PARAM_ICON.get(kpi_name, kpi_name)
+
+
+def strip_unit(glyph):
+    """The bare unit from the game's measure-unit glyph: '(HP)' -> 'HP', '(km/h)'
+    -> 'km/h'. The tank_params unit strings are parenthesized (they trail a value
+    in the native params panel); we drop the wrapping parens so the unit reads
+    inline after our own signed number ('+10 HP'). Whitespace-trimmed; a glyph
+    without parens is returned as-is; "" -> ""."""
+    s = (glyph or "").strip()
+    if len(s) >= 2 and s[0] == "(" and s[-1] == ")":
+        s = s[1:-1].strip()
+    return s
+
+
+def kpi_record(icon, is_debuff, value_str, desc):
+    """Pack one buff line into the widget's delimited record
+    (icon <SEP> cls <SEP> value <SEP> desc), where cls is 'neg' for a debuff
+    (nerf -> red) else 'pos' (buff -> green). All fields coerced to "" when
+    absent. This is the single source of the wire format; WGModResearch.js splits
+    on the same separator."""
+    cls = "neg" if is_debuff else "pos"
+    return KPI_FIELD_SEP.join(
+        [icon or "", cls, value_str or "", desc or ""])
