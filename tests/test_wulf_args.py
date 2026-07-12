@@ -107,3 +107,30 @@ def test_cmd_wh_arg_empty_is_zero():
 
 def test_cmd_wh_arg_string_numbers_coerced():
     assert w.cmd_wh_arg([{"w": "1280", "h": "720"}]) == (1280, 720)
+
+
+# --- cmd_str_arg (the header mode-switch selection) -------------------------
+
+def test_cmd_str_arg_dict_value():
+    assert w.cmd_str_arg([{"value": "elite"}]) == "elite"
+
+
+def test_cmd_str_arg_wulf_map():
+    assert w.cmd_str_arg([_WulfMap({"value": "field_mods"})]) == "field_mods"
+
+
+def test_cmd_str_arg_id_fallback():
+    assert w.cmd_str_arg([{"id": "tech_tree"}]) == "tech_tree"
+
+
+def test_cmd_str_arg_bare_scalar():
+    assert w.cmd_str_arg(["elite_rewards"]) == "elite_rewards"
+
+
+def test_cmd_str_arg_empty_is_blank():
+    assert w.cmd_str_arg([]) == ""
+    assert w.cmd_str_arg(None) == ""
+
+
+def test_cmd_str_arg_none_value_is_blank():
+    assert w.cmd_str_arg([{"value": None}]) == ""

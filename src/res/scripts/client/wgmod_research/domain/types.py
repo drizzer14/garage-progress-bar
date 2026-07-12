@@ -198,9 +198,15 @@ class VehicleSnapshot(object):
                  skilltree_final_xp=0, skilltree_available=None,
                  skilltree_final_effect="", vehicle_int_cd=0,
                  avg_battle_xp=0, battle_count=0, account_avg_battle_xp=0,
-                 reserve_mult=100, daily_double_factor=100, max_battle_xp=0):
+                 reserve_mult=100, daily_double_factor=100, max_battle_xp=0,
+                 is_premium=False):
         self.tier = tier                          # 1..11
         self.is_elite = is_elite                  # True = fully researched
+        # Premium / gift / reward vehicle (not part of a research tech tree). Such tanks
+        # never get a Tier XI, so the speculative POTENTIAL_TIER_XI bar must not apply to
+        # them (e.g. the tier-X premium Dravec). Defaults False so existing tests/regular
+        # tech-tree tanks are unaffected.
+        self.is_premium = is_premium
         self.vehicle_xp = vehicle_xp              # unspent accumulated vehicle XP
         self.free_xp = free_xp                    # global free XP
         self.tech_unlocks = tech_unlocks or []    # [UnlockItem]
@@ -270,7 +276,8 @@ class ResearchProgressModel(object):
                  elite_current_icon="",
                  combat_xp=0, avail_upgrades=None, spendable_xp=0,
                  avg_battle_xp=0, battle_count=0, account_avg_battle_xp=0,
-                 reserve_mult=100, daily_double_factor=100, max_battle_xp=0):
+                 reserve_mult=100, daily_double_factor=100, max_battle_xp=0,
+                 avail_modes=None):
         self.mode = mode
         self.scale_min = scale_min
         self.scale_max = scale_max
@@ -312,3 +319,8 @@ class ResearchProgressModel(object):
         self.reserve_mult = reserve_mult
         self.daily_double_factor = daily_double_factor
         self.max_battle_xp = max_battle_xp
+        # Ordered list of Mode strings this vehicle qualifies for AND are enabled --
+        # the "mode switch" options the widget shows in the header (priority order).
+        # >=2 entries -> a dimmed switch title for the NEXT mode; <2 -> no switch.
+        # The emitted model is still a SINGLE mode; this is only the switch menu.
+        self.avail_modes = avail_modes or []

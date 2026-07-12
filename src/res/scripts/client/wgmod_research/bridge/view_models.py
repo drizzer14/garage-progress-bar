@@ -130,7 +130,7 @@ class UpgradeVM(ViewModel):
 
 
 class ResearchVM(ViewModel):
-    def __init__(self, properties=28, commands=7):
+    def __init__(self, properties=31, commands=8):
         super(ResearchVM, self).__init__(properties=properties, commands=commands)
 
     def _initialize(self):
@@ -167,6 +167,7 @@ class ResearchVM(ViewModel):
         self._addNumberProperty("maxBattleXp", 0)          # 27 (this tank's best single random battle; range's optimistic bound)
         self._addNumberProperty("posW", 0)   # 28 (viewport px a pinned posX/posY was captured at; 0 = unknown)
         self._addNumberProperty("posH", 0)   # 29 (viewport px a pinned posX/posY was captured at; 0 = unknown)
+        self._addStringProperty("availModes", "")  # 30 (comma-joined Mode strings for the header mode switch; <2 -> no switch)
         # Reverse channel: JS click handlers invoke these commands. Each returns a
         # command object that connect_commands() wires to a Python handler. Wulf
         # delivers the JS-supplied argument(s) to those handlers.
@@ -177,6 +178,9 @@ class ResearchVM(ViewModel):
         self.openFieldMods = self._addCommand("openFieldMods")      # no arg (done field-mod marker click)
         self.buyMount = self._addCommand("buyMount")                # arg: module int_cd (done MODULE marker: buy + mount)
         self.setPosition = self._addCommand("setPosition")          # arg: {x, y[, w, h][, seed]} px (drag / seed); w/h = capture viewport
+        # NB: "selectMode", NOT "setMode" -- setMode is the property-0 setter method below;
+        # a same-named command attribute assigned here would shadow it.
+        self.selectMode = self._addCommand("selectMode")            # arg: {value: Mode string} (header mode-switch click)
 
     def setMode(self, v):
         self._setString(0, v)
@@ -267,6 +271,9 @@ class ResearchVM(ViewModel):
 
     def setPosH(self, v):
         self._setNumber(29, v)
+
+    def setAvailModes(self, v):
+        self._setString(30, v)
 
     @staticmethod
     def getTicksType():

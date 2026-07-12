@@ -52,6 +52,34 @@ def cmd_int_arg(args):
         return 0
 
 
+def cmd_str_arg(args):
+    """Extract the string a JS command invocation carried. Wulf delivers a single MAP
+    argument (the JS side wraps the value as {value: str}); pull the `value` key out of
+    it, tolerating a plain dict, a wrapped map, or a bare scalar. "" = nothing usable."""
+    try:
+        if not args:
+            return ""
+        a = args[0]
+        if isinstance(a, dict):
+            a = a.get("value", a.get("id"))
+        else:
+            getter = getattr(a, "get", None)
+            if callable(getter):
+                try:
+                    a = a.get("value")
+                except Exception:
+                    pass
+        if a is None:
+            return ""
+        try:
+            return str(a)
+        except Exception:
+            return ""
+    except Exception:
+        LOG_CURRENT_EXCEPTION()
+        return ""
+
+
 def _as_int(v):
     try:
         return int(v)

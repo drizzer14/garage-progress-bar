@@ -50,7 +50,8 @@ _TICK_MODES = (t.Mode.TECH_TREE, t.Mode.FIELD_MODS, t.Mode.SKILL_TREE)
 
 
 def record(kind, veh_int_cd, item_id, name="", icon="", category="",
-           level=0, effect="", xp_cost=0, kind_label="", done_count=0):
+           level=0, effect="", xp_cost=0, kind_label="", done_count=0,
+           options=None, option_effects=None):
     """Optimistically stash the item just clicked. Display fields are captured now
     because a researched item vanishes from every snapshot source afterwards.
 
@@ -77,6 +78,11 @@ def record(kind, veh_int_cd, item_id, name="", icon="", category="",
             "xp_cost": int(xp_cost or 0),
             "kind_label": kind_label or "",
             "done_count": int(done_count or 0),
+            # Field-mod A/B variant pair -- the only thing distinguishing one level
+            # from the next (base name/effect repeat across levels). Carried so the
+            # done tick's tooltip matches the live tick's; empty for non-choice items.
+            "options": list(options or []),
+            "option_effects": list(option_effects or []),
         }
         _pending_reconciles = 0
     except Exception:
@@ -233,6 +239,8 @@ def _make_tick(rec):
         xp_position=0, category=rec["category"], icon=rec["icon"], name=rec["name"],
         xp_gained=0, xp_required=0, affordable=True, completed=True,
         locked=False, level=rec["level"], effect=rec["effect"],
+        options=rec.get("options") or [],
+        option_effects=rec.get("option_effects") or [],
         kind_label=rec["kind_label"], done=True, int_cd=rec["item_id"],
         action_id=rec["item_id"] if is_module else 0)
 

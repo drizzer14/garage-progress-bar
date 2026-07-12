@@ -112,6 +112,32 @@ footer when `price` is non-zero (`creditsHtml`, `CREDITS_ICON`). Clicking a done
 native screen: `CMD.OPEN_FIELD_MODS` for field-mod ticks, `CMD.OPEN_RESEARCH` otherwise; a done
 chip fires `CMD.OPEN_SKILL_TREE`.
 
+## Header mode switch (`.wg-switch`)
+When a vehicle qualifies for ≥2 bar modes, Python pushes the ordered `availModes` (comma-joined);
+the widget shows the NEXT mode's title dimmed beside the current heading, click swaps the bar to it
+(`selectMode`, persisted per-vehicle), and the previously-active title becomes the new switch
+(A↔B with 2 modes, forward-cycle with 3+). `modeTitle(mode)`, `switchHit(el,x,y)` (live-rect hit-test),
+`setSwitchHot(el,hot)`, `renderModeSwitch(root,data)`/`hideSwitch(root)`. The title is **rendered
+only** — it lives in the header, which the root's `pointer-events:none` covers.
+- **Header input routing (the hard part).** The switch title sits in the HEADER, above the bar.
+  Input there is delivered by **extending the bar's `.wg-hot` layer UP over the header** (`top:-26rem`)
+  — `.wg-hot` is the one proven-interactive layer. `ensureHover`'s `mousemove`/`click`/`mouseleave`
+  handlers hit-test the title's own rect (`switchHit`) BEFORE the chip/tick logic, and gate the bar's
+  tick tooltip/affordance/click by cursor-y (`e.clientY < barRect.top` = header band → skip). Measured
+  live: motion events AND clicks DO reach `.wg-hot` over the header — an earlier belief that the header
+  region was input-blocked was wrong. What failed was a body-level sibling overlay AND a nested
+  `.wg-head-hot`; the working answer is the single extended `.wg-hot`.
+- **Dim↔bright is a COLOR swap, inline, driven by `setSwitchHot`** (`#8e867d` ↔ `#ede6d9`) with
+  `transition:color` for the fade — NOT opacity and NOT a `.wg-switch-hot` class. In this Coherent
+  build a dynamic **opacity** change (with `transition`) never repaints, and a toggled **class** never
+  restyles, but a dynamic inline **color** write does. (Add to the CSS-quirks list alongside
+  `:hover`/`:not()` unreliability.)
+- **render must NOT reset the hover color on repeat pushes** (same bug as the tooltip): `hideSwitch`
+  (top of `render`) only sets `display:none`, and `renderModeSwitch` re-applies the dim resting color
+  ONLY when the target changes (`prevTarget !== target`). Otherwise a push while the cursor rests on
+  the title dims it, and — no mousemove to re-brighten — it stays dim until the mouse moves ("hover
+  only works while moving"). Python side (`availModes`/`selectMode`/`modeOverrides`): see gpb-architecture.
+
 ## Hover & click hit-testing
 - **Hover** two-tier: exact element under cursor (`_wgBody` off ancestor `.wg-tick`) when Gameface
   deep-targets, else nearest tick by cursor-x over `tickMeta`. Single-milestone modes (skill_tree's

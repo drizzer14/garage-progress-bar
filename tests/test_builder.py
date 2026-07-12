@@ -526,6 +526,24 @@ def test_potential_excluded_when_real_tier_xi_researched_with_prestige():
     assert build_model(snap, _WITH_PXI).mode == t.Mode.ELITE
 
 
+def test_potential_excluded_for_premium_tank():
+    # A premium / gift / reward tier-X (e.g. Dravec) has no research line -> the
+    # speculative bar must NOT apply, even when enabled. Falls through to COMPLETE.
+    snap = _done_tier_x(is_premium=True)
+    assert build_model(snap, _WITH_PXI).mode == t.Mode.COMPLETE
+
+
+def test_potential_excluded_for_premium_tank_with_prestige():
+    # Same premium exclusion with prestige -> falls through to ELITE, and POTENTIAL is
+    # NOT offered as a switch option.
+    snap = _done_tier_x(is_premium=True, has_prestige=True, elite_level=10,
+                        elite_max_level=20, elite_grades=_grades(),
+                        elite_level_xp={10: 650000})
+    m = build_model(snap, _WITH_PXI)
+    assert m.mode == t.Mode.ELITE
+    assert t.Mode.POTENTIAL_TIER_XI not in m.avail_modes
+
+
 def test_potential_still_shows_with_researched_module_in_unlocks():
     # A researched MODULE left in tech_unlocks is NOT a successor vehicle -> only a
     # VEHICLE entry signals a real Tier XI, so the speculative bar still applies.
@@ -545,3 +563,98 @@ def test_potential_model_carries_estimate_inputs_and_class():
     assert (m.avg_battle_xp, m.battle_count, m.account_avg_battle_xp,
             m.reserve_mult, m.daily_double_factor, m.max_battle_xp) == (
         740, 42, 560, 200, 200, 1900)
+
+
+# --- avail_modes + override (the header "mode switch") --------------------
+# avail_modes lists every mode the vehicle qualifies for AND that is enabled, in
+# priority order. override re-emits any of those; a stale/absent override is ignored.
+
+def test_avail_modes_single_mode_has_one_entry():
+    # A plain tech-tree vehicle qualifies for exactly one mode -> no switch (len 1).
+    snap = t.VehicleSnapshot(tier=6, is_elite=False, vehicle_xp=500, free_xp=0,
+                             tech_unlocks=[_u(1, 1000)])
+    m = build_model(snap)
+    assert m.mode == t.Mode.TECH_TREE
+    assert m.avail_modes == [t.Mode.TECH_TREE]
+
+
+def test_avail_modes_elite_and_rewards_coexist():
+    # A prestige vehicle with an unearned reward qualifies for BOTH elite_rewards and
+    # the grade band -> two switch options, priority order (rewards first).
+    snap = _elite_snap(rewards=[t.EliteReward(50, True), t.EliteReward(100, False)])
+    m = build_model(snap)
+    assert m.mode == t.Mode.ELITE_REWARDS
+    assert m.avail_modes == [t.Mode.ELITE_REWARDS, t.Mode.ELITE]
+
+
+def test_avail_modes_all_rewards_earned_is_elite_only():
+    # No unearned reward -> elite_rewards is NOT available; only the band remains.
+    snap = _elite_snap(rewards=[t.EliteReward(50, True), t.EliteReward(100, True)])
+    m = build_model(snap)
+    assert m.avail_modes == [t.Mode.ELITE]
+
+
+def test_avail_modes_excludes_disabled_modes():
+    # A disabled mode is not a switch option even when the vehicle qualifies for it.
+    snap = _elite_snap(rewards=[t.EliteReward(50, True), t.EliteReward(100, False)])
+    m = build_model(snap, _without(t.Mode.ELITE))
+    # ELITE filtered out; ELITE_REWARDS (the priority winner) still shows.
+    assert m.mode == t.Mode.ELITE_REWARDS
+    assert m.avail_modes == [t.Mode.ELITE_REWARDS]
+
+
+def test_override_selects_a_lower_priority_available_mode():
+    # override to the grade band on a vehicle whose default is elite_rewards.
+    snap = _elite_snap(rewards=[t.EliteReward(50, True), t.EliteReward(100, False)],
+                       level=10, level_xp={10: 650000})
+    m = build_model(snap, _ALL_MODES, override=t.Mode.ELITE)
+    assert m.mode == t.Mode.ELITE
+    # avail_modes is unchanged by the override -- it's still the full switch menu.
+    assert m.avail_modes == [t.Mode.ELITE_REWARDS, t.Mode.ELITE]
+
+
+def test_override_ignored_when_mode_not_available():
+    # A stale override (mode the vehicle no longer qualifies for) is ignored -> the
+    # priority default shows.
+    snap = t.VehicleSnapshot(tier=6, is_elite=False, vehicle_xp=500, free_xp=0,
+                             tech_unlocks=[_u(1, 1000)])
+    m = build_model(snap, _ALL_MODES, override=t.Mode.ELITE)
+    assert m.mode == t.Mode.TECH_TREE
+
+
+def test_override_ignored_when_mode_disabled():
+    # override names a mode the vehicle qualifies for but the user disabled -> not in
+    # avail, so ignored; the enabled priority default shows.
+    snap = _elite_snap(rewards=[t.EliteReward(50, True), t.EliteReward(100, False)])
+    m = build_model(snap, _without(t.Mode.ELITE), override=t.Mode.ELITE)
+    assert m.mode == t.Mode.ELITE_REWARDS
+
+
+def test_override_none_is_priority_default():
+    snap = _elite_snap(rewards=[t.EliteReward(50, True), t.EliteReward(100, False)])
+    assert build_model(snap, _ALL_MODES, override=None).mode == t.Mode.ELITE_REWARDS
+
+
+def test_complete_has_empty_avail_modes():
+    snap = t.VehicleSnapshot(tier=8, is_elite=True, vehicle_xp=0, free_xp=0)
+    m = build_model(snap)
+    assert m.mode == t.Mode.COMPLETE
+    assert m.avail_modes == []
+
+
+def test_hidden_model_still_reports_avail_modes():
+    # The priority winner is disabled -> HIDDEN, but avail_modes still lists the enabled
+    # options (so an override to an enabled mode could later show the bar).
+    snap = _elite_snap(rewards=[t.EliteReward(50, True), t.EliteReward(100, False)])
+    m = build_model(snap, _without(t.Mode.ELITE_REWARDS))
+    assert m.mode == t.Mode.HIDDEN
+    assert m.avail_modes == [t.Mode.ELITE]
+
+
+def test_override_honored_even_when_priority_default_disabled():
+    # If the priority winner is off but the player explicitly picked an enabled mode,
+    # honor it (the switch only offers enabled modes, so this is the player asking).
+    snap = _elite_snap(rewards=[t.EliteReward(50, True), t.EliteReward(100, False)],
+                       level=10, level_xp={10: 650000})
+    m = build_model(snap, _without(t.Mode.ELITE_REWARDS), override=t.Mode.ELITE)
+    assert m.mode == t.Mode.ELITE

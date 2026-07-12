@@ -23,7 +23,7 @@ const CMD = {                                           // bridge/view_models.py
     RESEARCH_UNLOCK: "researchUnlock", UNLOCK_FIELD_MOD: "unlockFieldMod",
     OPEN_SKILL_TREE: "openSkillTree", OPEN_RESEARCH: "openResearch",
     OPEN_FIELD_MODS: "openFieldMods", BUY_MOUNT: "buyMount",
-    SET_POSITION: "setPosition",
+    SET_POSITION: "setPosition", SELECT_MODE: "selectMode",
 };
 const GRADE = {                                         // domain/constants.py GradeFamily
     IRON: "iron", BRONZE: "bronze", SILVER: "silver", GOLD: "gold",
@@ -812,6 +812,10 @@ function ensureRoot() {
             '<div class="wg-head-left">' +
             '<div class="wg-label"></div>' +
             '<div class="wg-upgrades"></div>' +
+            // The mode-switch title: the NEXT available mode, dimmed, to the right of the
+            // current title. Visual only; hover/click are routed through the .wg-head-hot
+            // layer (see bindHeadHot / renderModeSwitch).
+            '<div class="wg-switch"></div>' +
             "</div>" +
             '<div class="wg-xp">' +
             '<span class="wg-xp-val"></span>' +
@@ -1332,8 +1336,107 @@ function eliteGlyph(t, isRewards) {
     return img;
 }
 
+// --- Header mode switch ------------------------------------------------------------
+// A vehicle often qualifies for several bar modes at once (research/field-mods,
+// elite-system/elite-rewards). Python pushes the ordered list of available modes as
+// `availModes` (comma-joined); when there are >=2 we render the NEXT one's title dimmed
+// beside the current one. Hover raises its opacity; a click fires selectMode, which
+// stores the choice per-vehicle and re-pushes -- the bar then repaints in that mode and
+// the previously-active title becomes the new switch (a clean A<->B swap with 2 modes; a
+// forward cycle with 3+).
+
+// The localized header title for a mode -- the SAME keys render() / renderElite() use for
+// .wg-label (elite's grade-name suffix is intentionally omitted; the switch shows the base).
+function modeTitle(mode) {
+    switch (mode) {
+        case MODE.SKILL_TREE: return L("headerSkillTree", "Upgrades");
+        case MODE.POTENTIAL_TIER_XI: return L("capTierXI", "Tier XI");
+        case MODE.FIELD_MODS: return L("headerFieldMods", "Field Modifications");
+        case MODE.ELITE_REWARDS: return L("headerEliteRewards", "EXCLUSIVE REWARDS");
+        case MODE.ELITE: return L("headerElite", "Elite System");
+        default: return L("headerResearch", "Research");
+    }
+}
+
+// Is (clientX, clientY) inside the switch title's CURRENT on-screen box? Measured fresh at
+// event time (like chipAt) against the live layout, so a mode swap that re-texts/re-flows
+// the title is always hit-tested correctly. The event coords and this rect are both in the
+// same viewport space, so there's no positioning offset to get wrong.
+function switchHit(switchEl, x, y) {
+    if (!switchEl || switchEl.style.display === "none") return false;
+    const r = switchEl.getBoundingClientRect();
+    return !!r && x >= r.left && x <= r.right && y >= r.top && y <= r.bottom;
+}
+
+// Switch-title dim (inactive) vs bright (hovered) look, driven by an INLINE COLOR write.
+// Measured live over two builds: motion events DO reach the header via .wg-hot and the
+// hit-test passes, but neither a toggled `.wg-switch-hot` class NOR a dynamic inline
+// OPACITY change ever brightened the title -- while a dynamic inline COLOR change repaints
+// fine (the diagnostic's green text proved it). So dim/bright is a color swap, no opacity
+// (dynamic opacity + `transition` is the combination that doesn't repaint in this Coherent
+// build; cf. the :hover / :not() unreliability in gameface-css-gotchas). The fade comes from
+// `transition: color` on .wg-switch -- color transitions DO animate here.
+const SWITCH_COLOR = "#8e867d";       // dim / inactive (tertiary token)
+// bright / hovered == the current heading's color EXACTLY (.wg-label #ede6d9), so a hovered
+// switch title reads identically to the active title beside it -- keep these in lockstep.
+const SWITCH_COLOR_HOT = "#ede6d9";
+function setSwitchHot(switchEl, hot) {
+    if (switchEl) switchEl.style.color = hot ? SWITCH_COLOR_HOT : SWITCH_COLOR;
+}
+
+// Hide the switch title. Called at the top of render() so any early return (no data,
+// hidden bar, COMPLETE) leaves no stale switch title / hit-target. The switch's hover +
+// click are hit-tested live off this element's rect by ensureHover (switchHit) via the
+// .wg-hot layer, so hiding the element (display:none makes switchHit return false) is all
+// that's needed -- there's no separate overlay to tear down.
+function hideSwitch(root) {
+    const r = root || getRoot();
+    if (r && r.querySelector) {
+        const sw = r.querySelector(".wg-switch");
+        // Display:none only -- do NOT reset the hover color or _wgTarget here. hideSwitch
+        // runs at the TOP of every render(), so clobbering the color would dim the title on
+        // every push; a push while the cursor rests on it would leave it dim until the next
+        // mousemove ("hover only works while moving"). While hidden, switchHit returns false
+        // (display:none), so a stale _wgTarget can't be hovered or clicked anyway. The live
+        // dim/bright color is owned by the mousemove handler; renderModeSwitch resets it only
+        // on a genuine target change. (Same rule as the tooltip -- see gpb-widget skill.)
+        if (sw) sw.style.display = "none";
+    }
+}
+
+// Render (or hide) the dimmed switch title. Called at the end of BOTH render() and
+// renderElite(). <2 available modes, or the current mode isn't in the list -> no switch.
+// The title is VISUAL ONLY; ensureHover's .wg-hot handler hit-tests its rect for hover
+// (brightening it via setSwitchHot) and click (firing selectMode with _wgTarget).
+function renderModeSwitch(root, data) {
+    const switchEl = root.querySelector(".wg-switch");
+    if (!switchEl) return;
+    const avail = ((data.availModes || "") + "").split(",").filter(Boolean);
+    const idx = avail.indexOf(data.mode);
+    if (avail.length < 2 || idx < 0) {
+        switchEl.style.display = "none";
+        switchEl._wgTarget = null;
+        return;
+    }
+    const target = avail[(idx + 1) % avail.length];
+    const prevTarget = switchEl._wgTarget;
+    switchEl.textContent = modeTitle(target);
+    switchEl._wgTarget = target;
+    switchEl.style.display = "block";
+    // Reset to the dim resting color ONLY when the switch first appears or its target
+    // changes -- NOT on every push. A repeat push for the SAME target while the cursor rests
+    // on the title must NOT clobber the hover color (no mousemove would fire to re-brighten,
+    // so it would stay dim until the mouse moved). The mousemove handler owns the live
+    // dim/bright color; render preserves it across repeat pushes. (Same rule as the tooltip
+    // -- render never blanket-resets hover state; see gpb-widget skill.)
+    if (prevTarget !== target) setSwitchHot(switchEl, false);
+}
+
 function render(model) {
     const root = ensureRoot();
+    // Hide the switch title up front; renderModeSwitch re-shows it at the end of whichever
+    // render path runs. Early returns below then leave the switch hidden.
+    hideSwitch(root);
     const label = root.querySelector(".wg-label");
     const catIcon = root.querySelector(".wg-cat-icon");
     const upgradesEl = root.querySelector(".wg-upgrades");
@@ -1591,6 +1694,9 @@ function render(model) {
     });
     hotEl._wgTickMeta = res.tickMeta;
     hotEl._wgClickMeta = res.clickMeta;
+
+    // Header mode switch (next available mode, dimmed, to the right of the title).
+    renderModeSwitch(root, data);
 }
 
 // Tooltip body for an elite mark: the grade/reward name, (rewards) the reward
@@ -1748,6 +1854,9 @@ function renderElite(root, data, isRewards) {
     hotEl._wgClickMeta = res.clickMeta;   // empty -- elite grade/reward marks aren't clickable
     // Don't force-hide the tooltip here (render() re-runs on model updates); the
     // hover handler owns visibility, same as the main bar.
+
+    // Header mode switch (e.g. Elite System <-> Exclusive Rewards).
+    renderModeSwitch(root, data);
 }
 
 // Attach the hover handler to the ticks layer exactly once. That layer is the
@@ -1781,6 +1890,20 @@ function ensureHover(hotEl, tipEl) {
         // While Ctrl is held the bar is in reposition mode -> a move cursor, no matter
         // what's under the cursor (Ctrl+drag moves the bar; see the mousedown handler).
         const dragMode = e.ctrlKey;
+        // Mode-switch title (in the header ABOVE the bar): .wg-hot is extended up over the
+        // header, so it carries the switch's events (the title itself is pointer-events:none
+        // under the root). Hit-test the title's live rect and, when the cursor is over it,
+        // raise its opacity + show a pointer -- no bar tooltip. Skipped in drag mode.
+        const root0 = getRoot();
+        const switchEl = root0 && root0.querySelector && root0.querySelector(".wg-switch");
+        if (switchEl && !dragMode && switchHit(switchEl, e.clientX, e.clientY)) {
+            setSwitchHot(switchEl, true);
+            setActiveChip(hotEl, null);
+            tipEl.style.display = "none";
+            hotEl.style.cursor = "pointer";
+            return;
+        }
+        if (switchEl) setSwitchHot(switchEl, false);
         // Tier-XI "Next available:" chips first (they own a framed tooltip + click,
         // hit-tested here since they can't receive events themselves).
         const chip = chipAt(hotEl, e.clientX, e.clientY);
@@ -1794,6 +1917,14 @@ function ensureHover(hotEl, tipEl) {
         // Read the bar TRACK rect ONCE for this event and share it across the affordance +
         // tooltip hit-tests (each did its own forced layout read before).
         const rect = barRect(hotEl);
+        // Header band (above the ticks layer): .wg-hot now reaches up here for the switch,
+        // but tick tooltips + the pointer affordance belong to the BAR only -- gate them out
+        // when the cursor is above the ticks. (Ctrl+drag still works anywhere via mousedown.)
+        if (rect && e.clientY < rect.top) {
+            tipEl.style.display = "none";
+            hotEl.style.cursor = dragMode ? "move" : "";
+            return;
+        }
         // Pointer affordance: a pointer cursor only while over a clickable tick.
         hotEl.style.cursor = dragMode ? "move"
             : (nearestClick(hotEl, e.clientX, rect) ? "pointer" : "");
@@ -1818,6 +1949,9 @@ function ensureHover(hotEl, tipEl) {
     hotEl.addEventListener("mouseleave", function () {
         setActiveChip(hotEl, null);
         tipEl.style.display = "none";
+        const root = getRoot();
+        const sw = root && root.querySelector && root.querySelector(".wg-switch");
+        if (sw) setSwitchHot(sw, false);
     });
     // Ctrl+drag to reposition the whole bar. Ctrl-gated so a normal click can't move it
     // by accident; a plain mousedown falls through to the click handler (research/unlock).
@@ -1878,10 +2012,21 @@ function ensureHover(hotEl, tipEl) {
         if (e.ctrlKey) return;
         const root = getRoot();
         if (root && root._wgDidDrag) return;
+        // Mode-switch title click (header band): swap to the next mode, and DON'T fall
+        // through to the bar-tick resolver (which is cursor-x only and would fire an
+        // unlock for whatever tick sits at that x).
+        const switchEl = root && root.querySelector && root.querySelector(".wg-switch");
+        if (switchEl && switchHit(switchEl, e.clientX, e.clientY)) {
+            if (switchEl._wgTarget) invokeCommand(CMD.SELECT_MODE, switchEl._wgTarget);
+            return;
+        }
         const chip = chipAt(hotEl, e.clientX, e.clientY);
         // chipAt returns any chip under the cursor regardless of clickability; an
         // unaffordable frontier chip carries a null cmd -> swallow the click here.
         if (chip) { if (chip.cmd) invokeCommand(chip.cmd, chip.arg); return; }
+        // A click up in the header band (not on the switch) must not fire a tick action.
+        const rect = barRect(hotEl);
+        if (rect && e.clientY < rect.top) return;
         const hit = nearestClick(hotEl, e.clientX);
         if (hit) invokeCommand(hit.cmd, hit.arg);
     });
@@ -1902,6 +2047,8 @@ function onViewportResize() {
     raf(function () {
         onViewportResize._pending = false;
         const root = getRoot();
+        // The switch title flows inside the header, so it needs no re-measure on resize
+        // (unlike the old body-level overlay).
         if (root && root._wgLastData) applyPosition(root, root._wgLastData);
     });
 }

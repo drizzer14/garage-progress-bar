@@ -87,6 +87,9 @@ def build_snapshot():
     return t.VehicleSnapshot(
         tier=_safe_int(lambda: veh.level, 0),
         is_elite=_safe(lambda: bool(veh.isElite), False),
+        # Premium/gift/reward tank -> no research line -> excluded from the speculative
+        # POTENTIAL_TIER_XI bar (see builder._b_potential). Guarded to False.
+        is_premium=_safe(lambda: bool(veh.isPremium), False),
         vehicle_xp=_safe_int(lambda: veh.xp, 0),
         free_xp=int(free_xp),
         tech_unlocks=_read_tech_unlocks(veh, unlocks),

@@ -36,7 +36,7 @@ from wgmod_research.bridge import mod_settings
 from wgmod_research.bridge.view_models import ResearchVM, TickVM, UpgradeVM
 from wgmod_research.bridge.wulf_args import (
     map_get as _map_get, cmd_int_arg as _cmd_int_arg, cmd_xy_arg as _cmd_xy_arg,
-    cmd_wh_arg as _cmd_wh_arg)
+    cmd_wh_arg as _cmd_wh_arg, cmd_str_arg as _cmd_str_arg)
 import openwg_gameface
 
 WIDGET_NAME = "WGModResearch"
@@ -51,6 +51,16 @@ INJECT_FIELD = "ModInjectModel"
 # (host_vm, rvm) for the currently-mounted widget. Importable so the entry point
 # and the dev REPL can drive refreshes without poking module-private state.
 _active = None
+
+# intCD of the vehicle in the most recent push, so the header mode-switch handler
+# (which carries only the chosen Mode string) knows which vehicle to store it against.
+_cur_int_cd = 0
+
+# Valid switch targets a selectMode click may carry (guards a bogus/stale JS value before
+# it's stored). The content modes only -- never HIDDEN / COMPLETE.
+_KNOWN_MODES = frozenset((
+    Mode.TECH_TREE, Mode.SKILL_TREE, Mode.FIELD_MODS, Mode.POTENTIAL_TIER_XI,
+    Mode.ELITE_REWARDS, Mode.ELITE))
 
 # Collision-aware placement across candidate hangar sub-views. OpenWG keeps ONE
 # ModInjectModel per sub-view (last-writer-wins), so instead of overwriting a mod that
@@ -414,6 +424,8 @@ def _record_click(int_cd):
                               name=s.name, icon=s.icon, category=Category.FIELDMOD,
                               level=getattr(s, "level", 0),
                               effect=getattr(s, "description", ""),
+                              options=getattr(s, "options", None),
+                              option_effects=getattr(s, "option_effects", None),
                               xp_cost=getattr(s, "xp_cost", 0))
                 return
     except Exception:
@@ -509,6 +521,19 @@ def _on_set_position(*args):
         LOG_CURRENT_EXCEPTION()
 
 
+def _on_select_mode(*args):
+    # Header mode-switch click: store the chosen Mode for the current vehicle and re-push.
+    # Class-B (local-state) command -- the game fires no sync, so set_mode_override refreshes.
+    try:
+        mode = _cmd_str_arg(args)
+        LOG_NOTE("[wgmod] selectMode mode=%s intCD=%s" % (mode, _cur_int_cd))
+        # Only accept a real Mode string, and only when a vehicle is in view.
+        if mode and mode in _KNOWN_MODES and _cur_int_cd:
+            mod_settings.set_mode_override(_cur_int_cd, mode)
+    except Exception:
+        LOG_CURRENT_EXCEPTION()
+
+
 def _connect_commands(rvm):
     """Wire the reverse-channel commands to their handlers. The command objects
     are Wulf events that support +=. A fresh ResearchVM is created per attach(),
@@ -521,6 +546,7 @@ def _connect_commands(rvm):
         rvm.openFieldMods += _on_open_field_mods
         rvm.buyMount += _on_buy_mount
         rvm.setPosition += _on_set_position
+        rvm.selectMode += _on_select_mode
     except Exception:
         LOG_CURRENT_EXCEPTION()
 
@@ -665,7 +691,13 @@ def push(rvm, host_vm=None):
         snap = engine_adapter.build_snapshot()
         if snap is None:
             return
-        model = build_model(snap, mod_settings.enabled_modes())
+        # Remember the current vehicle so a mode-switch click (which carries only a Mode
+        # string) can store its per-vehicle selection, and read that selection back so the
+        # bar renders the player's chosen mode (ignored by build_model if no longer valid).
+        global _cur_int_cd
+        _cur_int_cd = getattr(snap, "vehicle_int_cd", 0) or 0
+        model = build_model(snap, mod_settings.enabled_modes(),
+                            override=mod_settings.mode_override(_cur_int_cd))
         # Session "done" markers: promote a confirmed click and inject the current
         # vehicle's marker (a first tick / first chip). Engine-free + guarded.
         recent.decorate(model, snap)
@@ -695,6 +727,9 @@ def push(rvm, host_vm=None):
             tx.setPosW(mod_settings.pos_w())
             tx.setPosH(mod_settings.pos_h())
             tx.setMode(model.mode)
+            # Available modes for the header switch (comma-joined, priority order). <2
+            # entries -> the widget shows no switch.
+            tx.setAvailModes(",".join(getattr(model, "avail_modes", None) or []))
             tx.setScaleMin(model.scale_min)
             tx.setScaleMax(model.scale_max)
             tx.setFillVehicle(model.fill_vehicle)

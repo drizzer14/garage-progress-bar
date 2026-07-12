@@ -65,6 +65,35 @@ def test_fieldmod_done_tick_has_no_action_id():
     assert model.ticks[0].action_id == 0
 
 
+def test_fieldmod_done_tick_carries_options_and_effects():
+    # The A/B variant pair is the ONLY thing distinguishing one field-mod level from the
+    # next (base name/effect repeat across levels). A done tick must carry it through, or
+    # its tooltip falls back to the generic base text and reads as a different field mod.
+    opts = ["Optics Coating", "Vision System"]
+    opt_eff = ["+5% aiming speed", "+3% view range"]
+    recent.record(recent.FIELDMOD, 100, 7, name="FM", icon="fm", category="fieldmod",
+                  level=3, options=opts, option_effects=opt_eff)
+    snap = _snap(100, field_mod_steps=[_step(7, unlocked=True)])
+    model = _model(mode=t.Mode.FIELD_MODS, ticks=[])
+    recent.decorate(model, snap)
+    tick = model.ticks[0]
+    assert tick.done is True
+    assert tick.options == opts
+    assert tick.option_effects == opt_eff
+
+
+def test_fieldmod_done_tick_without_options_stays_empty():
+    # Feature / role-slot levels have no variant pair -> options stay empty and the tick
+    # keeps its name+effect tooltip (no regression).
+    recent.record(recent.FIELDMOD, 100, 7, name="FM", icon="fm", category="fieldmod", level=3)
+    snap = _snap(100, field_mod_steps=[_step(7, unlocked=True)])
+    model = _model(mode=t.Mode.FIELD_MODS, ticks=[])
+    recent.decorate(model, snap)
+    tick = model.ticks[0]
+    assert tick.options == []
+    assert tick.option_effects == []
+
+
 def test_cancel_leaves_no_marker():
     recent.record(recent.TECHTREE, 100, 5, name="Gun", icon="g.png", category="module")
     # Confirm was cancelled: item 5 still pending (not researched) -> nothing surfaces.

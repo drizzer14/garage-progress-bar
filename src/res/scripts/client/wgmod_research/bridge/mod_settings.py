@@ -44,6 +44,12 @@ from wgmod_research.adapter import i18n
 # Our mod's reverse-domain id, reused as the MSA "linkage" (panel identity / storage key).
 LINKAGE = "com.14th_ua.garageprogressbar"
 
+# 2/3-safe string check (basestring on Py2.7 in-game; str under a Py3 import).
+try:
+    _STR_TYPES = basestring
+except NameError:
+    _STR_TYPES = str
+
 # Sanity ceiling for a stored pixel coordinate (well past any real screen size); a
 # typed/echoed value is clamped into [0, POS_MAX], with 0 meaning "auto / unseeded".
 POS_MAX = 20000
@@ -64,7 +70,13 @@ DEFAULTS = {"hideAlways": False, "hideWhenComplete": False, "posX": 0, "posY": 0
             # tank with no real tier XI, tracks banked XP toward a hypothetical one and
             # REPLACES the Elite-Levels bar. Unlike the toggles above, off does not hide
             # the bar -- it falls through to the normal Elite/COMPLETE behavior.
-            "showPotentialTierXI": False}
+            "showPotentialTierXI": False,
+            # Per-vehicle "mode switch" selection: a JSON-string map {intCD: Mode} of the
+            # non-default mode the player picked in the header switch for each vehicle. Not
+            # a user-facing control (absent from _template, so no settingsVersion bump), but
+            # persisted like posW/posH via _full_settings_for_write + saveState. Honored by
+            # build_model only while the chosen mode is still available (self-healing).
+            "modeOverrides": "{}"}
 
 
 def clamp_pos(v):
@@ -255,6 +267,11 @@ def _apply(settings):
             continue
         if key in ("posX", "posY", "posW", "posH"):
             _settings[key] = clamp_pos(settings[key])
+        elif key == "modeOverrides":
+            # A JSON string (per-vehicle mode switch map); keep it verbatim, guarding a
+            # non-string / missing value back to the empty map.
+            v = settings[key]
+            _settings[key] = v if isinstance(v, _STR_TYPES) else "{}"
         else:
             _settings[key] = bool(settings[key])
 
@@ -585,3 +602,65 @@ def enabled_modes():
     if _settings["showPotentialTierXI"]:
         modes.add(t.Mode.POTENTIAL_TIER_XI)
     return modes
+
+
+def _mode_overrides():
+    """Parse the per-vehicle mode-switch map from the JSON-string setting. Guarded: bad
+    JSON / non-dict -> empty map, so a corrupt value never breaks the push."""
+    import json
+    try:
+        m = json.loads(_settings.get("modeOverrides", "{}") or "{}")
+        return m if isinstance(m, dict) else {}
+    except Exception:
+        return {}
+
+
+def mode_override(int_cd):
+    """The player's chosen (non-default) bar mode for this vehicle, or None. Keyed by
+    intCD (stored as a JSON string key). intCD 0 (no vehicle) -> None."""
+    try:
+        int_cd = int(int_cd or 0)
+    except (TypeError, ValueError):
+        return None
+    if not int_cd:
+        return None
+    return _mode_overrides().get(str(int_cd)) or None
+
+
+def set_mode_override(int_cd, mode):
+    """Persist the player's header mode-switch choice for `int_cd` and re-push so the bar
+    repaints in that mode. Stored in the JSON-string map (survives a client restart, like
+    a pinned position). intCD 0 is rejected. build_model applies it only while the chosen
+    mode is still available, so a stale entry is harmless."""
+    try:
+        int_cd = int(int_cd or 0)
+    except (TypeError, ValueError):
+        return
+    if not int_cd or not mode:
+        return
+    import json
+    m = _mode_overrides()
+    m[str(int_cd)] = mode
+    try:
+        _settings["modeOverrides"] = json.dumps(m)
+    except Exception:
+        LOG_CURRENT_EXCEPTION()
+        return
+    try:
+        from gui.modsSettingsApi import g_modsSettingsApi
+        g_modsSettingsApi.updateModSettings(LINKAGE, _full_settings_for_write(g_modsSettingsApi))
+        try:
+            g_modsSettingsApi.saveState()
+        except Exception:
+            LOG_CURRENT_EXCEPTION()
+    except ImportError:
+        pass  # MSA absent -> selection applies this session, just not persisted
+    except Exception:
+        LOG_CURRENT_EXCEPTION()
+    # Re-push so the chosen mode reaches the widget immediately (Class-B local-state
+    # command: the game fires no sync, so we must refresh -- like set_position).
+    try:
+        from wgmod_research.bridge import gameface_bridge as B
+        B.refresh()
+    except Exception:
+        LOG_CURRENT_EXCEPTION()

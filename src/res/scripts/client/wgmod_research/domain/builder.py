@@ -78,11 +78,126 @@ def bar_visible(overlay_closed, hide_always, hide_when_complete, mode, in_garage
     return overlay_closed
 
 
-def build_model(snapshot, enabled=None):
+# --- Per-mode candidate builders --------------------------------------------------
+# Each returns (Mode, ResearchProgressModel) if the vehicle qualifies for that mode,
+# else None. They embody the SAME gate logic the old first-match chain used, but each
+# is evaluated independently so build_model can (a) enumerate ALL applicable modes for
+# the header switch and (b) re-emit any chosen one. `ctx` carries the shared scalars
+# derived once from the snapshot (fill/spendable/est/counters/class). Order in _BUILDERS
+# is the historical priority order; the first non-None is the priority winner.
+
+
+def _b_tech(snapshot, ctx, enabled):
+    # Research takes priority: while ANY tech unlock (module or next vehicle) is still
+    # unresearched, show the tech tree -- even on a vehicle the account already counts
+    # as elite. techtree.resolve returns remaining-only ticks, so its emptiness is the
+    # exact "nothing left to research" signal (see the long note kept below).
+    ticks = techtree.resolve(snapshot)
+    if not ticks:
+        return None
+    return (t.Mode.TECH_TREE, t.ResearchProgressModel(
+        mode=t.Mode.TECH_TREE, scale_min=0, scale_max=_max_pos(ticks, 0),
+        fill_vehicle=ctx["fill_vehicle"], fill_free=ctx["fill_free"], ticks=ticks,
+        vehicle_class=ctx["veh_class"], spendable_xp=ctx["spendable"], **ctx["est"]))
+
+
+def _b_skill(snapshot, ctx, enabled):
+    # Tier-XI "vehicle skill tree": a branching COUNT bar (axis = total nodes). resolve()
+    # returns None once fully upgraded, so it then falls through to prestige / COMPLETE.
+    if not snapshot.is_skill_tree:
+        return None
+    st = skilltree.resolve(snapshot)
+    if st is None:
+        return None
+    return (t.Mode.SKILL_TREE, t.ResearchProgressModel(
+        mode=t.Mode.SKILL_TREE, scale_min=st["scale_min"],
+        scale_max=st["scale_max"], fill_vehicle=st["fill"],
+        fill_free=0, ticks=st["ticks"],
+        fieldmods_done=st["done"], fieldmods_total=st["total"],
+        vehicle_class=ctx["veh_class"], spendable_xp=ctx["spendable"],
+        avail_upgrades=st.get("avail_upgrades", []), **ctx["est"]))
+
+
+def _b_field(snapshot, ctx, enabled):
+    # Nothing left to research: remaining Field Modifications, plus the researched/total
+    # field-mod-level counter in the header.
+    fm_ticks = fieldmods.resolve(snapshot)
+    if not fm_ticks:
+        return None
+    return (t.Mode.FIELD_MODS, t.ResearchProgressModel(
+        mode=t.Mode.FIELD_MODS, scale_min=0, scale_max=_max_pos(fm_ticks, 0),
+        fill_vehicle=ctx["fill_vehicle"], fill_free=ctx["fill_free"], ticks=fm_ticks,
+        fieldmods_done=ctx["fm_done"], fieldmods_total=ctx["fm_total"],
+        vehicle_class=ctx["veh_class"], spendable_xp=ctx["spendable"], **ctx["est"]))
+
+
+def _b_potential(snapshot, ctx, enabled):
+    # Speculative "potential Tier XI" (opt-in, default off): a tier-X tank with NO real
+    # tier XI, fully researched + field mods done. Banked spendable XP filling toward the
+    # fixed price a real tier XI costs. Sits above prestige so it REPLACES the Elite-Levels
+    # bar when enabled. Gated at ENTRY on enabled membership (not the _emit hide path), so
+    # OFF falls THROUGH to elite/complete rather than hiding. enabled=None (legacy/tests)
+    # never includes this opt-in mode, so existing tests are unchanged. It also must NOT
+    # apply to a PREMIUM / gift / reward tank (no research line -> never a Tier XI; e.g. the
+    # tier-X premium Dravec). "No real Tier XI" needs the remaining exclusions: not
+    # skill-tree, and no tech-tree Tier-XI successor vehicle (which stays in tech_unlocks
+    # researched=True -- see _has_real_tier_xi).
+    if not (enabled is not None and t.Mode.POTENTIAL_TIER_XI in enabled
+            and snapshot.tier == 10 and not snapshot.is_skill_tree
+            and not getattr(snapshot, "is_premium", False)
+            and not _has_real_tier_xi(snapshot)):
+        return None
+    # potential.resolve never returns None by contract, so no None-guard.
+    pxi = potential.resolve(snapshot)
+    return (t.Mode.POTENTIAL_TIER_XI, t.ResearchProgressModel(
+        mode=t.Mode.POTENTIAL_TIER_XI, scale_min=pxi["scale_min"],
+        scale_max=pxi["scale_max"], fill_vehicle=ctx["fill_vehicle"],
+        fill_free=ctx["fill_free"], ticks=pxi["ticks"],
+        vehicle_class=ctx["veh_class"], spendable_xp=ctx["spendable"], **ctx["est"]))
+
+
+def _b_elite_rewards(snapshot, ctx, enabled):
+    # Tier-exclusive reward roadmap: available only while a reward is unearned. Once all
+    # are earned, resolve returns None / any_unearned False and we fall to the grade band.
+    if not snapshot.has_prestige:
+        return None
+    reward = elite.resolve_reward_track(snapshot)
+    if reward is not None and reward["any_unearned"]:
+        return (t.Mode.ELITE_REWARDS,
+                _elite_model(t.Mode.ELITE_REWARDS, reward, snapshot, ctx["est"], ctx["spendable"]))
+    return None
+
+
+def _b_elite(snapshot, ctx, enabled):
+    # Prestige grade-band progression (the fallback prestige view).
+    if not snapshot.has_prestige:
+        return None
+    band = elite.resolve_grade_band(snapshot)
+    if band is not None:
+        return (t.Mode.ELITE, _elite_model(t.Mode.ELITE, band, snapshot, ctx["est"], ctx["spendable"]))
+    return None
+
+
+# Historical priority order: the first non-None candidate is the mode the bar shows by
+# default (unchanged from the old first-match chain).
+_BUILDERS = (_b_tech, _b_skill, _b_field, _b_potential, _b_elite_rewards, _b_elite)
+
+
+def build_model(snapshot, enabled=None, override=None):
     """`enabled` is the set of Mode strings the user has left ON (None = all on).
-    The mode is resolved by the usual priority chain; if the resolved mode is OFF,
-    the bar is HIDDEN -- there is NO fall-through to a lower-priority mode, and
-    COMPLETE is reached only when the vehicle is genuinely done (no branch matched)."""
+
+    The default mode is resolved by the usual priority chain (the first applicable mode
+    in _BUILDERS); if that resolved mode is OFF, the bar is HIDDEN -- there is NO
+    fall-through to a lower-priority mode, and COMPLETE is reached only when the vehicle
+    is genuinely done (no branch matched).
+
+    `override` is the player's per-vehicle "mode switch" choice (a Mode string). It is
+    honored ONLY when it is among the AVAILABLE modes (applicable AND enabled) -- an
+    explicit, still-valid choice by the player, so it wins even if the priority default
+    is disabled. A stale/absent override is ignored and the priority default applies.
+
+    The emitted model carries `avail_modes` (the ordered available modes) so the widget
+    can render the header switch."""
     fill_vehicle = snapshot.vehicle_xp
     fill_free = snapshot.free_xp
     # Total spendable XP, set on every model below so the view can show per-item
@@ -94,6 +209,8 @@ def build_model(snapshot, enabled=None):
     fm_done = snapshot.fieldmods_done
     fm_total = snapshot.fieldmods_total
     veh_class = snapshot.vehicle_class
+    ctx = {"fill_vehicle": fill_vehicle, "fill_free": fill_free, "spendable": spendable,
+           "est": est, "fm_done": fm_done, "fm_total": fm_total, "veh_class": veh_class}
 
     def _hidden():
         # The vehicle's resolved mode is toggled off: a placeholder model whose only
@@ -105,100 +222,38 @@ def build_model(snapshot, enabled=None):
             fieldmods_done=fm_done, fieldmods_total=fm_total, vehicle_class=veh_class,
             spendable_xp=spendable, **est)
 
-    def _emit(mode, model):
-        # Honor the per-mode user toggle: a mode this vehicle RESOLVED to but which the
-        # user turned off hides the bar -- there is NO fall-through to a lower-priority
-        # mode (see build_model's docstring). Otherwise emit the resolved model.
-        return model if _on(enabled, mode) else _hidden()
+    # Enumerate every applicable mode in priority order (each builder embeds its own gate).
+    cands = []
+    for build in _BUILDERS:
+        r = build(snapshot, ctx, enabled)
+        if r is not None:
+            cands.append(r)
+    # The switch options: applicable AND enabled, priority-ordered (POTENTIAL is already
+    # entry-gated on enabled membership, so _on is a safe no-op for it).
+    avail = [m for (m, _model) in cands if _on(enabled, m)]
 
-    # Research takes priority: while ANY tech unlock (module or next vehicle) is
-    # still unresearched, show the tech tree -- even on a vehicle the account
-    # already counts as elite. veh.isElite is merely eliteVehicles membership and
-    # can be True while modules remain unresearched; only isFullyElite means
-    # nothing is left (Vehicle.py:304-305). Gating on is_elite wrongly showed
-    # Field Modifications for still-researchable elite tanks (e.g. Leopard 1).
-    # techtree.resolve already returns remaining-only ticks, so its emptiness is
-    # the exact "nothing left to research" signal.
-    ticks = techtree.resolve(snapshot)
-    if ticks:
-        return _emit(t.Mode.TECH_TREE, t.ResearchProgressModel(
-            mode=t.Mode.TECH_TREE, scale_min=0, scale_max=_max_pos(ticks, 0),
-            fill_vehicle=fill_vehicle, fill_free=fill_free, ticks=ticks,
-            vehicle_class=veh_class, spendable_xp=spendable, **est))
-
-    # Tier-XI "vehicle skill tree" upgrade: a branching post-progression tree, so
-    # the linear FIELD_MODS reader doesn't apply. The tree is non-linear, so the bar
-    # is a COUNT readout: axis = total upgrade nodes, fill = nodes unlocked (a SINGLE
-    # segment riding the vehicle slot, free slot empty -- like the elite modes), with
-    # one tick per node and the signature 'final' upgrade flagged at the end.
-    # resolve() returns None once fully upgraded, so the bar then falls through to
-    # the prestige / COMPLETE branches like any other elite vehicle.
-    if snapshot.is_skill_tree:
-        st = skilltree.resolve(snapshot)
-        if st is not None:
-            return _emit(t.Mode.SKILL_TREE, t.ResearchProgressModel(
-                mode=t.Mode.SKILL_TREE, scale_min=st["scale_min"],
-                scale_max=st["scale_max"], fill_vehicle=st["fill"],
-                fill_free=0, ticks=st["ticks"],
-                fieldmods_done=st["done"], fieldmods_total=st["total"],
-                vehicle_class=veh_class, spendable_xp=spendable,
-                avail_upgrades=st.get("avail_upgrades", []), **est))
-
-    # Nothing left to research: show remaining Field Modifications, plus the
-    # researched/total field-mod-level counter in the header.
-    fm_ticks = fieldmods.resolve(snapshot)
-    if fm_ticks:
-        return _emit(t.Mode.FIELD_MODS, t.ResearchProgressModel(
-            mode=t.Mode.FIELD_MODS, scale_min=0, scale_max=_max_pos(fm_ticks, 0),
-            fill_vehicle=fill_vehicle, fill_free=fill_free, ticks=fm_ticks,
+    if not cands:
+        # nothing left to research and no prestige data: COMPLETE (elite badge).
+        result = t.ResearchProgressModel(
+            mode=t.Mode.COMPLETE, scale_min=0, scale_max=0,
+            fill_vehicle=fill_vehicle, fill_free=fill_free, ticks=[],
             fieldmods_done=fm_done, fieldmods_total=fm_total, vehicle_class=veh_class,
-            spendable_xp=spendable, **est))
+            spendable_xp=spendable, **est)
+    else:
+        by_mode = dict(cands)
+        if override and override in avail:
+            # Player's explicit choice among the available modes -- honored even if the
+            # priority default is disabled (override is drawn from `avail`, i.e. enabled).
+            result = by_mode[override]
+        else:
+            winner_mode, winner_model = cands[0]
+            # Honor the per-mode user toggle for the priority default: a mode this vehicle
+            # RESOLVED to but which the user turned off hides the bar -- NO fall-through
+            # to a lower-priority mode.
+            result = winner_model if _on(enabled, winner_mode) else _hidden()
 
-    # Speculative "potential Tier XI" (opt-in, default off): a tier-X tank with NO
-    # real tier XI, fully researched + field mods done. Banked spendable XP (vehicle +
-    # free) filling toward the fixed price a real tier XI costs (POTENTIAL_TIER_XI_XP).
-    # Sits above prestige so it REPLACES the Elite-Levels bar on these tanks when enabled.
-    # "No real Tier XI" needs THREE exclusions: not a skill-tree vehicle, AND no tech-tree
-    # Tier-XI successor vehicle in tech_unlocks (which stays there researched=True after
-    # being researched -- see _has_real_tier_xi; without this check a tier-X whose real
-    # Tier XI is already researched wrongly shows the ghost speculative bar).
-    # NB: unlike the per-mode "show X" toggles this is gated at ENTRY (only entered
-    # when explicitly enabled), so OFF falls THROUGH to elite/complete rather than
-    # HIDING the bar. enabled is None (legacy/tests default = "all on") is treated as
-    # NOT including this opt-in mode, so every existing test's resolved mode is
-    # unchanged. Tier X == veh.level 10 (tier XI is level 11).
-    # bar_visible keeps this bar shown under hide_when_complete (it's POTENTIAL, not
-    # COMPLETE) -- the user opted into the speculative bar, so it overrides the hide.
-    if (enabled is not None and t.Mode.POTENTIAL_TIER_XI in enabled
-            and snapshot.tier == 10 and not snapshot.is_skill_tree
-            and not _has_real_tier_xi(snapshot)):
-        # potential.resolve never returns None by contract, so no None-guard.
-        pxi = potential.resolve(snapshot)
-        return t.ResearchProgressModel(
-            mode=t.Mode.POTENTIAL_TIER_XI, scale_min=pxi["scale_min"],
-            scale_max=pxi["scale_max"], fill_vehicle=fill_vehicle,
-            fill_free=fill_free, ticks=pxi["ticks"],
-            vehicle_class=veh_class, spendable_xp=spendable, **est)
-
-    # Fully researched. If the vehicle has Elite-Levels (prestige) data, show
-    # the prestige progression instead of the static "fully researched" badge.
-    if snapshot.has_prestige:
-        # Tier-exclusive reward roadmap takes priority while any reward is
-        # unearned; once all are earned, fall through to the grade band.
-        reward = elite.resolve_reward_track(snapshot)
-        if reward is not None and reward["any_unearned"]:
-            return _emit(t.Mode.ELITE_REWARDS,
-                         _elite_model(t.Mode.ELITE_REWARDS, reward, snapshot, est, spendable))
-        band = elite.resolve_grade_band(snapshot)
-        if band is not None:
-            return _emit(t.Mode.ELITE, _elite_model(t.Mode.ELITE, band, snapshot, est, spendable))
-
-    # nothing left to research and no prestige data: COMPLETE (elite badge).
-    return t.ResearchProgressModel(
-        mode=t.Mode.COMPLETE, scale_min=0, scale_max=0,
-        fill_vehicle=fill_vehicle, fill_free=fill_free, ticks=[],
-        fieldmods_done=fm_done, fieldmods_total=fm_total, vehicle_class=veh_class,
-        spendable_xp=spendable, **est)
+    result.avail_modes = avail
+    return result
 
 
 def _elite_model(mode, res, snapshot, est, spendable):

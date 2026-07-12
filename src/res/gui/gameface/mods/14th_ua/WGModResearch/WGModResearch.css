@@ -121,6 +121,29 @@
     text-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.8);
 }
 
+/* Mode-switch title: the NEXT available mode, to the right of the current heading, shown
+   DIM (inactive) until hovered. Same typography as .wg-label so it reads as a sibling
+   heading. VISUAL ONLY (pointer-events:none like the rest of the header) -- input is routed
+   through the bar's .wg-hot layer, which is extended UP over the header (see .wg-hot).
+   ensureHover hit-tests the switch title's own rect (switchHit) for hover/click. Dim/bright
+   is a COLOR swap driven by an inline write from JS (setSwitchHot) -- NOT opacity and NOT a
+   class: measured live, a dynamic opacity change (with `transition`) never repainted the
+   title in this Coherent build, and a toggled class didn't either, while a dynamic inline
+   color change does. The `color` here is just the pre-JS resting (dim) value; `transition:
+   color` fades the inline swap (color transitions DO animate here, unlike the opacity one).
+   Hidden by JS when <2 modes are available. */
+#wgmod-root .wg-switch {
+    display: none;
+    margin-left: 12rem;
+    font-size: 13rem;
+    font-weight: 700;
+    letter-spacing: 1rem;
+    text-transform: uppercase;
+    color: #8e867d;             /* dim / inactive; setSwitchHot brightens to #ede6d9 on hover */
+    text-shadow: 0 1rem 4rem rgba(0, 0, 0, 0.9), 0 0 2rem rgba(0, 0, 0, 0.6);
+    transition: color 0.12s ease;
+}
+
 /* Total-XP readout, pinned to the RIGHT end of the header row (the head uses
    space-between). One figure -- vehicle combat XP + global free XP -- in the
    experience tone, with the native experience glyph to its RIGHT. */
@@ -206,7 +229,14 @@
        left width doesn't shift any tick's hit position. */
     left: -18rem;
     right: 0;
-    top: -3rem;
+    /* Extended UP over the header band (was -3rem) so this ONE proven-interactive layer
+       also covers the mode-switch title -- a body-level overlay AND a nested .wg-head-hot
+       both got NO events in the header region, so we test whether the SAME element that
+       works over the bar receives events when stretched up into the header. Tick hover/
+       click stay gated to the bar by a cursor-y check in JS (ensureHover); only the switch
+       title's own rect does switch logic up here. Don't overshoot our own header top into
+       the game's vehicle-name/XP header above (it would steal that header's input). */
+    top: -26rem;
     bottom: -39rem;
     z-index: 3;                 /* topmost, so it reliably receives the hover */
     pointer-events: auto;

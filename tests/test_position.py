@@ -97,6 +97,47 @@ def test_full_settings_defaults_enabled_when_missing():
     assert out["enabled"] is True
 
 
+# --- per-vehicle mode-switch overrides (JSON-string map) --------------------
+
+def test_mode_overrides_defaults_to_empty_map():
+    assert mod_settings.DEFAULTS["modeOverrides"] == "{}"
+
+
+def test_mode_override_round_trip():
+    # set_mode_override mutates the in-memory JSON map (MSA + refresh degrade to no-ops in
+    # tests); mode_override reads the same vehicle's choice back.
+    mod_settings._settings["modeOverrides"] = "{}"
+    mod_settings.set_mode_override(1234, "elite")
+    assert mod_settings.mode_override(1234) == "elite"
+    # a different vehicle is independent / untouched.
+    assert mod_settings.mode_override(5678) is None
+    mod_settings.set_mode_override(5678, "field_mods")
+    assert mod_settings.mode_override(1234) == "elite"
+    assert mod_settings.mode_override(5678) == "field_mods"
+
+
+def test_mode_override_intcd_zero_rejected():
+    mod_settings._settings["modeOverrides"] = "{}"
+    mod_settings.set_mode_override(0, "elite")
+    assert mod_settings.mode_override(0) is None
+    assert mod_settings._settings["modeOverrides"] == "{}"
+
+
+def test_mode_override_bad_json_is_none():
+    # A corrupt stored value never raises -> treated as no override.
+    mod_settings._settings["modeOverrides"] = "not json"
+    assert mod_settings.mode_override(1234) is None
+
+
+def test_apply_keeps_mode_overrides_string():
+    # _apply keeps the JSON string verbatim; a non-string value falls back to "{}".
+    mod_settings._settings["modeOverrides"] = "{}"
+    mod_settings._apply({"modeOverrides": '{"42": "elite"}'})
+    assert mod_settings._settings["modeOverrides"] == '{"42": "elite"}'
+    mod_settings._apply({"modeOverrides": 123})
+    assert mod_settings._settings["modeOverrides"] == "{}"
+
+
 def test_full_settings_handles_no_stored():
     # No stored settings (fresh / template mismatch) -> still a complete dict.
     out = mod_settings._full_settings_for_write(_FakeApi(None))
