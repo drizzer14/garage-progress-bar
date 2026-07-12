@@ -94,6 +94,16 @@ hide-when-complete option, the tank-setup-overlay state, and the fail-closed gar
   the absence test but guards the empty list. A pending that never confirms is dropped after
   `_PENDING_MAX_RECONCILES` (~5, count-based/testable); `veh_int_cd == 0` is rejected in both
   `record()` and `decorate()`.
+- **A synthetic done tick must carry EVERY tooltip-bearing field a live tick has.** The done
+  marker's `recent._make_tick` builds a `Tick` from the recorded dict, so any field it omits
+  defaults to empty and the widget silently falls back to a less-specific tooltip branch. This
+  bit field mods: `_make_tick` dropped `options`/`option_effects` (the A/B variant pair), so the
+  done tick took `tooltipHtml`'s base `name`+`effect` branch — and those base strings are generic
+  and repeat across levels (`post_progression_read.py`), reading as the WRONG field mod. Fix
+  threaded the pair through the whole optimistic chain: `_record_click` (capture off the snapshot
+  step) → `recent.record()` params → the `_pending` dict → `_make_tick`. The bridge marshal
+  already forwards `options`/`optionEffects` for every tick, so no VM/JS change was needed. Rule
+  of thumb: when adding a tooltip field to a live resolver tick, mirror it in the `recent` chain.
 - **Buff/KPI tooltip lines are enriched records, not plain text.** `_read_common._kpi_lines`
   emits one `format.kpi_record` per KPI (`icon \x1f cls \x1f value \x1f desc`) so the widget can
   render the game's native perk-tooltip look. Three resolutions, all live-verified (EU 2.3):
