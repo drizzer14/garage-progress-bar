@@ -39,7 +39,7 @@ The visibility decision itself is the engine-free `builder.bar_visible`; this mo
 only owns the settings storage + the live-apply on change.
 """
 from wgmod_research._compat import LOG_CURRENT_EXCEPTION, LOG_NOTE
-from wgmod_research.adapter import i18n
+from wgmod_research.adapter import settings_i18n
 
 # Our mod's reverse-domain id, reused as the MSA "linkage" (panel identity / storage key).
 LINKAGE = "com.14th_ua.garageprogressbar"
@@ -107,154 +107,153 @@ def _template():
     install shows the bar everywhere) plus the draggable-position fields: two numeric
     px steppers. The steppers show 0 until the widget seeds them from the live layout on
     the first hangar mount. Reset is the panel's own per-mod reset button (see _on_reset),
-    so there is no custom reset control here."""
-    return _mark_untranslated({
+    so there is no custom reset control here.
+
+    Every visible label/tooltip is pulled from settings_i18n.panel_text() at the CLIENT's
+    active language (English fallback per key). The control STRUCTURE (types, varNames,
+    values, min/max, settingsVersion) is language-independent and unchanged; only text
+    follows the language. `modDisplayName` stays the literal English brand."""
+    t = settings_i18n.panel_text()
+    return {
         "modDisplayName": "Garage Progress Bar",
         "enabled": True,
         # settingsVersion lets the panel preserve the user's saved values across cosmetic
-        # template edits (tooltip/label tweaks): with it set, the host only wipes stored
-        # settings to defaults when this number is BUMPED. Bump it whenever the set of
-        # varNames / control layout changes (not for text-only edits). Verified against
-        # the Aslain 1.3.2 + izeberg 1.7.0 compareTemplates bytecode.
+        # template edits (tooltip/label tweaks -- including this localization): with it
+        # set, the host only wipes stored settings to defaults when this number is BUMPED.
+        # Bump it whenever the set of varNames / control layout changes (not for text-only
+        # edits; localizing the text is text-only, so it stays 3). Verified against the
+        # Aslain 1.3.2 + izeberg 1.7.0 compareTemplates bytecode.
         "settingsVersion": 3,
         "column1": [
             {
                 "type": "CheckBox",
-                "text": "Hide the bar completely",
+                "text": t["hideAlways"]["text"],
                 "value": DEFAULTS["hideAlways"],
-                "tooltip": ("{HEADER}Hide the bar completely{/HEADER}"
-                            "{BODY}Hides the progress bar on every vehicle.{/BODY}"),
+                "tooltip": t["hideAlways"]["tooltip"],
                 "varName": "hideAlways",
             },
             {
                 "type": "CheckBox",
-                "text": "Hide when fully progressed",
+                "text": t["hideWhenComplete"]["text"],
                 "value": DEFAULTS["hideWhenComplete"],
-                "tooltip": ("{HEADER}Hide when fully progressed{/HEADER}"
-                            "{BODY}Hides the bar only on vehicles with nothing left "
-                            "to research, upgrade, or unlock.{/BODY}"),
+                "tooltip": t["hideWhenComplete"]["tooltip"],
                 "varName": "hideWhenComplete",
             },
             {
                 "type": "Label",
-                "text": "Bar modes",
-                "tooltip": ("{HEADER}Bar modes{/HEADER}"
-                            "{BODY}Turn off the bar modes you don't care about. When a "
-                            "vehicle's progress falls under a mode you've hidden, the bar "
-                            "is hidden for it (it does not switch to another mode).{/BODY}"),
+                "text": t["barModes"]["text"],
+                "tooltip": t["barModes"]["tooltip"],
             },
             {
                 "type": "CheckBox",
-                "text": "Show research (tech tree)",
+                "text": t["showTechTree"]["text"],
                 "value": DEFAULTS["showTechTree"],
-                "tooltip": ("{HEADER}Show research{/HEADER}"
-                            "{BODY}The tech-tree progress toward the vehicle's remaining "
-                            "module and next-vehicle unlocks.{/BODY}"),
+                "tooltip": t["showTechTree"]["tooltip"],
                 "varName": "showTechTree",
             },
             {
                 "type": "CheckBox",
-                "text": "Show tier-XI upgrades",
+                "text": t["showSkillTree"]["text"],
                 "value": DEFAULTS["showSkillTree"],
-                "tooltip": ("{HEADER}Show tier-XI upgrades{/HEADER}"
-                            "{BODY}The branching upgrade (skill) tree on tier-XI "
-                            "vehicles.{/BODY}"),
+                "tooltip": t["showSkillTree"]["tooltip"],
                 "varName": "showSkillTree",
             },
             {
                 "type": "CheckBox",
-                "text": "Show field modifications",
+                "text": t["showFieldMods"]["text"],
                 "value": DEFAULTS["showFieldMods"],
-                "tooltip": ("{HEADER}Show field modifications{/HEADER}"
-                            "{BODY}The field-modification steps unlocked once the vehicle "
-                            "is fully researched.{/BODY}"),
+                "tooltip": t["showFieldMods"]["tooltip"],
                 "varName": "showFieldMods",
             },
             {
                 "type": "CheckBox",
-                "text": "Show Elite rewards",
+                "text": t["showEliteRewards"]["text"],
                 "value": DEFAULTS["showEliteRewards"],
-                "tooltip": ("{HEADER}Show Elite rewards{/HEADER}"
-                            "{BODY}The tier-exclusive milestone-reward roadmap on prestige "
-                            "vehicles.{/BODY}"),
+                "tooltip": t["showEliteRewards"]["tooltip"],
                 "varName": "showEliteRewards",
             },
             {
                 "type": "CheckBox",
-                "text": "Show Elite progression",
+                "text": t["showElite"]["text"],
                 "value": DEFAULTS["showElite"],
-                "tooltip": ("{HEADER}Show Elite progression{/HEADER}"
-                            "{BODY}The Elite-Levels grade-band progression on prestige "
-                            "vehicles.{/BODY}"),
+                "tooltip": t["showElite"]["tooltip"],
                 "varName": "showElite",
             },
             {
                 "type": "CheckBox",
-                "text": "Show potential Tier XI",
+                "text": t["showPotentialTierXI"]["text"],
                 "value": DEFAULTS["showPotentialTierXI"],
-                "tooltip": ("{HEADER}Show potential Tier XI{/HEADER}"
-                            "{BODY}On a Tier X tank that has no Tier XI, once it's fully "
-                            "researched and its field mods are done, track your banked XP "
-                            "(vehicle XP + Free XP) toward the fixed price a Tier XI costs "
-                            "to unlock. Replaces the Elite-Levels bar on those tanks. Off "
-                            "by default.{/BODY}"),
+                "tooltip": t["showPotentialTierXI"]["tooltip"],
                 "varName": "showPotentialTierXI",
             },
         ],
         "column2": [
             {
                 "type": "Label",
-                "text": "Bar position (px)",
-                "tooltip": ("{HEADER}Bar position{/HEADER}"
-                            "{BODY}Ctrl+drag the bar in the garage to move it, or type "
-                            "exact on-screen pixel coordinates below. Reset returns it "
-                            "to the default position.{/BODY}"),
+                "text": t["barPosition"]["text"],
+                "tooltip": t["barPosition"]["tooltip"],
             },
             {
                 "type": "NumericStepper",
-                "text": _POSX_LABEL,
+                "text": t["posX"]["text"],
                 "value": DEFAULTS["posX"],
                 "minimum": 0,
                 "maximum": POS_MAX,
                 "snapInterval": 1,
                 "canManualInput": True,
-                "tooltip": ("{HEADER}Horizontal position{/HEADER}"
-                            "{BODY}The bar's CENTER, in pixels from the left screen "
-                            "edge.{/BODY}"),
+                "tooltip": t["posX"]["tooltip"],
                 "varName": "posX",
             },
             {
                 "type": "NumericStepper",
-                "text": _POSY_LABEL,
+                "text": t["posY"]["text"],
                 "value": DEFAULTS["posY"],
                 "minimum": 0,
                 "maximum": POS_MAX,
                 "snapInterval": 1,
                 "canManualInput": True,
-                "tooltip": ("{HEADER}Vertical position{/HEADER}"
-                            "{BODY}The bar's TOP, in pixels from the top screen "
-                            "edge.{/BODY}"),
+                "tooltip": t["posY"]["tooltip"],
                 "varName": "posY",
             },
         ],
-    })
+    }
 
 
-def _mark_untranslated(tpl):
-    """DIAGNOSTIC: the whole settings panel is intentionally English (mod-invented
-    prose with no in-game equivalent), so -- when i18n.MARK_UNTRANSLATED is on -- prefix
-    every visible label/tooltip with an underscore, matching the widget's convention for
-    untranslated text. The brand `modDisplayName` is left as-is. No-op when the flag is
-    off; flip it (in i18n) to clear these before shipping."""
-    if not i18n.MARK_UNTRANSLATED:
-        return tpl
-    for col in ("column1", "column2"):
-        for entry in tpl.get(col, ()):
-            if entry.get("text"):
-                entry["text"] = i18n._mark(entry["text"])
-            if entry.get("tooltip"):
-                entry["tooltip"] = i18n._mark(entry["tooltip"])
-    return tpl
+def _sync_template_text(api):
+    """Refresh a stored template's label/tooltip text to the client's active language.
+
+    MSA stores a COPY of the template text at registration and renders from it (deep-
+    copied on each open); on an EXISTING install init() takes the saved-truthy branch and
+    never re-applies the template text, so a language change (or this feature landing over
+    an English install) would otherwise never show. This walks the stored template in
+    lockstep with settings_i18n's column key order (Labels carry no varName) and overwrites
+    each entry's text/tooltip from panel_text(), saving only if something changed.
+    Idempotent: a no-op on a fresh install (text already matches). Guarded; all changes are
+    text-only so no settingsVersion bump is involved."""
+    try:
+        tmpl = (getattr(api, "state", None) or {}).get("templates", {}).get(LINKAGE)
+        if not isinstance(tmpl, dict):
+            return
+        t = settings_i18n.panel_text()
+        changed = False
+        for col, keys in (("column1", settings_i18n.COL1_KEYS),
+                          ("column2", settings_i18n.COL2_KEYS)):
+            for comp, key in zip(tmpl.get(col) or [], keys):
+                rendered = t.get(key) if isinstance(comp, dict) else None
+                if not rendered:
+                    continue
+                if comp.get("text") != rendered["text"]:
+                    comp["text"] = rendered["text"]
+                    changed = True
+                tip = rendered.get("tooltip")
+                if tip is not None and comp.get("tooltip") != tip:
+                    comp["tooltip"] = tip
+                    changed = True
+        if changed and hasattr(api, "saveState"):
+            api.saveState()
+            LOG_NOTE("[wgmod] synced settings template text to client language")
+    except Exception:
+        LOG_CURRENT_EXCEPTION()
 
 
 def _apply(settings):
@@ -324,6 +323,12 @@ def init():
             _subscribe_reset(_aslain_api)
         except Exception:
             pass
+        # Refresh the stored template text to the client's active language. Required for
+        # EXISTING installs: the saved-truthy branch above re-uses the stored (possibly
+        # stale-language) template, so without this a language change never reaches the
+        # panel. No-op on a fresh install (setModTemplate just stored the localized text).
+        for _api in _candidate_apis():
+            _sync_template_text(_api)
         # Label the position steppers with the stored default coords (from a prior seed) so
         # the panel shows the default target even when this session won't re-seed (the seed
         # only fires when the position is auto; a saved custom position skips it).
@@ -427,26 +432,25 @@ def _stored_default():
     return None, None
 
 
-# Base labels for the position steppers; _label_defaults() appends the default coords once
-# the widget has reported them, so the panel reads e.g. "Horizontal (center X) — default 1920".
-_POSX_LABEL = "Horizontal (center X)"
-_POSY_LABEL = "Vertical (top Y)"
-
-
 def _label_defaults(api, dx, dy):
     """Show the DEFAULT position in the stepper labels (so the panel displays the reset
     target, not the currently-applied value). Patches the stored template's posX/posY label
     text in place -- the panel deep-copies the template on each open, so the new label shows
-    next time it's opened. Guarded; no-op if the template/coords aren't available."""
+    next time it's opened. Guarded; no-op if the template/coords aren't available.
+
+    The base label AND the "default N" suffix are localized: the base comes from
+    settings_i18n.panel_text() (the same source _sync_template_text uses, already marked if
+    it fell back to English) and settings_i18n.default_label appends the localized suffix --
+    e.g. EN "Horizontal (center X) — default 1920", DE "... — Standard 1920"."""
     if not dx or not dy:
         return
     try:
         tmpl = (getattr(api, "state", None) or {}).get("templates", {}).get(LINKAGE)
         if not isinstance(tmpl, dict):
             return
-        # Marked untranslated (underscore) to match the rest of the English-only panel.
-        wanted = {"posX": i18n._mark("%s — default %d" % (_POSX_LABEL, dx)),
-                  "posY": i18n._mark("%s — default %d" % (_POSY_LABEL, dy))}
+        t = settings_i18n.panel_text()
+        wanted = {"posX": settings_i18n.default_label(t["posX"]["text"], dx),
+                  "posY": settings_i18n.default_label(t["posY"]["text"], dy)}
         changed = False
         for col in ("column1", "column2"):
             for comp in tmpl.get(col, []) or []:

@@ -224,3 +224,73 @@ def test_reset_returns_to_auto_not_seeded_px():
     # the capture viewport is cleared too, so a reset truly returns to auto
     assert mod_settings._settings["posW"] == 0
     assert mod_settings._settings["posH"] == 0
+
+
+# --- localized settings template (see adapter/settings_i18n) --------------------------
+
+# `helpers` is a game module absent under pytest, so settings_i18n.client_language()
+# fails soft to English -- _template() renders the English master here.
+_VARNAMES = {"hideAlways", "hideWhenComplete", "showTechTree", "showSkillTree",
+             "showFieldMods", "showEliteRewards", "showElite", "showPotentialTierXI",
+             "posX", "posY"}
+
+
+def test_template_structure_unchanged_and_english_text():
+    tpl = mod_settings._template()
+    # Structure the host owns is language-independent.
+    assert tpl["settingsVersion"] == 3
+    assert tpl["modDisplayName"] == "Garage Progress Bar"   # brand, never translated
+    varnames = [c["varName"] for col in ("column1", "column2")
+                for c in tpl[col] if "varName" in c]
+    assert set(varnames) == _VARNAMES
+    assert len(varnames) == len(_VARNAMES)                  # no dupes / drops
+    # Every visible control carries text + tooltip.
+    for col in ("column1", "column2"):
+        for c in tpl[col]:
+            assert c.get("text")
+            assert c.get("tooltip")
+    # Mod-invented text comes from the tables (English in the test env).
+    assert tpl["column1"][0]["text"] == u"Hide the bar completely"   # hideAlways
+    assert tpl["column1"][2]["text"] == u"Bar modes"                 # barModes Label
+    assert tpl["column2"][0]["text"] == u"Bar position (px)"         # barPosition Label
+    # Per-mode checkbox labels come from WG's own strings (i18n.widget_labels(), which
+    # fails soft to English feature names here) -- NOT the old "Show ..." phrasing.
+    assert tpl["column1"][3]["text"] == u"Research"                  # showTechTree
+    assert tpl["column1"][7]["text"] == u"Elite System"             # showElite
+
+
+class _FakeStateApi(object):
+    """Stand-in for an MSA api that stores a template + counts saveState() calls."""
+    def __init__(self, template):
+        self.state = {"templates": {mod_settings.LINKAGE: template}}
+        self.saved = 0
+
+    def saveState(self):
+        self.saved += 1
+
+
+def test_sync_template_text_rewrites_stale_and_saves():
+    fresh = mod_settings._template()         # correct (English) text
+    good_text = fresh["column1"][0]["text"]
+    good_tip = fresh["column1"][0]["tooltip"]
+    fresh["column1"][0]["text"] = u"STALE LABEL"
+    fresh["column1"][0]["tooltip"] = u"STALE TIP"
+    api = _FakeStateApi(fresh)
+    mod_settings._sync_template_text(api)
+    assert fresh["column1"][0]["text"] == good_text
+    assert fresh["column1"][0]["tooltip"] == good_tip
+    assert api.saved == 1                    # changed -> persisted once
+
+
+def test_sync_template_text_noop_when_current():
+    api = _FakeStateApi(mod_settings._template())
+    mod_settings._sync_template_text(api)
+    assert api.saved == 0                    # already current -> no write
+
+
+def test_sync_template_text_guards_missing_template():
+    # No stored template for our linkage -> silent no-op, never raises.
+    api = _FakeStateApi(None)
+    api.state = {"templates": {}}
+    mod_settings._sync_template_text(api)
+    assert api.saved == 0

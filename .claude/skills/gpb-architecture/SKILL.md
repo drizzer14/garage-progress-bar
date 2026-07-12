@@ -107,6 +107,31 @@ hide-when-complete option, the tank-setup-overlay state, and the fail-closed gar
   box). `format.py` holds the pure helpers (unit-tested); the game-symbol lookups live in
   `_read_common` (live-only). Widget rendering: see gpb-widget "Buff lines".
 - Settings template is versioned (`settingsVersion` 3).
+- **Only the settings panel is localized, and within it only the LABELS** — NOT tooltips,
+  NOT anything outside the panel (`adapter/settings_i18n.py`). Two label sources:
+  (1) **WG feature names** (Research, Upgrades, Field Modifications, Elite System, Elite
+  Rewards, Tier XI) — the per-mode checkbox labels reuse WG's own localized strings via
+  `i18n.widget_labels()` (`FEATURE_WG` maps each checkbox → its widget-labels key), so they
+  match the game exactly and never need hand-translation. NEVER hand-translate a term the game
+  already ships (that's how "модифікації" vs the correct "модернізація" / an un-localized
+  "Elite" slip in); "Show"+noun composition is impossible (grammar/case), so the label just IS
+  the WG noun.
+  (2) **Mod-invented labels** (the two hide toggles, the "Bar modes"/"Bar position" Labels, the
+  two position steppers) — lang-major `_LABELS` tables (`'en'` master, per-key English fallback,
+  `i18n._mark` when `MARK_UNTRANSLATED`).
+  **Tooltips are FIXED ENGLISH for every control** (`_TOOLTIPS_EN`, header+body) — help text,
+  never translated, never routed through i18n. `render_panel(wg_labels, lang)` is pure
+  (testable with a fake label dict); `panel_text()` feeds it `i18n.widget_labels()`;
+  `client_language()` is the one guarded `helpers.getClientLanguage()` read (`_norm` handles
+  case/`-_`/primary-subtag/`_ALIASES` e.g. `ua`→`uk`). Ships `cs de en es fr hu it pl ru tr uk`;
+  verify exact client codes live (gpb-debug-repl).
+- **MSA stores a COPY of the template text and renders from it — text-only edits DON'T reach
+  EXISTING installs on their own.** On a saved install `init()` re-uses the stored template;
+  a fresh language/label only lands via `_sync_template_text(api)`, which overwrites the stored
+  `api.state['templates'][LINKAGE]` text/tooltip in place + `saveState()` (called unconditionally
+  per candidate api in `init()`). This is the same in-place-mutation trick `_label_defaults`
+  already used for the "default N" stepper labels. A text-only change needs NO `settingsVersion`
+  bump (bumping wipes users' saved values); the sync is what propagates it.
 - **Bar position is resolution-aware, and the recompute lives in the WIDGET, not Python.**
   `posX`/`posY` are px, `0/0` = auto (resolution-relative CSS default). A *pinned* position also
   stores `posW`/`posH` — the Gameface viewport it was captured at — so the JS can rescale it
