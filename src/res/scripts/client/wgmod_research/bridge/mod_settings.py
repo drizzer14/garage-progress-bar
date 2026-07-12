@@ -49,6 +49,12 @@ LINKAGE = "com.14th_ua.garageprogressbar"
 POS_MAX = 20000
 
 DEFAULTS = {"hideAlways": False, "hideWhenComplete": False, "posX": 0, "posY": 0,
+            # Viewport (px) a custom posX/posY was captured at, so the widget can rescale
+            # the pinned position proportionally after a resolution / UI-scale change (see
+            # applyPosition in WGModResearch.js). 0 = unknown (auto position, or a pre-fix
+            # saved pin -- the widget then adopts the current viewport on first sight).
+            # Not user-facing (no stepper); written only via set_position.
+            "posW": 0, "posH": 0,
             # Per-mode toggles, all default True (every mode shown). When a mode is
             # off, a vehicle that resolves to it hides the bar -- no fall-through
             # (see domain.builder.build_model / enabled_modes below).
@@ -247,7 +253,7 @@ def _apply(settings):
     for key in DEFAULTS:
         if key not in settings:
             continue
-        if key in ("posX", "posY"):
+        if key in ("posX", "posY", "posW", "posH"):
             _settings[key] = clamp_pos(settings[key])
         else:
             _settings[key] = bool(settings[key])
@@ -456,6 +462,8 @@ def _on_reset(linkage, defaults):
         # host snapshot may still carry -- see the Option 1 drift fix in set_position.
         _settings["posX"] = 0
         _settings["posY"] = 0
+        _settings["posW"] = 0
+        _settings["posH"] = 0
         LOG_NOTE("[wgmod] onResetMod -> position reset: %s" % (_settings,))
         from wgmod_research.bridge import gameface_bridge as B
         B.refresh()
@@ -485,7 +493,7 @@ def _full_settings_for_write(g_modsSettingsApi):
     return data
 
 
-def set_position(x, y, is_default=False):
+def set_position(x, y, is_default=False, w=0, h=0):
     """Persist a new bar position (px) and re-push it to the widget. Called from the JS
     `setPosition` reverse command.
 
@@ -496,6 +504,11 @@ def set_position(x, y, is_default=False):
     stays in force, so the bar never drifts to stale pixels when the game resolution changes.
     Only a real drag / stepper edit (is_default=False) pins posX/posY to the chosen px.
 
+    `w`/`h` are the Gameface viewport size the px were captured at. For a real pin we store
+    them (posW/posH) so the widget can rescale the pinned position proportionally after a
+    resolution / UI-scale change (see applyPosition in WGModResearch.js). The seed doesn't
+    pin px, so its w/h are ignored here.
+
     Writes the FULL settings through ModsSettingsAPI so the panel's numeric fields track the
     position; guarded so a missing/broken MSA never breaks the bar. updateModSettings only
     mutates in-memory state, so saveState() flushes it to disk (survives a client restart)."""
@@ -505,6 +518,9 @@ def set_position(x, y, is_default=False):
         # A real drag/stepper edit pins the chosen px; the seed leaves posX/posY at auto.
         _settings["posX"] = x
         _settings["posY"] = y
+        # Record the viewport the pin was captured at (for later proportional rescale).
+        _settings["posW"] = clamp_pos(w)
+        _settings["posH"] = clamp_pos(h)
     try:
         from gui.modsSettingsApi import g_modsSettingsApi
         g_modsSettingsApi.updateModSettings(LINKAGE, _full_settings_for_write(g_modsSettingsApi))
@@ -540,6 +556,14 @@ def pos_x():
 
 def pos_y():
     return _settings["posY"]
+
+
+def pos_w():
+    return _settings["posW"]
+
+
+def pos_h():
+    return _settings["posH"]
 
 
 def enabled_modes():

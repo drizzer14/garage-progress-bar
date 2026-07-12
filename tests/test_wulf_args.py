@@ -82,3 +82,28 @@ def test_cmd_xy_arg_missing_keys_default_zero():
 def test_cmd_xy_arg_empty_is_origin():
     assert w.cmd_xy_arg([]) == (0, 0)
     assert w.cmd_xy_arg(None) == (0, 0)
+
+
+# --- cmd_wh_arg (capture viewport for resolution-aware rescale) -------------
+
+def test_cmd_wh_arg_dict():
+    assert w.cmd_wh_arg([{"w": 3840, "h": 2160}]) == (3840, 2160)
+
+
+def test_cmd_wh_arg_wulf_map():
+    assert w.cmd_wh_arg([_WulfMap({"w": 1920, "h": 1080})]) == (1920, 1080)
+
+
+def test_cmd_wh_arg_missing_keys_default_zero():
+    # A drag/seed from a pre-fix widget carries no w/h -> (0, 0) == unknown viewport.
+    assert w.cmd_wh_arg([{"x": 10, "y": 20}]) == (0, 0)
+    assert w.cmd_wh_arg([{"w": 1920}]) == (1920, 0)
+
+
+def test_cmd_wh_arg_empty_is_zero():
+    assert w.cmd_wh_arg([]) == (0, 0)
+    assert w.cmd_wh_arg(None) == (0, 0)
+
+
+def test_cmd_wh_arg_string_numbers_coerced():
+    assert w.cmd_wh_arg([{"w": "1280", "h": "720"}]) == (1280, 720)

@@ -17,7 +17,11 @@ use the **gpb-debug-repl** skill.
   `ILoadoutController.onInteractorUpdated` (loadout overlay hide); lobby
   `getLobbyStateMachine().onVisibleRouteChanged` → `visibleState.getStateID()` == `hangar/{root}`
   (garage allowlist, fail-closed); `IItemsCache.onSyncCompleted` (stats, skip `shop`/`clan`);
-  `ISettingsCore.onSettingsChanged` filtered to `GRAPHICS.COLOR_BLIND` (colorblind).
+  `ISettingsCore.onSettingsChanged` filtered to `GRAPHICS.COLOR_BLIND` **or** a geometry key
+  (`_geometry_setting_keys()` — resolution/window/interface-scale; triggers a position recompute).
+- Plus `gui.g_guiResetters` (a `set`, not an Event): `_arm_gui_resetters` adds `_on_gui_reset`
+  (WoT invokes every resetter on a screen-resolution / GUI-scale reset → `refresh()` re-pushes so
+  the widget re-derives / rescales its position). Idempotent add, armed alongside `_LISTENERS`.
 
 ## Reads (`adapter/*_read.py`, `_read_common.py`)
 - `engine_adapter.is_color_blind()` ← `ISettingsCore.getSetting(GRAPHICS.COLOR_BLIND)`.

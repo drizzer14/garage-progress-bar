@@ -52,20 +52,36 @@ def cmd_int_arg(args):
         return 0
 
 
+def _as_int(v):
+    try:
+        return int(v)
+    except (TypeError, ValueError):
+        return 0
+
+
 def cmd_xy_arg(args):
     """Extract the (x, y) pixel pair a JS `setPosition` invocation carried. Wulf
     delivers a single MAP argument ({x, y}); pull both keys, tolerating a plain dict
     or a wrapped map. Missing/invalid -> 0 (auto)."""
-    def as_int(v):
-        try:
-            return int(v)
-        except (TypeError, ValueError):
-            return 0
     try:
         if not args:
             return 0, 0
         a = args[0]
-        return as_int(map_get(a, "x")), as_int(map_get(a, "y"))
+        return _as_int(map_get(a, "x")), _as_int(map_get(a, "y"))
+    except Exception:
+        LOG_CURRENT_EXCEPTION()
+        return 0, 0
+
+
+def cmd_wh_arg(args):
+    """Extract the (w, h) capture-viewport pair a JS `setPosition` invocation carried
+    (the resolution/scale the px were measured at, so a pinned position can be rescaled
+    later). Same MAP-arg tolerance as cmd_xy_arg. Missing/invalid -> 0 (unknown)."""
+    try:
+        if not args:
+            return 0, 0
+        a = args[0]
+        return _as_int(map_get(a, "w")), _as_int(map_get(a, "h"))
     except Exception:
         LOG_CURRENT_EXCEPTION()
         return 0, 0

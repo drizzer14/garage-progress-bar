@@ -58,6 +58,13 @@ def test_defaults_include_auto_position():
     assert mod_settings.DEFAULTS["posY"] == 0
 
 
+def test_defaults_include_unknown_capture_viewport():
+    # posW/posH default to 0 == "unknown capture viewport" (auto position, or a pre-fix
+    # saved pin). The widget adopts the current viewport on first sight.
+    assert mod_settings.DEFAULTS["posW"] == 0
+    assert mod_settings.DEFAULTS["posH"] == 0
+
+
 class _FakeApi(object):
     """Minimal stand-in for g_modsSettingsApi.getModSettings."""
     def __init__(self, stored):
@@ -132,12 +139,47 @@ def test_real_drag_persists_as_position():
     assert mod_settings._settings["posY"] == 300
 
 
+# --- capture viewport (posW/posH) for resolution-aware rescale -----------------------
+
+def test_real_drag_stores_capture_viewport():
+    # A real drag records the viewport (posW/posH) the px were captured at, so the widget
+    # can rescale the pin proportionally after a resolution / UI-scale change.
+    mod_settings._settings["posW"] = 0
+    mod_settings._settings["posH"] = 0
+    mod_settings.set_position(700, 300, is_default=False, w=3840, h=2160)
+    assert mod_settings._settings["posW"] == 3840
+    assert mod_settings._settings["posH"] == 2160
+    assert mod_settings.pos_w() == 3840 and mod_settings.pos_h() == 2160
+
+
+def test_capture_viewport_is_clamped():
+    # w/h go through the same clamp as posX/posY (non-numeric / negative -> 0).
+    mod_settings.set_position(700, 300, is_default=False, w=-5, h="nope")
+    assert mod_settings._settings["posW"] == 0
+    assert mod_settings._settings["posH"] == 0
+
+
+def test_seed_does_not_store_capture_viewport():
+    # The seed (is_default=True) doesn't pin px, so it must not record a capture viewport
+    # either (posW/posH stay as-is / auto).
+    mod_settings._settings["posW"] = 0
+    mod_settings._settings["posH"] = 0
+    mod_settings.set_position(960, 190, is_default=True, w=3840, h=2160)
+    assert mod_settings._settings["posW"] == 0
+    assert mod_settings._settings["posH"] == 0
+
+
 def test_reset_returns_to_auto_not_seeded_px():
     # Reset -> AUTO (0/0) so the resolution-relative CSS default applies, even when the
     # host's stored 'defaults' snapshot still carries a seeded px. (Pre-fix this pinned
     # the stale seeded pixels, which is exactly the drift being removed.)
     mod_settings._settings["posX"] = 700
     mod_settings._settings["posY"] = 300
+    mod_settings._settings["posW"] = 3840
+    mod_settings._settings["posH"] = 2160
     mod_settings._on_reset(mod_settings.LINKAGE, {"posX": 960, "posY": 190})
     assert mod_settings._settings["posX"] == 0
     assert mod_settings._settings["posY"] == 0
+    # the capture viewport is cleared too, so a reset truly returns to auto
+    assert mod_settings._settings["posW"] == 0
+    assert mod_settings._settings["posH"] == 0

@@ -1113,42 +1113,81 @@ function hideStaleTooltip(hotEl, tipEl, data) {
     tipEl._wgShownBody = null;
 }
 
+// The current Gameface viewport (CSS px). Both position paths key off this so a
+// resolution / UI-scale change (which resizes the viewport) triggers a re-derive
+// (auto) or a proportional rescale (pinned). 0 when unread -> callers no-op safely.
+function currentVP() {
+    return { w: window.innerWidth || 0, h: window.innerHeight || 0 };
+}
+
 // Apply the user's dragged bar position (px), or fall back to the CSS default and seed
 // the settings fields from the live layout. posX = bar CENTER-x, posY = bar TOP (px),
-// both 0 == "auto". When auto, we clear the inline left/top (so the CSS default --
-// centered, 17.6vh -- applies) and, once, measure where the bar actually landed and
-// report it back via setPosition, so the numeric settings fields show real coordinates
-// with no visible jump. Fail-open: an older Python build without posX -> leave default.
+// both 0 == "auto". Both paths are VIEWPORT-AWARE so the bar tracks a resolution / UI-
+// scale change instead of freezing at the resolution it was placed on:
+//   - PINNED (posX/posY > 0): stored px were captured at data.posW x data.posH. If the
+//     current viewport differs, rescale the px proportionally, apply, and echo the
+//     rescaled px + new capture size back via setPosition so the settings steppers track
+//     it (and the next push, now matching, won't re-rescale). A pre-fix pin with no
+//     posW/posH just applies as-is and self-heals on the next drag.
+//   - AUTO (0/0): clear inline left/top so the resolution-relative CSS default (centered,
+//     17.6vh) re-derives, and (re-)seed the panel's default label -- ONCE PER VIEWPORT
+//     SIZE (keyed on w x h), so a new resolution re-measures the default instead of
+//     showing the old one. Python stores the seed only as the "default N" label, never as
+//     posX/posY (Option 1 drift fix), so auto stays resolution-relative.
+// Fail-open: an older Python build without posX -> leave the CSS default untouched.
 function applyPosition(root, data) {
     if (root._wgDragging) return;   // never fight an in-progress drag
     if (!data || data.posX === undefined) return;   // feature absent -> CSS default
+    const vp = currentVP();
     const x = data.posX | 0;
     const y = data.posY | 0;
     if (x > 0 && y > 0) {
         root._wgSeedPending = false;
-        root.style.left = x + "px";
-        root.style.top = y + "px";
+        let ax = x, ay = y;
+        const rw = data.posW | 0, rh = data.posH | 0;
+        if (rw && rh && vp.w && vp.h && (rw !== vp.w || rh !== vp.h)) {
+            // resolution/scale changed since the pin was captured -> rescale proportionally
+            ax = Math.round(x * vp.w / rw);
+            ay = Math.round(y * vp.h / rh);
+            // persist the rescaled px + the new capture size (steppers track it; converges
+            // because the next push carries posW/posH == the current viewport).
+            invokeCommand(CMD.SET_POSITION, { x: ax, y: ay, w: vp.w, h: vp.h });
+        } else if ((!rw || !rh) && vp.w && vp.h) {
+            // pinned px with NO recorded capture size -- a value typed into the panel
+            // steppers, or a position saved by a pre-fix build. Adopt the current viewport
+            // as the reference (apply the px unchanged now) so a LATER resolution / scale
+            // change can rescale it. Echo converges: the next push carries posW/posH.
+            invokeCommand(CMD.SET_POSITION, { x: x, y: y, w: vp.w, h: vp.h });
+        }
+        root.style.left = ax + "px";
+        root.style.top = ay + "px";
         return;
     }
     // auto / unseeded: keep the CSS default position...
     root.style.left = "";
     root.style.top = "";
-    // ...and seed the settings fields once from the live layout (guarded so exactly one
-    // seed is sent until Python echoes a concrete position back).
-    if (root._wgSeedPending) return;
+    // ...and seed the settings fields from the live layout, once PER VIEWPORT SIZE (so a
+    // resolution change re-measures the default). _wgSeededVP records the size last seeded;
+    // _wgSeedPending guards against a second seed while one is in flight for this size.
+    const key = vp.w + "x" + vp.h;
+    if (root._wgSeedPending || root._wgSeededVP === key) return;
     root._wgSeedPending = true;
     const raf = window.requestAnimationFrame || function (f) { f(); };
     raf(function () {
+        root._wgSeedPending = false;
         const r = root.getBoundingClientRect();
-        if (!r || !r.width) { root._wgSeedPending = false; return; }
+        if (!r || !r.width) return;
         const cx = Math.round(r.left + r.width / 2);
         const cy = Math.round(r.top);
         // seed:1 marks this as the DEFAULT position (measured at the CSS default spot).
         // Python records it ONLY as the panel's "default N" stepper label -- it does NOT
         // persist it as posX/posY (Option 1 drift fix), so posX/posY stay 0 (auto) and the
         // resolution-relative CSS default keeps applying. Reset returns to that auto default.
-        if (cx > 0 && cy > 0) invokeCommand(CMD.SET_POSITION, { x: cx, y: cy, seed: 1 });
-        else root._wgSeedPending = false;
+        // w/h let Python note which resolution the default was measured at.
+        if (cx > 0 && cy > 0) {
+            root._wgSeededVP = key;
+            invokeCommand(CMD.SET_POSITION, { x: cx, y: cy, seed: 1, w: vp.w, h: vp.h });
+        }
     });
 }
 
@@ -1335,6 +1374,9 @@ function render(model) {
 
     // Apply the user's dragged/typed bar position (or the CSS default + seed) before any
     // mode branch, so every mode -- including the elite early-return below -- honors it.
+    // Stash the data so the window-resize handler can re-run applyPosition on a live
+    // resolution / UI-scale change (which never re-pushes the model on its own).
+    root._wgLastData = data;
     applyPosition(root, data);
 
     // Elite Levels (prestige) modes own the whole header + bar (grade/reward
@@ -1814,9 +1856,13 @@ function ensureHover(hotEl, tipEl) {
             document.removeEventListener("mouseup", onUp, true);
             root._wgDragging = false;
             const r = root.getBoundingClientRect();
+            const vp = currentVP();
             invokeCommand(CMD.SET_POSITION, {
                 x: Math.round(r.left + r.width / 2),
                 y: Math.max(1, Math.round(r.top)),   // never 0 (the unseeded sentinel)
+                // record the viewport this px was captured at, so a later resolution /
+                // UI-scale change rescales it proportionally (see applyPosition).
+                w: vp.w, h: vp.h,
             });
             // keep _wgDidDrag set through the click that fires right after this mouseup,
             // then clear it (the click handler reads it to suppress a research action).
@@ -1841,8 +1887,33 @@ function ensureHover(hotEl, tipEl) {
     });
 }
 
+// A screen-resolution / UI-scale change resizes the Gameface viewport but does NOT
+// re-push the model, so render()/applyPosition wouldn't otherwise re-run and the bar
+// would keep its stale geometry (and the panel its stale "default N"). Re-run
+// applyPosition on resize against the last-pushed data: auto re-derives the CSS default
+// + re-seeds (keyed on the new viewport size), a pinned position rescales proportionally.
+// rAF-coalesced so a burst of resize events (e.g. dragging the scale slider) collapses to
+// one recompute. (The Python g_guiResetters / settings listeners are a backstop for
+// change types this event may not fire on.)
+function onViewportResize() {
+    if (onViewportResize._pending) return;
+    onViewportResize._pending = true;
+    const raf = window.requestAnimationFrame || function (f) { f(); };
+    raf(function () {
+        onViewportResize._pending = false;
+        const root = getRoot();
+        if (root && root._wgLastData) applyPosition(root, root._wgLastData);
+    });
+}
+
 engine.whenReady.then(() => {
     observer.onUpdate(render);
     observer.subscribe();
     render(observer.model);
+    // Add the viewport listener once, even if this module is re-executed on a later
+    // hangar mount (guarded so we don't stack duplicate handlers on the shared document).
+    if (!window._wgResizeHooked) {
+        window._wgResizeHooked = true;
+        window.addEventListener("resize", onViewportResize);
+    }
 });

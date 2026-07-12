@@ -35,7 +35,8 @@ from wgmod_research.domain.types import Mode
 from wgmod_research.bridge import mod_settings
 from wgmod_research.bridge.view_models import ResearchVM, TickVM, UpgradeVM
 from wgmod_research.bridge.wulf_args import (
-    map_get as _map_get, cmd_int_arg as _cmd_int_arg, cmd_xy_arg as _cmd_xy_arg)
+    map_get as _map_get, cmd_int_arg as _cmd_int_arg, cmd_xy_arg as _cmd_xy_arg,
+    cmd_wh_arg as _cmd_wh_arg)
 import openwg_gameface
 
 WIDGET_NAME = "WGModResearch"
@@ -86,6 +87,10 @@ _refresh_pending = False
 # only ever skip the clearly-irrelevant syncs.
 _IGNORED_SYNC_REASONS = frozenset(("shop", "clan"))
 
+# Cache of the onSettingsChanged keys that mean the GUI geometry changed (built lazily
+# from the live GRAPHICS constants; see _geometry_setting_keys). None until first built.
+_GEOM_KEYS = None
+
 
 def _on_vehicle_changed(*args, **kwargs):
     try:
@@ -114,15 +119,66 @@ def _on_lobby_state_changed(*args, **kwargs):
         LOG_CURRENT_EXCEPTION()
 
 
-def _on_settings_changed(diff):
-    # settingsCore.onSettingsChanged(diff): a dict of the settings that changed. Only
-    # re-push when the color-blind flag is among them, so we don't refresh on every
-    # unrelated settings tweak. Guarded and fail-open (refresh if the diff is
-    # unreadable) so a settings-API shape change can't silently freeze the palette.
+def _geometry_setting_keys():
+    """The set of onSettingsChanged keys that mean the GUI geometry changed (screen
+    resolution / window size / interface scale / aspect ratio) -- a change to any of them
+    means the bar must re-derive (auto) or rescale (pinned) its position, so we refresh.
+    Built from whatever GRAPHICS constants this client actually exposes (their name carrying
+    a geometry marker) UNION a literal fallback set, so an API rename can't silently drop
+    coverage. Best-effort: the JS window-resize handler and g_guiResetters are the primary
+    signals; this is the interface-scale-in-settings backstop. Cached after first build."""
+    global _GEOM_KEYS
+    if _GEOM_KEYS is not None:
+        return _GEOM_KEYS
+    # Literal fallbacks (the string setting names WoT has historically used). Kept even if
+    # the constant lookup below succeeds, so a missing constant still refreshes.
+    keys = set(["monitor", "resolution", "windowSize", "windowMode", "fullScreen",
+                "aspectRatio", "interfaceScale", "monitorResolution", "windowedResolution",
+                "fullscreenMonitorResolution"])
     try:
         from account_helpers.settings_core.settings_constants import GRAPHICS
-        if diff is None or GRAPHICS.COLOR_BLIND in diff:
+        markers = ("RESOLUTION", "SCALE", "MONITOR", "FULLSCREEN", "FULL_SCREEN",
+                   "ASPECT", "WINDOW")
+        for name in dir(GRAPHICS):
+            if name.startswith("_"):
+                continue
+            if any(m in name for m in markers):
+                val = getattr(GRAPHICS, name, None)
+                if isinstance(val, str):
+                    keys.add(val)
+    except Exception:
+        LOG_CURRENT_EXCEPTION()
+    _GEOM_KEYS = keys
+    return keys
+
+
+def _on_settings_changed(diff):
+    # settingsCore.onSettingsChanged(diff): a dict of the settings that changed. Re-push
+    # when the color-blind flag changed (re-color) OR a geometry setting changed (screen
+    # resolution / window size / interface scale -> the bar must reposition). We don't
+    # refresh on every unrelated settings tweak. Guarded and fail-open (refresh if the diff
+    # is unreadable) so a settings-API shape change can't silently freeze the palette.
+    try:
+        from account_helpers.settings_core.settings_constants import GRAPHICS
+        if diff is None:
             refresh()
+            return
+        if GRAPHICS.COLOR_BLIND in diff:
+            refresh()
+            return
+        if any(k in diff for k in _geometry_setting_keys()):
+            refresh()
+    except Exception:
+        LOG_CURRENT_EXCEPTION()
+
+
+def _on_gui_reset(*args, **kwargs):
+    # A callback in gui.g_guiResetters: WoT invokes every resetter when the screen
+    # resolution (and, on most builds, the interface scale) changes and the GUI must
+    # re-lay-out. Re-push so applyPosition re-derives / rescales the bar for the new
+    # viewport. Guarded so a resetter that raises can't break the GUI reset chain.
+    try:
+        refresh()
     except Exception:
         LOG_CURRENT_EXCEPTION()
 
@@ -291,11 +347,27 @@ def _arm(label, get_holder, attr, handler):
         LOG_CURRENT_EXCEPTION()
 
 
+def _arm_gui_resetters():
+    """Register _on_gui_reset in gui.g_guiResetters (the set WoT invokes on a screen-
+    resolution / GUI-scale reset). It's a plain set, not a Wulf Event, so it doesn't fit
+    the _LISTENERS getattr/+=/setattr pattern; set.add is idempotent, so re-arming every
+    mount can't stack duplicates. Guarded so a missing symbol just skips (retried next
+    mount) and never breaks the mount path."""
+    try:
+        from gui import g_guiResetters
+        if _on_gui_reset not in g_guiResetters:
+            g_guiResetters.add(_on_gui_reset)
+            LOG_NOTE("[wgmod] gui-resetter listener (re)armed")
+    except Exception:
+        LOG_CURRENT_EXCEPTION()
+
+
 def install_all_listeners():
     """(Re)arm every engine listener. Safe to call on every hangar mount -- the battle
     exit teardown drops the hangar-scoped delegates and this restores them."""
     for entry in _LISTENERS:
         _arm(*entry)
+    _arm_gui_resetters()
 
 
 # --- Reverse channel: handlers for JS click commands -------------------------
@@ -418,18 +490,21 @@ def _on_open_field_mods(*args):
 def _on_set_position(*args):
     try:
         x, y = _cmd_xy_arg(args)
+        # Capture viewport (px) the coords were measured at, so a pinned position can be
+        # rescaled proportionally after a resolution / UI-scale change (see applyPosition).
+        w, h = _cmd_wh_arg(args)
         # The widget marks its default-position SEED with seed=1 (measured while the bar
         # sits at its CSS default). That value becomes the reset target; a plain drag omits
         # it. See mod_settings.set_position / _store_default_position.
         is_seed = bool(_map_get(args[0], "seed")) if args else False
-        LOG_NOTE("[wgmod] setPosition x=%s y=%s seed=%s" % (x, y, is_seed))
+        LOG_NOTE("[wgmod] setPosition x=%s y=%s w=%s h=%s seed=%s" % (x, y, w, h, is_seed))
         # A non-seed drag with a coord <= 0 is not a real placement: 0 is the
         # auto/unseeded sentinel, and the _cmd_xy_arg failure signature is (0, 0).
         # Dropping it keeps a bad measurement from clobbering the stored position.
         # Seed writes are always allowed -- they carry real measured default coords.
         if not is_seed and (x <= 0 or y <= 0):
             return
-        mod_settings.set_position(x, y, is_default=is_seed)
+        mod_settings.set_position(x, y, is_default=is_seed, w=w, h=h)
     except Exception:
         LOG_CURRENT_EXCEPTION()
 
@@ -617,6 +692,8 @@ def push(rvm, host_vm=None):
             tx.setLabels(labels_json)
             tx.setPosX(mod_settings.pos_x())
             tx.setPosY(mod_settings.pos_y())
+            tx.setPosW(mod_settings.pos_w())
+            tx.setPosH(mod_settings.pos_h())
             tx.setMode(model.mode)
             tx.setScaleMin(model.scale_min)
             tx.setScaleMax(model.scale_max)

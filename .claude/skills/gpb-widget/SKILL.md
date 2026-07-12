@@ -36,7 +36,8 @@ fails silently). `MODE.HIDDEN` exists for completeness only: the HIDDEN model ar
 - Per `render`: `refreshLabels(data)` (parses `labels` JSON → `LBL`; `L(key, fallback)` never
   blanks a caption), `cbClass(data)` (toggles `wg-colorblind`), `applyPosition(root, data)`
   (positions from `posX`/`posY`; 0 = CSS default — first run measures + seeds via
-  `CMD.SET_POSITION` `{x, y, seed:1}`). The ONE re-enabled pointer layer is `.wg-hot`
+  `CMD.SET_POSITION` `{x, y, seed:1}`). `render` stashes `root._wgLastData = data` so the
+  resize handler can reposition without a re-push. The ONE re-enabled pointer layer is `.wg-hot`
   (`z-index:3`), spanning the bar + the glyph strip below it (extends past the left edge so
   0%-anchored done markers stay hoverable); tooltip is `z-index:4` but non-interactive.
 
@@ -135,7 +136,23 @@ chip fires `CMD.OPEN_SKILL_TREE`.
   `RESEARCH_UNLOCK`. Chips: done → `OPEN_SKILL_TREE`, else `UNLOCK_FIELD_MOD` **only when
   affordable** (`spendableXp >= xpRequired`), else `cmd:null`.
 - **Ctrl+drag repositions**: mousedown on `.wg-hot` with `e.ctrlKey`; on release the new center-x/
-  top px go via `CMD.SET_POSITION` `{x, y}`. **`y` is floored at 1, never 0**: `y=0` is the
-  auto/unseeded sentinel the next push re-seeds from, so a flush-to-top drag stored as 0 is
-  silently discarded — `onMove` clamp and `onUp` send both `Math.max(1, …)`, and the bridge drops
-  any non-seed write with `x<=0 or y<=0`.
+  top px go via `CMD.SET_POSITION` `{x, y, w, h}` (`w/h` = the current viewport, see below).
+  **`y` is floored at 1, never 0**: `y=0` is the auto/unseeded sentinel the next push re-seeds
+  from, so a flush-to-top drag stored as 0 is silently discarded — `onMove` clamp and `onUp`
+  send both `Math.max(1, …)`, and the bridge drops any non-seed write with `x<=0 or y<=0`.
+- **Position is viewport-aware (tracks resolution / UI-scale changes).** A resolution or
+  UI-scale change resizes the Gameface viewport but does NOT re-push the model, so a `window`
+  `resize` listener (added once, rAF-coalesced) re-runs `applyPosition(getRoot(),
+  root._wgLastData)`. `applyPosition` keys off `currentVP()` = `{innerWidth, innerHeight}`:
+  - **auto** (`posX/posY == 0`): clears inline `left/top` so the resolution-relative CSS
+    default (`left:50%; top:17.6vh`) re-derives, and re-fires the default-label seed ONCE PER
+    viewport size (`root._wgSeededVP = "WxH"` guard) so a new resolution re-measures the panel's
+    "default N" label instead of showing the old one.
+  - **pinned** (`posX/posY > 0`): the px were captured at `posW`×`posH` (pushed from Python).
+    If the current viewport differs, rescale proportionally (`x*vp.w/rw`, `y*vp.h/rh`) and echo
+    the rescaled px + new capture size back via `CMD.SET_POSITION` so the steppers track it and
+    the next push (now matching) doesn't re-rescale (converges). A pinned px with NO capture size
+    (typed into a stepper, or a pre-fix save) ADOPTS the current viewport as its ref on first
+    sight (applied unchanged that once) so a later change can rescale it. Verified live 4K→1440p
+    →1080p→4K: horizontal stays centered, vertical scales exactly and round-trips with no drift.
+    (Python side: `g_guiResetters` + a broadened `onSettingsChanged` also refresh — see gpb-architecture.)

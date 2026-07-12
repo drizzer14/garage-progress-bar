@@ -29,8 +29,8 @@ src/res/scripts/client/
     adapter/recent.py                 # session "done" markers (optimistic record + reconcile) — tested
     bridge/gameface_bridge.py         # listeners, refresh scheduling, click handlers, push/marshal
     bridge/view_models.py             # Wulf VMs: ResearchVM/TickVM/UpgradeVM (hand-numbered indices)
-    bridge/wulf_args.py               # engine-free MAP-arg parsing (cmd_int_arg/cmd_xy_arg) — tested
-    bridge/mod_settings.py            # ModsSettingsAPI panel: per-mode toggles, auto-hide, position
+    bridge/wulf_args.py               # engine-free MAP-arg parsing (cmd_int_arg/cmd_xy_arg/cmd_wh_arg) — tested
+    bridge/mod_settings.py            # ModsSettingsAPI panel: per-mode toggles, auto-hide, position (+ capture viewport posW/posH)
     domain/types.py                   # engine-free data types (2/3 compatible) + Mode
     domain/constants.py               # Category / GradeFamily string ids — the JS wire contract
     domain/builder.py                 # MODE STATE MACHINE (build_model + bar_visible)
@@ -53,15 +53,17 @@ injects JS/CSS via `openwg_gameface.gf_mod_inject`, hangs a `ResearchVM` on the 
 `builder.build_model(snapshot, enabled=mod_settings.enabled_modes())` (picks a `Mode`, calls
 the matching resolver) → the bridge writes the `ResearchProgressModel` into `ResearchVM` in a
 Wulf `transaction()`, plus channel fields: `labels` (JSON from `i18n.widget_labels()`),
-`colorBlind`, `posX`/`posY`, `eliteCurrentIcon`, `spendableXp`, done-tick `price`. JS
+`colorBlind`, `posX`/`posY` (+ `posW`/`posH`, the viewport a pinned position was captured at,
+for resolution-aware rescale), `eliteCurrentIcon`, `spendableXp`, done-tick `price`. JS
 `ModelObserver("WGModResearch")` re-renders.
 
 ## Reverse flow (clicks → research)
 JS `invokeCommand()` calls a Wulf command on `wgResearch`. Six commands (`view_models.py`):
 `researchUnlock` (tech-tree int_cd) / `unlockFieldMod` (field-mod or skill-tree step_id) /
 `openSkillTree` / `openResearch` / `openFieldMods` (no arg — done-marker clicks open the
-native screen) / `setPosition` ({x, y} px). Handlers parse args via `wulf_args.cmd_int_arg` /
-`cmd_xy_arg` and delegate to `actions.py` or `mod_settings.set_position`. Before a research
+native screen) / `setPosition` ({x, y[, w, h][, seed]} px; w/h = capture viewport). Handlers
+parse args via `wulf_args.cmd_int_arg` / `cmd_xy_arg` / `cmd_wh_arg` and delegate to `actions.py`
+or `mod_settings.set_position`. Before a research
 action the bridge calls `_record_click()` → `recent.record(...)` so the item can render as a
 "done" marker after it vanishes (optimistic-record; reconciled next sync). Handlers do NOT
 refresh — the game's `onSyncCompleted` does.
@@ -104,7 +106,19 @@ hide-when-complete option, the tank-setup-overlay state, and the fail-closed gar
   perk-tooltip bundle; unknown names used verbatim, unresolved → no icon/unit, never a broken
   box). `format.py` holds the pure helpers (unit-tested); the game-symbol lookups live in
   `_read_common` (live-only). Widget rendering: see gpb-widget "Buff lines".
-- Settings template is versioned (`settingsVersion` 2).
+- Settings template is versioned (`settingsVersion` 3).
+- **Bar position is resolution-aware, and the recompute lives in the WIDGET, not Python.**
+  `posX`/`posY` are px, `0/0` = auto (resolution-relative CSS default). A *pinned* position also
+  stores `posW`/`posH` — the Gameface viewport it was captured at — so the JS can rescale it
+  proportionally after a resolution / UI-scale change (auto just re-derives the CSS default).
+  Python's role is only to (a) persist `posW`/`posH` in `set_position(x, y, is_default, w, h)`
+  and push them, and (b) TRIGGER a recompute when the viewport changes, via two added signals in
+  the bridge: a `gui.g_guiResetters` callback (`_arm_gui_resetters`, a set — not the `+=`/`setattr`
+  Event pattern; set-add is idempotent so re-arm-per-mount is safe) and a broadened
+  `_on_settings_changed` (COLOR_BLIND **or** any geometry key from `_geometry_setting_keys()`).
+  The JS `window` `resize` listener is the primary self-heal; these are the backstop. The seed
+  still never persists as `posX/posY` (the Option-1 drift fix) — auto stays auto. See gpb-widget
+  for the JS `applyPosition` rescale/adopt logic.
 
 ## Key data types
 `VehicleSnapshot` (adapter output / domain input), `ResearchProgressModel` (builder output →
