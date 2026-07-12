@@ -80,6 +80,14 @@ shows everywhere with no options.
 - **After a game update**, move the `.wotmod` to the new `mods\<version>\` folder. A
   new client version may need a rebuilt mod — check the Releases page.
 
+## Conflicts with mods
+
+- **"Old UI" / legacy-hangar mods** — e.g. *Legacy Interface UI*
+  (`renovo.legacyhangar`). These replace the current Garage with the pre-2.0
+  interface. The bar is built around the current Garage UI — it attaches to that UI's
+  panels and is styled to match its native progress bars — so it won't appear while an
+  old-style hangar is active. Switch back to the standard Garage interface to see it.
+
 ## Modpacks & license
 
 Free to use, redistribute, and include in modpacks as long as it stays free and
@@ -176,6 +184,14 @@ Building, deploying, testing, and the repo layout are documented in
   кріпиться смуга, тож там вона не з'явиться. У звичайному Ангарі вона повертається.
 - **Після оновлення гри** перемістіть `.wotmod` у нову папку `mods\<версія>\`. Нова
   версія клієнта може потребувати перезібраного мода — перевіряйте сторінку релізів.
+
+## Конфлікти з модами
+
+- **Моди «старого інтерфейсу» / застарілого ангара** — наприклад *Legacy Interface UI*
+  (`renovo.legacyhangar`). Вони замінюють сучасний Ангар інтерфейсом до версії 2.0.
+  Смуга побудована навколо сучасного інтерфейсу Ангара — кріпиться до його панелей і
+  оформлена під його рідні смуги прогресу — тож вона не з'явиться, поки активний ангар
+  старого стилю. Поверніться до стандартного інтерфейсу Ангара, щоб її побачити.
 
 ## Модпаки та ліцензія
 
