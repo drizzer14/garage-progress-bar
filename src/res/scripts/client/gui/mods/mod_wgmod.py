@@ -22,7 +22,7 @@ from debug_utils import LOG_CURRENT_EXCEPTION
 from wgmod_research._compat import LOG_NOTE
 
 MOD_NAME = "Garage Progress Bar"
-MOD_VERSION = "0.8.0"
+MOD_VERSION = "0.8.1"
 
 
 def _patch_presenter(bridge, P, name):
