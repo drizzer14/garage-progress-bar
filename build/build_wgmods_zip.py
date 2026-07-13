@@ -38,7 +38,7 @@ README_TEMPLATE = os.path.join(ROOT, "installer", "readme.wgmods.txt")
 # The target client version -- the mods/<CLIENT>/ folder inside the zip, so the
 # player can extract straight into <World of Tanks>\. Mirrors the version folder
 # WoT loads mods from; must track the supported client (see CLAUDE.md).
-CLIENT_VERSION = "2.3.0.1"
+CLIENT_VERSION = "2.3.1.0"
 
 
 def _read_meta():

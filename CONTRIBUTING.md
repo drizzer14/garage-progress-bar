@@ -43,8 +43,8 @@ python build/build_wotmod.py        # -> dist/com.14th_ua.garageprogressbar_<ver
 ## Build + deploy into a local WoT install (Python 2.7.18, client CLOSED)
 
 ```sh
-python build/deploy_wotmod.py "D:/Games/World_of_Tanks_EU" 2.3.0.1
-# or create deploy.local.json (gitignored): { "wot_path": "...", "version": "2.3.0.1" }
+python build/deploy_wotmod.py "D:/Games/World_of_Tanks_EU" 2.3.1.0
+# or create deploy.local.json (gitignored): { "wot_path": "...", "version": "2.3.1.0" }
 python build/deploy_wotmod.py
 ```
 
@@ -61,7 +61,7 @@ python -m pytest -q
 ## JS/CSS-only changes (hot reload, no relaunch)
 
 ```sh
-python tools/dev/sync_gameface.py "<install>" 2.3.0.1
+python tools/dev/sync_gameface.py "<install>" 2.3.1.0
 # then in-game: switch to another screen and back to the Garage
 ```
 
@@ -80,7 +80,7 @@ python tools/dev/sync_gameface.py "<install>" 2.3.0.1
 - **WoT 2.3 loads mods only from `.wotmod` in `mods/<version>/`.** `res_mods/<version>/`
   outranks `.wotmod`, so a stale loose copy silently shadows the package — always
   deploy via `deploy_wotmod.py` and keep `res_mods` clean for ship verification.
-- Built for the **Wargaming EU/global** client (version 2.3.0.1) only.
+- Built for the **Wargaming EU/global** client (version 2.3.1.0) only.
 
 ## Releasing
 

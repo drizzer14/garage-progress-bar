@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-World of Tanks **EU 2.3.0.1** Garage mod (`com.14th_ua.garageprogressbar`) — a progress bar
+World of Tanks **EU 2.3.1.0** Garage mod (`com.14th_ua.garageprogressbar`) — a progress bar
 showing the selected vehicle's tech-tree research, Field Modifications, tier-XI
 skill-tree upgrades, and Elite Levels (prestige). Hard dependency: **OpenWG
 GameFace**. Player-facing docs: `README.md`, `INSTALL.md`. Generic WoT-modding
