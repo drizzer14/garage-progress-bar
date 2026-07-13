@@ -12,14 +12,28 @@ default on any failure) lifted here so more than one module can share them.
 
 Adapter/bridge only -- the engine-free `domain/` layer must NOT import this. 2/3-compatible.
 """
+# Dev-trace gate. LOG_CURRENT_EXCEPTION always fires (real errors, in `except` blocks
+# only); LOG_NOTE is informational chatter that runs on the normal path (every refresh,
+# hangar mount, listener re-arm and click) and would otherwise spam a player's
+# python.log. So LOG_NOTE is routed through a gate that is a no-op unless _DEBUG -- flip
+# _DEBUG to True only for a local dev build; the shipped mod stays quiet.
+_DEBUG = False
+
 try:
-    from debug_utils import LOG_CURRENT_EXCEPTION, LOG_NOTE
+    from debug_utils import LOG_CURRENT_EXCEPTION, LOG_NOTE as _LOG_NOTE
 except Exception:
     def LOG_CURRENT_EXCEPTION():
         pass
 
-    def LOG_NOTE(*args, **kwargs):
+    def _LOG_NOTE(*args, **kwargs):
         pass
+
+
+def LOG_NOTE(*args, **kwargs):
+    """Informational trace -- suppressed unless _DEBUG so a shipped build never writes
+    dev chatter to the player's python.log. Callers keep using LOG_NOTE unchanged."""
+    if _DEBUG:
+        _LOG_NOTE(*args, **kwargs)
 
 
 def _safe(fn, default):

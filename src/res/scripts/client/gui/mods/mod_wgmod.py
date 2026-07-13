@@ -15,7 +15,11 @@ We recompute on vehicle change.
 
 OpenWG Gameface is a hard dependency. Python 2.7 (BigWorld) runtime.
 """
-from debug_utils import LOG_NOTE, LOG_CURRENT_EXCEPTION
+# LOG_CURRENT_EXCEPTION straight from the engine (always on, error paths only);
+# LOG_NOTE via _compat so it goes through the same _DEBUG gate as the rest of the mod
+# and never spams a player's python.log on the normal path.
+from debug_utils import LOG_CURRENT_EXCEPTION
+from wgmod_research._compat import LOG_NOTE
 
 MOD_NAME = "Garage Progress Bar"
 MOD_VERSION = "0.8.0"
