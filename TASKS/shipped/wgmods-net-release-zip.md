@@ -4,6 +4,11 @@ _Submitted: "Mod was approved on wgmods.net, need to update release process. Git
 as-is, but alongside it I need a .zip with the mod file + any required dependencies +
 short readme.txt with install instructions in English and Ukrainian" · Status: open_
 
+> **Update (2026-07-14):** artifact names were later corrected so both zips carry
+> the mod's real name. Current canonical names (see `gpb-release`): consumer zip =
+> `GarageProgressBar_X.Y.Z.zip`, wgmods bundle = `GarageProgressBar-Bundle_X.Y.Z.zip`.
+> The `Research-Progress-Bar_*` and `GarageProgressBar-wgmods_*` names below are historical.
+
 ## Summary
 Add ONE new deliverable to the release process: a wgmods.net-oriented `.zip` bundling
 the mod `.wotmod`, its required dependency payload(s), and a short bilingual (EN + UA)

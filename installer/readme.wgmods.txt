@@ -42,8 +42,7 @@ UNINSTALL
     Delete com.14th_ua.garageprogressbar_{VERSION}.wotmod from
     mods\<version>\ and restart. Leave GameFace if other mods use it.
 
-    Built for the Wargaming EU/global client, NOT the Lesta / Mir
-    Tankov (RU) client.
+    Built for the Wargaming EU/global client only.
 
 
 ==============================================================
@@ -77,5 +76,4 @@ UNINSTALL
     mods\<версія>\ і перезапустіть. GameFace лишіть, якщо його
     використовують інші моди.
 
-    Зроблено для клієнта Wargaming EU/global, НЕ для клієнта
-    Lesta / Мир танків (RU).
+    Зроблено лише для клієнта Wargaming EU/global.

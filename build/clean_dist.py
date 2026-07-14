@@ -14,10 +14,12 @@ release's worth of artifacts.
 Runs on ANY Python (2.7 or 3.x): pure filesystem + XML, no bytecode. It only
 touches the four canonical release artifact families and never deletes the
 current version's files or the unversioned INSTALL.txt:
-  * <id>_<ver>.wotmod                 (build_wotmod.py)
-  * GarageProgressBar-Setup-<ver>.exe (build_installer.ps1)
-  * Research-Progress-Bar_<ver>.zip   (consumer zip, hand-assembled)
-  * GarageProgressBar_<ver>.zip        / -<ver>.zip (wgmods bundle, incl. old name)
+  * <id>_<ver>.wotmod                  (build_wotmod.py)
+  * GarageProgressBar-Setup-<ver>.exe  (build_installer.ps1)
+  * GarageProgressBar_<ver>.zip        (consumer zip, hand-assembled)
+  * GarageProgressBar-Bundle_<ver>.zip (wgmods bundle, build_wgmods_zip.py)
+  * legacy: Research-Progress-Bar_<ver>.zip (old consumer name) and the old
+    GarageProgressBar-<ver>.zip bundle name are both still swept.
 Anything else in dist/ (INSTALL.txt, the transient _build/ dir, unrelated files)
 is left untouched.
 """
@@ -43,15 +45,18 @@ def _keep_names(mod_id, version):
     return set([
         "{0}_{1}.wotmod".format(mod_id, version),
         "GarageProgressBar-Setup-{0}.exe".format(version),
-        "Research-Progress-Bar_{0}.zip".format(version),
-        "GarageProgressBar_{0}.zip".format(version),
+        "GarageProgressBar_{0}.zip".format(version),          # consumer zip
+        "GarageProgressBar-Bundle_{0}.zip".format(version),   # wgmods bundle
     ])
 
 
 def _artifact_patterns(mod_id):
-    """Filenames that are versioned release artifacts of ANY version. The wgmods
-    bundle pattern accepts both the current 'GarageProgressBar_<ver>.zip' and the
-    superseded 'GarageProgressBar-<ver>.zip' naming so stale copies get swept."""
+    """Filenames that are versioned release artifacts of ANY version. The
+    'GarageProgressBar[-_]' pattern sweeps the consumer zip
+    ('GarageProgressBar_<ver>.zip'), the wgmods bundle
+    ('GarageProgressBar-Bundle_<ver>.zip'), and the superseded bare
+    'GarageProgressBar-<ver>.zip' bundle name. The 'Research-Progress-Bar_'
+    pattern sweeps the old consumer-zip name so stale copies get removed too."""
     return [
         # Require a DIGIT right after the underscore so this matches versioned packages
         # (<id>_0.6.1.wotmod) but never the dev debug package (<id>_debug.wotmod), which

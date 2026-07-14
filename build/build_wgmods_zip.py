@@ -7,7 +7,7 @@ straight into their World of Tanks folder.
   python build/build_wgmods_zip.py
 
 This is the extra deliverable for the wgmods.net channel; the GitHub release is
-unchanged (Setup .exe + bare .wotmod + the consumer Research-Progress-Bar zip).
+unchanged (Setup .exe + bare .wotmod + the consumer GarageProgressBar zip).
 The built zip is UPLOADED TO wgmods.net MANUALLY -- it is not attached to the
 GitHub release.
 
@@ -17,7 +17,7 @@ Prereqs:
 Runs on ANY Python (2.7 or 3.x): it only copies/zips already-built files, it
 never compiles bytecode, so the 2.7-vs-3 rule does not apply here.
 
-Output: dist/GarageProgressBar_<version>.zip
+Output: dist/GarageProgressBar-Bundle_<version>.zip
     readme.txt                                              (bilingual EN + UA)
     mods/<client>/com.14th_ua.garageprogressbar_<version>.wotmod
     mods/<client>/<each installer/vendor/*.wotmod>          (bundled deps)
@@ -66,7 +66,7 @@ def main():
     # readme.txt is opened on Windows -- normalise to CRLF so Notepad renders it.
     readme = readme.replace(u"\r\n", u"\n").replace(u"\n", u"\r\n")
 
-    out_path = os.path.join(DIST, "GarageProgressBar_{0}.zip".format(version))
+    out_path = os.path.join(DIST, "GarageProgressBar-Bundle_{0}.zip".format(version))
     if os.path.exists(out_path):
         os.remove(out_path)
 

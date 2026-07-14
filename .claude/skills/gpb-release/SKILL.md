@@ -51,12 +51,12 @@ The installer needs the `.wotmod` already built and BOTH vendor payloads present
 Consumer zip (no committed generator — hand-assemble): bump `dist\INSTALL.txt` version, then
 ```powershell
 Compress-Archive -Path dist\com.14th_ua.garageprogressbar_X.Y.Z.wotmod,dist\INSTALL.txt `
-  -DestinationPath dist\Research-Progress-Bar_X.Y.Z.zip          # flat root, 2 files
+  -DestinationPath dist\GarageProgressBar_X.Y.Z.zip          # flat root, 2 files
 ```
 
 **wgmods.net bundle zip** (uploaded to wgmods.net BY HAND, NOT attached to the GitHub release):
 ```powershell
-python build\build_wgmods_zip.py       # -> dist\GarageProgressBar_X.Y.Z.zip
+python build\build_wgmods_zip.py       # -> dist\GarageProgressBar-Bundle_X.Y.Z.zip
 ```
 Runs on either Python (only zips already-built files). Needs the `.wotmod` + both
 `installer\vendor\*.wotmod`; bundles mod + vendor deps under `mods\2.3.0.1\` plus a bilingual
@@ -68,10 +68,21 @@ Runs on either Python (only zips already-built files). Needs the `.wotmod` + bot
 gh release create vX.Y.Z --title "Garage Progress Bar vX.Y.Z" --notes-file <body.md> `
   dist\GarageProgressBar-Setup-X.Y.Z.exe `
   dist\com.14th_ua.garageprogressbar_X.Y.Z.wotmod `
-  dist\Research-Progress-Bar_X.Y.Z.zip
+  dist\GarageProgressBar_X.Y.Z.zip
 ```
 Body: intro + `### What's new in X.Y.Z` + Requirements + Install (recommended, .exe) + Manual
-install (.wotmod).
+install (.wotmod). **Only ever reference Wargaming's World of Tanks.** Never name or contrast
+against any other/regional fork of the game in release notes, readmes, or any doc — these mods
+target Wargaming's World of Tanks only, which every consumer already knows. State compatibility
+positively ("World of Tanks EU 2.3.1.0", "Wargaming EU/global client"). Before publishing,
+proofread every release body + readme to confirm no other client is named.
+
+**Published releases are IMMUTABLE here.** Once a release is published you CANNOT add, delete,
+rename, or replace its assets (`gh release upload`/`delete-asset` → HTTP 422 "immutable
+release"); only the notes/body stay editable. So the asset filenames must be right AT PUBLISH
+time — a later rename means the body reference and the actual asset can diverge with no way to
+fix the asset. To correct a shipped asset name, cut a NEW release; don't edit the body to claim
+a name the attached asset doesn't have.
 
 **Do not rename the setup .exe asset.** The installer's self-update builds the download URL
 from the tag + the fixed name `GarageProgressBar-Setup-<version>.exe`
