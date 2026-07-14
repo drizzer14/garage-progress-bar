@@ -14,6 +14,8 @@ first, then global free XP. The view treats a scale_min == scale_max range as
 100% (guard divide-by-zero). The ELITE/ELITE_REWARDS modes reuse the same
 scale/ticks/fill axis with a single segment (fill_free = 0).
 """
+import copy
+
 from wgmod_research.domain import types as t
 from wgmod_research.domain.constants import Category
 from wgmod_research.domain.resolvers import techtree, fieldmods, elite, skilltree, potential
@@ -183,8 +185,18 @@ def _b_elite(snapshot, ctx, enabled):
 _BUILDERS = (_b_tech, _b_skill, _b_field, _b_potential, _b_elite_rewards, _b_elite)
 
 
-def build_model(snapshot, enabled=None, override=None):
+def build_model(snapshot, enabled=None, override=None, ignore_free_xp=False):
     """`enabled` is the set of Mode strings the user has left ON (None = all on).
+
+    `ignore_free_xp` (the "Ignore Free XP" setting) makes the bar behave as if the
+    account-global free XP were zero -- combat XP only counts toward the fill,
+    per-item affordability, and every resolver's own spendable. It is applied ONCE
+    here by neutralizing the single source field (snapshot.free_xp) on a shallow copy
+    (the snapshot is fresh per push, but copy so a shared test fixture isn't mutated);
+    everything downstream -- fill_free/spendable below AND each resolver's affordability
+    (techtree/fieldmods/potential) -- reads snapshot.free_xp, so no per-site logic is
+    needed. The battles estimate is already combat-XP-only; elite modes already force
+    fill_free = 0.
 
     The default mode is resolved by the usual priority chain (the first applicable mode
     in _BUILDERS); if that resolved mode is OFF, the bar is HIDDEN -- there is NO
@@ -198,6 +210,9 @@ def build_model(snapshot, enabled=None, override=None):
 
     The emitted model carries `avail_modes` (the ordered available modes) so the widget
     can render the header switch."""
+    if ignore_free_xp:
+        snapshot = copy.copy(snapshot)
+        snapshot.free_xp = 0
     fill_vehicle = snapshot.vehicle_xp
     fill_free = snapshot.free_xp
     # Total spendable XP, set on every model below so the view can show per-item

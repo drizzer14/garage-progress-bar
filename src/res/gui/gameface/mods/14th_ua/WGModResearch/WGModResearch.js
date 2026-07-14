@@ -88,6 +88,17 @@ const XP_ICON = "img://gui/maps/icons/vehicle_hub/research_purchase/total_experi
 // freeXpIcon_23x22 confirms it's the standard combat/free pair).
 const COMBAT_XP_ICON = "img://gui/maps/icons/library/xpIcon_23x22.png";
 
+// "Ignore Free XP" setting (pushed on data.ignoreFreeXp, refreshed each render()). When
+// on, the domain already zeroed free XP (fill/spendable/affordability), so the spendable
+// figure is combat XP only -- and the currency glyph for it should be the plain combat-XP
+// star, not the combined Total-XP star. Every spendable-XP presentation site draws
+// xpCurrencyIcon() so the whole bar switches with one flag; the elite paths keep their
+// own COMBAT_XP_ICON regardless (they were always combat-only).
+let IGNORE_FREE_XP = false;
+function xpCurrencyIcon() {
+    return IGNORE_FREE_XP ? COMBAT_XP_ICON : XP_ICON;
+}
+
 // Credits glyph for the "done" tick footer (a researched item still costs credits to
 // buy). Matches the top-right account-balance credits icon.
 const CREDITS_ICON = "img://gui/maps/icons/library/CreditsIcon-3.png";
@@ -667,7 +678,7 @@ function tooltipHtml(t, spendableXp, fillVehicle, est, frontier) {
         // so show name + cost only then, not the generic "Prerequisites not met". Uses
         // t.xpRequired (the real cost), not t.position (a node index); no fillVehicle.
         // When it's NOT the frontier, fall through to the t.locked requirements branch.
-        foot = xpFracHtml(spendableXp, t.xpRequired, XP_ICON, undefined, est);
+        foot = xpFracHtml(spendableXp, t.xpRequired, xpCurrencyIcon(), undefined, est);
     } else if (t.locked) {
         // Name the blocking prerequisites when known, else the generic line.
         const reqs = splitLines(t.prereqNames);
@@ -677,7 +688,7 @@ function tooltipHtml(t, spendableXp, fillVehicle, est, frontier) {
             : '<div class="wg-tip-status">' +
                 escapeHtml(L("prereqNotMet", "Prerequisites not met")) + "</div>";
     } else {
-        foot = xpFracHtml(spendableXp, t.position, XP_ICON, fillVehicle, est);
+        foot = xpFracHtml(spendableXp, t.position, xpCurrencyIcon(), fillVehicle, est);
     }
     // Text block + its icon are ONE unit (no divider between them); the divider only
     // separates that unit from the footer (cost / prerequisite).
@@ -712,7 +723,7 @@ function setUpgrades(el, done, total) {
 // every mode -- available XP stays meaningful even once the tank is researched.
 function setXp(root, vehXp, freeXp) {
     root.querySelector(".wg-xp-ico").style.backgroundImage =
-        "url('" + XP_ICON + "')";
+        "url('" + xpCurrencyIcon() + "')";
     root.querySelector(".wg-xp-val").textContent =
         fmtXp((vehXp || 0) + (freeXp || 0), ",");
 }
@@ -899,7 +910,7 @@ function renderNextAvailable(nextEl, arr, hotEl, spendableXp, est) {
             // remaining sub-line would be bogus.
             const cFoot = u.done
                 ? ""
-                : xpFracHtml(spendableXp, xp, XP_ICON, undefined, est);
+                : xpFracHtml(spendableXp, xp, xpCurrencyIcon(), undefined, est);
             // Text block + icon as one unit (no divider between them); divider before cost.
             tip.innerHTML = joinSections([tipMain(cIcon, cTitle, cBody), cFoot]);
             chip.appendChild(tip);
@@ -1464,6 +1475,10 @@ function render(model) {
     }
     // Localized labels for this render (also read later by the hover tooltip builders).
     refreshLabels(data);
+    // "Ignore Free XP": latch the flag for this render so the tooltip builders (which run
+    // later, on hover) and the header readouts all pick the combat-XP glyph via
+    // xpCurrencyIcon(). The root class drives the CSS glyph-size + shortfall-color tweaks.
+    IGNORE_FREE_XP = !!data.ignoreFreeXp;
 
     // Show the bar ONLY in the plain garage. Python pushes visible=false while a
     // tank-setup / ammo loadout overlay is open (the params panel stays mounted to
@@ -1523,7 +1538,7 @@ function render(model) {
         const xp2Val = root.querySelector(".wg-xp2-val");
         const xp2Ico = root.querySelector(".wg-xp2-ico");
         xp2Val.textContent = fmtXp(spendableXp, ",");
-        xp2Ico.style.backgroundImage = "url('" + XP_ICON + "')";
+        xp2Ico.style.backgroundImage = "url('" + xpCurrencyIcon() + "')";
         // NB: Gameface rejects `display:inline-block` set imperatively (the stylesheet
         // value is fine, the CSSOM setter is not) -- use "block". As flex items they
         // stay in the header row regardless.
@@ -1604,7 +1619,8 @@ function render(model) {
     // upgrade carrying its icon on the rightmost tick. No per-node tooltips (the
     // tick loop below skips hover wiring for this mode). wg-skill gives the fill its
     // own steel-blue tone (.wg-skill .wg-fill-veh in CSS), distinct from tech-tree.
-    root.className = (mode === MODE.SKILL_TREE ? "wg-skill" : "") + cbClass(data);
+    root.className = (mode === MODE.SKILL_TREE ? "wg-skill" : "") + cbClass(data) +
+        (IGNORE_FREE_XP ? " wg-ignore-free" : "");
 
     label.textContent = mode === MODE.SKILL_TREE ? L("headerSkillTree", "Upgrades")
         : mode === MODE.POTENTIAL_TIER_XI ? L("capTierXI", "Tier XI")
@@ -1734,7 +1750,8 @@ function eliteTooltipHtml(t, isRewards, combatXp, est) {
 // the bar's track + hover overlay but with a single fill segment, a combat-XP
 // readout, an "Elite Lvl N/350" counter, and grade-pip / reward-thumbnail ticks.
 function renderElite(root, data, isRewards) {
-    root.className = "wg-elite" + (isRewards ? " wg-elite-rewards" : "") + cbClass(data);
+    root.className = "wg-elite" + (isRewards ? " wg-elite-rewards" : "") + cbClass(data) +
+        (IGNORE_FREE_XP ? " wg-ignore-free" : "");
     const label = root.querySelector(".wg-label");
     const catIcon = root.querySelector(".wg-cat-icon");
     const upgradesEl = root.querySelector(".wg-upgrades");

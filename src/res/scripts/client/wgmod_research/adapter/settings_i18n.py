@@ -57,9 +57,9 @@ _FEATURE_EN = {
 
 # Ordered key lists per column -- the wire order of the controls in ``_template()``. Used
 # by mod_settings to walk a stored template in lockstep (Labels carry no varName).
-COL1_KEYS = (u"hideAlways", u"hideWhenComplete", u"barModes", u"showTechTree",
-             u"showSkillTree", u"showFieldMods", u"showEliteRewards", u"showElite",
-             u"showPotentialTierXI")
+COL1_KEYS = (u"hideAlways", u"hideWhenComplete", u"ignoreFreeXp", u"barModes",
+             u"showTechTree", u"showSkillTree", u"showFieldMods", u"showEliteRewards",
+             u"showElite", u"showPotentialTierXI")
 COL2_KEYS = (u"barPosition", u"posX", u"posY")
 
 
@@ -88,6 +88,7 @@ _LABELS = {
     u"en": {
         u"hideAlways": u"Hide the bar completely",
         u"hideWhenComplete": u"Hide when fully progressed",
+        u"ignoreFreeXp": u"Ignore Free XP",
         u"barModes": u"Bar modes",
         u"barPosition": u"Bar position (px)",
         u"posX": u"Horizontal (center X)",
@@ -96,6 +97,7 @@ _LABELS = {
     u"de": {
         u"hideAlways": u"Leiste komplett ausblenden",
         u"hideWhenComplete": u"Bei vollem Fortschritt ausblenden",
+        u"ignoreFreeXp": u"Freie Erfahrung ignorieren",
         u"barModes": u"Leistenmodi",
         u"barPosition": u"Leistenposition (px)",
         u"posX": u"Horizontal (Mitte X)",
@@ -104,6 +106,7 @@ _LABELS = {
     u"fr": {
         u"hideAlways": u"Masquer complètement la barre",
         u"hideWhenComplete": u"Masquer une fois entièrement progressé",
+        u"ignoreFreeXp": u"Ignorer l'expérience libre",
         u"barModes": u"Modes de la barre",
         u"barPosition": u"Position de la barre (px)",
         u"posX": u"Horizontale (centre X)",
@@ -112,6 +115,7 @@ _LABELS = {
     u"es": {
         u"hideAlways": u"Ocultar la barra por completo",
         u"hideWhenComplete": u"Ocultar al completar el progreso",
+        u"ignoreFreeXp": u"Ignorar la experiencia libre",
         u"barModes": u"Modos de la barra",
         u"barPosition": u"Posición de la barra (px)",
         u"posX": u"Horizontal (centro X)",
@@ -120,6 +124,7 @@ _LABELS = {
     u"it": {
         u"hideAlways": u"Nascondi completamente la barra",
         u"hideWhenComplete": u"Nascondi a progresso completato",
+        u"ignoreFreeXp": u"Ignora l'esperienza libera",
         u"barModes": u"Modalità della barra",
         u"barPosition": u"Posizione della barra (px)",
         u"posX": u"Orizzontale (centro X)",
@@ -128,6 +133,7 @@ _LABELS = {
     u"pl": {
         u"hideAlways": u"Całkowicie ukryj pasek",
         u"hideWhenComplete": u"Ukryj po pełnym ukończeniu",
+        u"ignoreFreeXp": u"Ignoruj wolne doświadczenie",
         u"barModes": u"Tryby paska",
         u"barPosition": u"Pozycja paska (px)",
         u"posX": u"Poziomo (środek X)",
@@ -136,6 +142,7 @@ _LABELS = {
     u"cs": {
         u"hideAlways": u"Zcela skrýt lištu",
         u"hideWhenComplete": u"Skrýt při plném dokončení",
+        u"ignoreFreeXp": u"Ignorovat volné zkušenosti",
         u"barModes": u"Režimy lišty",
         u"barPosition": u"Pozice lišty (px)",
         u"posX": u"Vodorovně (střed X)",
@@ -144,6 +151,7 @@ _LABELS = {
     u"ru": {
         u"hideAlways": u"Полностью скрыть полосу",
         u"hideWhenComplete": u"Скрывать при полном прогрессе",
+        u"ignoreFreeXp": u"Игнорировать свободный опыт",
         u"barModes": u"Режимы полосы",
         u"barPosition": u"Положение полосы (px)",
         u"posX": u"По горизонтали (центр X)",
@@ -152,6 +160,7 @@ _LABELS = {
     u"uk": {
         u"hideAlways": u"Повністю сховати смугу",
         u"hideWhenComplete": u"Ховати за повного прогресу",
+        u"ignoreFreeXp": u"Ігнорувати вільний досвід",
         u"barModes": u"Режими смуги",
         u"barPosition": u"Розташування смуги (px)",
         u"posX": u"По горизонталі (центр X)",
@@ -160,6 +169,7 @@ _LABELS = {
     u"hu": {
         u"hideAlways": u"A sáv teljes elrejtése",
         u"hideWhenComplete": u"Elrejtés teljes haladásnál",
+        u"ignoreFreeXp": u"Szabad tapasztalat mellőzése",
         u"barModes": u"Sávmódok",
         u"barPosition": u"A sáv helyzete (px)",
         u"posX": u"Vízszintes (középpont X)",
@@ -168,6 +178,7 @@ _LABELS = {
     u"tr": {
         u"hideAlways": u"Çubuğu tamamen gizle",
         u"hideWhenComplete": u"Tamamen ilerlediğinde gizle",
+        u"ignoreFreeXp": u"Serbest deneyimi yok say",
         u"barModes": u"Çubuk modları",
         u"barPosition": u"Çubuk konumu (px)",
         u"posX": u"Yatay (merkez X)",
@@ -185,6 +196,10 @@ _TOOLTIPS_EN = {
     u"hideWhenComplete": (u"Hide when fully progressed",
                           u"Hides the bar only on vehicles with nothing left to "
                           u"research, upgrade, or unlock."),
+    u"ignoreFreeXp": (u"Ignore Free XP",
+                      u"Counts only the combat XP you earn on each vehicle toward its "
+                      u"progress. Free XP is excluded from the bar, the totals, and the "
+                      u"tooltips. Off by default."),
     u"barModes": (u"Bar modes",
                   u"Turn off the bar modes you don't care about. When a vehicle's "
                   u"progress falls under a mode you've hidden, the bar is hidden for it "

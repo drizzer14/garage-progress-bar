@@ -64,6 +64,57 @@ def test_spendable_xp_is_vehicle_plus_free_xp():
     assert mfm.spendable_xp == 1200
 
 
+# --- "Ignore Free XP" setting (build_model ignore_free_xp) ----------------
+# When on, the account-global free XP is neutralized at the single source
+# (snapshot.free_xp) so the fill, model spendable, AND each resolver's own
+# affordability all count combat XP only. Default (off) is unchanged.
+
+def test_ignore_free_xp_zeroes_fill_and_spendable():
+    # A tick priced between combat XP (800) and combat+free (1100): affordable only
+    # because free XP covers the rest -- exactly the case the setting removes.
+    snap = t.VehicleSnapshot(tier=6, is_elite=False, vehicle_xp=800, free_xp=300,
+                             tech_unlocks=[_u(1, 1000)])
+    off = build_model(snap, ignore_free_xp=False)
+    assert off.fill_vehicle == 800
+    assert off.fill_free == 300
+    assert off.spendable_xp == 1100
+    assert [tk.affordable for tk in off.ticks] == [True]     # free XP affords it
+
+    on = build_model(snap, ignore_free_xp=True)
+    assert on.fill_vehicle == 800
+    assert on.fill_free == 0                                 # free segment gone
+    assert on.spendable_xp == 800                            # combat XP only
+    assert [tk.affordable for tk in on.ticks] == [False]     # combat alone falls short
+
+
+def test_ignore_free_xp_does_not_mutate_the_snapshot():
+    # build_model must copy before zeroing -- a shared fixture (or the caller's snapshot)
+    # keeps its free XP so a later off-build still counts it.
+    snap = t.VehicleSnapshot(tier=6, is_elite=False, vehicle_xp=800, free_xp=300,
+                             tech_unlocks=[_u(1, 1000)])
+    build_model(snap, ignore_free_xp=True)
+    assert snap.free_xp == 300
+    assert build_model(snap, ignore_free_xp=False).spendable_xp == 1100
+
+
+def test_ignore_free_xp_affects_field_mod_affordability():
+    # The fieldmods resolver recomputes its own spendable from snapshot.free_xp, so it
+    # must see the neutralized value too.
+    snap = t.VehicleSnapshot(tier=10, is_elite=True, vehicle_xp=1000, free_xp=1500,
+                             field_mod_steps=[_step(1, 2000)])
+    assert [tk.affordable for tk in build_model(snap, ignore_free_xp=False).ticks] == [True]
+    assert [tk.affordable for tk in build_model(snap, ignore_free_xp=True).ticks] == [False]
+
+
+def test_ignore_free_xp_affects_potential_mode_spendable():
+    # The potential resolver also derives spendable from snapshot.free_xp.
+    on = build_model(_done_tier_x(vehicle_xp=100000, free_xp=50000), _WITH_PXI,
+                     ignore_free_xp=True)
+    assert on.mode == t.Mode.POTENTIAL_TIER_XI
+    assert on.fill_free == 0
+    assert on.spendable_xp == 100000
+
+
 def test_avg_battle_xp_carries_onto_model():
     # The snapshot's avg combat XP/battle rides every model so the view can estimate
     # "battles remaining"; 0 when unread stays 0 (view then hides the estimate).

@@ -697,7 +697,8 @@ def push(rvm, host_vm=None):
         global _cur_int_cd
         _cur_int_cd = getattr(snap, "vehicle_int_cd", 0) or 0
         model = build_model(snap, mod_settings.enabled_modes(),
-                            override=mod_settings.mode_override(_cur_int_cd))
+                            override=mod_settings.mode_override(_cur_int_cd),
+                            ignore_free_xp=mod_settings.ignore_free_xp())
         # Session "done" markers: promote a confirmed click and inject the current
         # vehicle's marker (a first tick / first chip). Engine-free + guarded.
         recent.decorate(model, snap)
@@ -718,6 +719,10 @@ def push(rvm, host_vm=None):
                                       mod_settings.hide_when_complete(), model.mode,
                                       _in_garage()))
             tx.setColorBlind(engine_adapter.is_color_blind())
+            # "Ignore Free XP" setting: the domain already zeroed free XP in the model
+            # (fill/spendable/affordability); this flag tells the widget to draw the
+            # combat-XP glyph instead of the total-XP star and drop the free-XP tone.
+            tx.setIgnoreFreeXp(mod_settings.ignore_free_xp())
             # Localized widget labels (client-language, sourced from WG's own strings);
             # JSON so the whole bundle rides one field. ensure_ascii escapes non-ASCII
             # (e.g. Cyrillic) to \uXXXX, which JS JSON.parse decodes back.

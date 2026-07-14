@@ -130,7 +130,7 @@ class UpgradeVM(ViewModel):
 
 
 class ResearchVM(ViewModel):
-    def __init__(self, properties=31, commands=8):
+    def __init__(self, properties=32, commands=8):
         super(ResearchVM, self).__init__(properties=properties, commands=commands)
 
     def _initialize(self):
@@ -168,6 +168,7 @@ class ResearchVM(ViewModel):
         self._addNumberProperty("posW", 0)   # 28 (viewport px a pinned posX/posY was captured at; 0 = unknown)
         self._addNumberProperty("posH", 0)   # 29 (viewport px a pinned posX/posY was captured at; 0 = unknown)
         self._addStringProperty("availModes", "")  # 30 (comma-joined Mode strings for the header mode switch; <2 -> no switch)
+        self._addBoolProperty("ignoreFreeXp", False)  # 31 ("Ignore Free XP" setting: draw the combat-XP glyph, hide the free-XP tone)
         # Reverse channel: JS click handlers invoke these commands. Each returns a
         # command object that connect_commands() wires to a Python handler. Wulf
         # delivers the JS-supplied argument(s) to those handlers.
@@ -274,6 +275,9 @@ class ResearchVM(ViewModel):
 
     def setAvailModes(self, v):
         self._setString(30, v)
+
+    def setIgnoreFreeXp(self, v):
+        self._setBool(31, v)
 
     @staticmethod
     def getTicksType():

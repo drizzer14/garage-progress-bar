@@ -54,7 +54,12 @@ except NameError:
 # typed/echoed value is clamped into [0, POS_MAX], with 0 meaning "auto / unseeded".
 POS_MAX = 20000
 
-DEFAULTS = {"hideAlways": False, "hideWhenComplete": False, "posX": 0, "posY": 0,
+DEFAULTS = {"hideAlways": False, "hideWhenComplete": False,
+            # "Ignore Free XP" -- opt-in (default off): count only the combat XP earned on
+            # each vehicle toward its progress, dropping the account-global free XP from the
+            # bar, affordability, and tooltips (see domain.builder.build_model ignore_free_xp).
+            "ignoreFreeXp": False,
+            "posX": 0, "posY": 0,
             # Viewport (px) a custom posX/posY was captured at, so the widget can rescale
             # the pinned position proportionally after a resolution / UI-scale change (see
             # applyPosition in WGModResearch.js). 0 = unknown (auto position, or a pre-fix
@@ -121,9 +126,10 @@ def _template():
         # template edits (tooltip/label tweaks -- including this localization): with it
         # set, the host only wipes stored settings to defaults when this number is BUMPED.
         # Bump it whenever the set of varNames / control layout changes (not for text-only
-        # edits; localizing the text is text-only, so it stays 3). Verified against the
-        # Aslain 1.3.2 + izeberg 1.7.0 compareTemplates bytecode.
-        "settingsVersion": 3,
+        # edits; localizing the text is text-only, so it stays at its current number).
+        # Verified against the Aslain 1.3.2 + izeberg 1.7.0 compareTemplates bytecode.
+        # Bumped 3 -> 4 when the "ignoreFreeXp" checkbox was added (a new varName).
+        "settingsVersion": 4,
         "column1": [
             {
                 "type": "CheckBox",
@@ -138,6 +144,13 @@ def _template():
                 "value": DEFAULTS["hideWhenComplete"],
                 "tooltip": t["hideWhenComplete"]["tooltip"],
                 "varName": "hideWhenComplete",
+            },
+            {
+                "type": "CheckBox",
+                "text": t["ignoreFreeXp"]["text"],
+                "value": DEFAULTS["ignoreFreeXp"],
+                "tooltip": t["ignoreFreeXp"]["tooltip"],
+                "varName": "ignoreFreeXp",
             },
             {
                 "type": "Label",
@@ -569,6 +582,10 @@ def hide_always():
 
 def hide_when_complete():
     return _settings["hideWhenComplete"]
+
+
+def ignore_free_xp():
+    return _settings["ignoreFreeXp"]
 
 
 def pos_x():

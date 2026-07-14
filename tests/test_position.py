@@ -230,15 +230,15 @@ def test_reset_returns_to_auto_not_seeded_px():
 
 # `helpers` is a game module absent under pytest, so settings_i18n.client_language()
 # fails soft to English -- _template() renders the English master here.
-_VARNAMES = {"hideAlways", "hideWhenComplete", "showTechTree", "showSkillTree",
-             "showFieldMods", "showEliteRewards", "showElite", "showPotentialTierXI",
-             "posX", "posY"}
+_VARNAMES = {"hideAlways", "hideWhenComplete", "ignoreFreeXp", "showTechTree",
+             "showSkillTree", "showFieldMods", "showEliteRewards", "showElite",
+             "showPotentialTierXI", "posX", "posY"}
 
 
 def test_template_structure_unchanged_and_english_text():
     tpl = mod_settings._template()
     # Structure the host owns is language-independent.
-    assert tpl["settingsVersion"] == 3
+    assert tpl["settingsVersion"] == 4
     assert tpl["modDisplayName"] == "Garage Progress Bar"   # brand, never translated
     varnames = [c["varName"] for col in ("column1", "column2")
                 for c in tpl[col] if "varName" in c]
@@ -251,12 +251,13 @@ def test_template_structure_unchanged_and_english_text():
             assert c.get("tooltip")
     # Mod-invented text comes from the tables (English in the test env).
     assert tpl["column1"][0]["text"] == u"Hide the bar completely"   # hideAlways
-    assert tpl["column1"][2]["text"] == u"Bar modes"                 # barModes Label
+    assert tpl["column1"][2]["text"] == u"Ignore Free XP"            # ignoreFreeXp
+    assert tpl["column1"][3]["text"] == u"Bar modes"                 # barModes Label
     assert tpl["column2"][0]["text"] == u"Bar position (px)"         # barPosition Label
     # Per-mode checkbox labels come from WG's own strings (i18n.widget_labels(), which
     # fails soft to English feature names here) -- NOT the old "Show ..." phrasing.
-    assert tpl["column1"][3]["text"] == u"Research"                  # showTechTree
-    assert tpl["column1"][7]["text"] == u"Elite System"             # showElite
+    assert tpl["column1"][4]["text"] == u"Research"                  # showTechTree
+    assert tpl["column1"][8]["text"] == u"Elite System"             # showElite
 
 
 class _FakeStateApi(object):

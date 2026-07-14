@@ -197,6 +197,14 @@
     top: -1rem;                 /* the combat-XP star's art sits low in its box --
                                    nudge up to optically center it with the figure */
 }
+/* "Ignore Free XP": the header readouts also draw the combat-XP star (via
+   xpCurrencyIcon), so give it the same size + centering compensation as elite above. */
+#wgmod-root.wg-ignore-free .wg-xp-ico,
+#wgmod-root.wg-ignore-free .wg-xp2-ico {
+    background-size: 130%;
+    position: relative;
+    top: -1rem;
+}
 
 /* Track: flat dark channel with a TWO-TONE frame -- a dark outer border, then a
    lighter inner border (drawn by the ::after overlay) whose color the segment
@@ -1141,6 +1149,12 @@
    figure is combat XP -> recolor it to the combat-XP near-white (its glyph is already
    the combat star, passed from eliteTooltipHtml). */
 #wgmod-root.wg-elite .wg-tip-rem-tot {
+    color: #dce0e0;
+}
+/* "Ignore Free XP": with free XP dropped, the single remaining figure is combat XP (its
+   glyph is already the combat star, via xpCurrencyIcon), so recolor it combat-white --
+   the free-XP tan would falsely imply free XP still counts. */
+#wgmod-root.wg-ignore-free .wg-tip-rem-tot {
     color: #dce0e0;
 }
 /* "≈ N" battles-remaining estimate: trails the remaining figures on the same row, set
