@@ -237,17 +237,17 @@ _TOOLTIPS_EN = {
 # Per-language suffix for the position steppers' "default N" LABEL (see mod_settings
 # _label_defaults). "%d" is the default coordinate. Falls back to English per _norm.
 _DEFAULT_SUFFIX = {
-    u"en": u" — default %d",
-    u"de": u" — Standard %d",
-    u"fr": u" — par défaut %d",
-    u"es": u" — predeterminado %d",
-    u"it": u" — predefinito %d",
-    u"pl": u" — domyślnie %d",
-    u"cs": u" — výchozí %d",
-    u"ru": u" — по умолчанию %d",
-    u"uk": u" — типово %d",
-    u"hu": u" — alapértelmezett %d",
-    u"tr": u" — varsayılan %d",
+    u"en": u" - default %d",
+    u"de": u" - Standard %d",
+    u"fr": u" - par défaut %d",
+    u"es": u" - predeterminado %d",
+    u"it": u" - predefinito %d",
+    u"pl": u" - domyślnie %d",
+    u"cs": u" - výchozí %d",
+    u"ru": u" - по умолчанию %d",
+    u"uk": u" - типово %d",
+    u"hu": u" - alapértelmezett %d",
+    u"tr": u" - varsayılan %d",
 }
 
 
@@ -299,7 +299,7 @@ def panel_text(lang=None):
 
 
 def default_suffix(lang):
-    """The localized ``" — default %d"`` format for ``lang`` (PURE). English fallback."""
+    """The localized ``" - default %d"`` format for ``lang`` (PURE). English fallback."""
     return _DEFAULT_SUFFIX.get(_norm(lang), _DEFAULT_SUFFIX[DEFAULT_LANGUAGE])
 
 

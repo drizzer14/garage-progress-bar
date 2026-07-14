@@ -454,7 +454,7 @@ def _label_defaults(api, dx, dy):
     The base label AND the "default N" suffix are localized: the base comes from
     settings_i18n.panel_text() (the same source _sync_template_text uses, already marked if
     it fell back to English) and settings_i18n.default_label appends the localized suffix --
-    e.g. EN "Horizontal (center X) — default 1920", DE "... — Standard 1920"."""
+    e.g. EN "Horizontal (center X) - default 1920", DE "... - Standard 1920"."""
     if not dx or not dy:
         return
     try:
