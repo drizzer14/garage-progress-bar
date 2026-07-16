@@ -3,7 +3,7 @@
 ; What it does, one double-click:
 ;   1. Detects the World of Tanks install folder (registry + common paths), lets
 ;      the user confirm/override it, and validates it (version.xml present).
-;   2. Resolves the client version (e.g. 2.3.0.1) and targets mods\<version>\.
+;   2. Resolves the client version (e.g. 2.3.1.0) and targets mods\<version>\.
 ;   3. Installs the bundled OpenWG GameFace dependency ONLY if it isn't already
 ;      present (recursive check) -- many users already have it via ModsList/Aslain.
 ;   4. Cleans old copies of this mod (and stale loose res_mods leftovers), then
@@ -62,7 +62,7 @@ SelectDirBrowseLabel=Confirm your World of Tanks installation folder (the one co
 
 [Code]
 var
-  GVersion: string;         { resolved game version, e.g. 2.3.0.1 }
+  GVersion: string;         { resolved game version, e.g. 2.3.1.0 }
   GUpdateChecked: Boolean;   { the GitHub update check has run once this session }
   GRelaunching: Boolean;     { a newer installer was launched; suppress cancel prompt }
   DownloadPage: TDownloadWizardPage;
@@ -77,7 +77,7 @@ begin
              FileExists(Path + '\WorldOfTanks.exe'));
 end;
 
-{ Parse "<version> v.2.3.0.1 #892 </version>" -> "2.3.0.1" }
+{ Parse "<version> v.2.3.1.0 #903 </version>" -> "2.3.1.0" }
 function ReadGameVersion(Root: string): string;
 var
   S: AnsiString;

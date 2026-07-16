@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Clean-build-and-deploy the mod as a .wotmod into a WoT install (run with Python 2.7.18).
 
-  python build/deploy_wotmod.py "D:/Games/World_of_Tanks_EU" 2.3.0.1
+  python build/deploy_wotmod.py "D:/Games/World_of_Tanks_EU" 2.3.1.0
   python build/deploy_wotmod.py            # uses deploy.local.json
   python build/deploy_wotmod.py --clean-overlay   # also remove the gameface overlay
 

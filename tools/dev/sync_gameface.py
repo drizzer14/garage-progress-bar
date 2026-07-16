@@ -12,7 +12,7 @@ This is for VISUAL (JS/CSS) iteration only. Python changes (the mount logic in
 the .wotmod) still require build + deploy + relaunch via deploy_wotmod.py.
 
 Usage (any Python 3, client may stay running):
-    python tools/dev/sync_gameface.py "D:\\Games\\World_of_Tanks_EU" 2.3.0.1
+    python tools/dev/sync_gameface.py "D:\\Games\\World_of_Tanks_EU" 2.3.1.0
 
 Note: this leaves a loose res_mods overlay in place. It only shadows the .wotmod's
 COPY of the SAME assets (intended) -- it does NOT shadow the Python entry point,

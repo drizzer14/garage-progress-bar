@@ -10,7 +10,7 @@ places at release time (see the gpb-release skill) and drift has slipped through
 before (a stale CONTRIBUTING.md filename).
 
 To avoid false positives on the *other* version numbers in the repo (the target
-client 2.3.0.1, bundled ModsSettingsAPI 1.7.0 / OpenWG GameFace 1.1.6, etc.) this
+client 2.3.1.0, bundled ModsSettingsAPI 1.7.0 / OpenWG GameFace 1.1.6, etc.) this
 matches only patterns that unambiguously carry THIS mod's version:
 
   * com.14th_ua.garageprogressbar_<v>.wotmod   (the packaged filename)
@@ -20,7 +20,7 @@ matches only patterns that unambiguously carry THIS mod's version:
   * version <v>                                  (prose header, e.g. dist/INSTALL.txt)
 
 The last (prose) pattern has a negative lookahead so it matches THIS mod's 3-part
-version only, never the 4-part client version ("version 2.3.0.1").
+version only, never the 4-part client version ("version 2.3.1.0").
 
 New references written in any of these forms are picked up automatically. On top of
 that, a small REQUIRED list names files that must carry at least one reference, so a
@@ -29,7 +29,7 @@ file silently LOSING its version reference also fails the check.
 The hand-bumped consumer readme (dist/INSTALL.txt) lives under gitignored dist/,
 which is otherwise skipped; it is scanned explicitly when present.
 
-It ALSO checks the supported CLIENT version (4-part, e.g. 2.3.0.1) -- a separate value
+It ALSO checks the supported CLIENT version (4-part, e.g. 2.3.1.0) -- a separate value
 from the mod version. The single canonical source is build_wgmods_zip.CLIENT_VERSION;
 a fixed set of shipping/instruction files (_CLIENT_REQUIRED) must each carry it and must
 not carry a differing 4-part client token, so a client patch that misses one file fails.
@@ -63,7 +63,7 @@ _EXTRA_FILES = ("dist/INSTALL.txt",)
 
 # Each pattern captures a semver in group 1 that must equal the meta version.
 # The prose "version <v>" pattern uses (?!\.\d) so it matches this mod's 3-part
-# version but never the 4-part client version ("version 2.3.0.1").
+# version but never the 4-part client version ("version 2.3.1.0").
 _PATTERNS = [
     re.compile(r"com\.14th_ua\.garageprogressbar_(\d+\.\d+\.\d+)\.wotmod"),
     re.compile(r"GarageProgressBar-Setup-(\d+\.\d+\.\d+)\.exe"),
@@ -87,7 +87,7 @@ _REQUIRED = (
 )
 
 
-# --- client version (4-part, e.g. 2.3.0.1) -----------------------------------
+# --- client version (4-part, e.g. 2.3.1.0) -----------------------------------
 # Canonical source: build_wgmods_zip.CLIENT_VERSION.
 _CLIENT_RE = re.compile(r'CLIENT_VERSION\s*=\s*["\'](\d+\.\d+\.\d+\.\d+)["\']')
 # A 4-part version token (the client version's shape). Loopback / IP-shaped tokens that are

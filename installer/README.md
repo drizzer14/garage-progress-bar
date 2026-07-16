@@ -10,7 +10,7 @@ installs the Garage Progress Bar mod and its dependencies — **OpenWG GameFace*
    locations, then shows the detected folder for the user to confirm or change.
    The chosen folder must contain `version.xml` (the installer validates this).
 2. **Targets the right version** — reads the client version from `version.xml`
-   (e.g. `2.3.0.1`) and installs into `mods\<version>\`.
+   (e.g. `2.3.1.0`) and installs into `mods\<version>\`.
 3. **Installs OpenWG only if missing** — recursively checks `mods\<version>\` for
    `net.openwg.gameface*.wotmod` (so it won't duplicate a copy the user already has
    via ModsList, Aslain, etc.). If absent, it copies the bundled

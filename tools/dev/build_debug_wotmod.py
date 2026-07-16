@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Build + deploy the DEV debug-REPL .wotmod (run with Python 2.7.18).
 
-  python tools/dev/build_debug_wotmod.py "D:/Games/World_of_Tanks_EU" 2.3.0.1
+  python tools/dev/build_debug_wotmod.py "D:/Games/World_of_Tanks_EU" 2.3.1.0
 
 Produces com.14th_ua.garageprogressbar_debug.wotmod (slim: just mod_wgmod_debug.pyc) and
 drops it in mods/<version>/. Keep it slim so it never conflicts with the real
