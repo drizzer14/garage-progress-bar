@@ -1,6 +1,6 @@
 ---
 name: gpb-architecture
-description: Architecture of the Garage Progress Bar WoT mod specifically — its concrete wgmod_research file tree, the six bar modes + priority order, the resolvers, per-item tech-tree pricing, blueprint discount, done-marker reconcile, and the ResearchVM/TickVM/UpgradeVM shapes. Use when editing or extending THIS mod's Python, adding a bar mode, tracing a click→research action, or debugging why the bar doesn't update. (For the reusable engine-free domain/adapter/bridge discipline and the conventions that bite, see the wotmod-architecture harness skill; for the JS/CSS widget, gpb-widget; for live game symbols, references/game-api.md.)
+description: Architecture of the Garage Progress Bar WoT mod specifically — its concrete wgmod_research file tree, the seven bar modes + priority order (including the opt-in POTENTIAL_TIER_XI speculative bar), the resolvers, per-item tech-tree pricing, blueprint discount, done-marker reconcile, and the ResearchVM/TickVM/UpgradeVM shapes. Use when editing or extending THIS mod's Python, adding a bar mode, tracing a click→research action, or debugging why the bar doesn't update. (For the reusable engine-free domain/adapter/bridge discipline and the conventions that bite, see the wotmod-architecture harness skill; for the JS/CSS widget, gpb-widget; for the settings-panel localization pattern, wotmod-i18n-settings; for live game symbols, references/game-api.md.)
 ---
 
 # wgmod architecture (this mod's specifics)
@@ -70,8 +70,11 @@ refresh — the game's `onSyncCompleted` does.
 
 ## Mode state machine (`builder.build_model`, priority order)
 TECH_TREE (any unlock remaining) → SKILL_TREE (tier-XI branching tree, count-based) →
-FIELD_MODS → ELITE_REWARDS (unearned tier-XI milestone rewards) → ELITE (prestige grade band)
-→ COMPLETE. `build_model` takes `enabled` (Mode strings left ON; None = all). If a vehicle
+FIELD_MODS → POTENTIAL_TIER_XI (opt-in speculative bar; entry-gated on `enabled` membership,
+only for a Tier-X tank with NO real Tier XI — `builder._b_potential`) → ELITE_REWARDS (unearned
+tier-XI milestone rewards) → ELITE (prestige grade band) → COMPLETE. This is the `_BUILDERS`
+tuple order (`_b_tech, _b_skill, _b_field, _b_potential, _b_elite_rewards, _b_elite`); there are
+SEVEN real modes plus HIDDEN. `build_model` takes `enabled` (Mode strings left ON; None = all). If a vehicle
 RESOLVES to a mode toggled off, `_emit()` returns a `Mode.HIDDEN` placeholder — **no
 fall-through** to a lower-priority mode. `bar_visible(overlay_closed, hide_always,
 hide_when_complete, mode, in_garage)` combines that with the master hide switch, the
@@ -116,32 +119,31 @@ hide-when-complete option, the tank-setup-overlay state, and the fail-closed gar
   perk-tooltip bundle; unknown names used verbatim, unresolved → no icon/unit, never a broken
   box). `format.py` holds the pure helpers (unit-tested); the game-symbol lookups live in
   `_read_common` (live-only). Widget rendering: see gpb-widget "Buff lines".
-- Settings template is versioned (`settingsVersion` 3).
-- **Only the settings panel is localized, and within it only the LABELS** — NOT tooltips,
-  NOT anything outside the panel (`adapter/settings_i18n.py`). Two label sources:
-  (1) **WG feature names** (Research, Upgrades, Field Modifications, Elite System, Elite
-  Rewards, Tier XI) — the per-mode checkbox labels reuse WG's own localized strings via
-  `i18n.widget_labels()` (`FEATURE_WG` maps each checkbox → its widget-labels key), so they
-  match the game exactly and never need hand-translation. NEVER hand-translate a term the game
-  already ships (that's how "модифікації" vs the correct "модернізація" / an un-localized
-  "Elite" slip in); "Show"+noun composition is impossible (grammar/case), so the label just IS
-  the WG noun.
-  (2) **Mod-invented labels** (the two hide toggles, the "Bar modes"/"Bar position" Labels, the
-  two position steppers) — lang-major `_LABELS` tables (`'en'` master, per-key English fallback,
-  `i18n._mark` when `MARK_UNTRANSLATED`).
-  **Tooltips are FIXED ENGLISH for every control** (`_TOOLTIPS_EN`, header+body) — help text,
-  never translated, never routed through i18n. `render_panel(wg_labels, lang)` is pure
-  (testable with a fake label dict); `panel_text()` feeds it `i18n.widget_labels()`;
-  `client_language()` is the one guarded `helpers.getClientLanguage()` read (`_norm` handles
-  case/`-_`/primary-subtag/`_ALIASES` e.g. `ua`→`uk`). Ships `cs de en es fr hu it pl ru tr uk`;
-  verify exact client codes live (gpb-debug-repl).
-- **MSA stores a COPY of the template text and renders from it — text-only edits DON'T reach
-  EXISTING installs on their own.** On a saved install `init()` re-uses the stored template;
-  a fresh language/label only lands via `_sync_template_text(api)`, which overwrites the stored
-  `api.state['templates'][LINKAGE]` text/tooltip in place + `saveState()` (called unconditionally
-  per candidate api in `init()`). This is the same in-place-mutation trick `_label_defaults`
-  already used for the "default N" stepper labels. A text-only change needs NO `settingsVersion`
-  bump (bumping wipes users' saved values); the sync is what propagates it.
+- **Settings-panel localization — read `wotmod-i18n-settings` FIRST.** The reusable MSA-panel
+  pattern (lang-major tables with English master + per-key fallback + untranslated-leak diagnostic,
+  `getClientLanguage`/`_norm` incl. `ua`→`uk`, `{HEADER}/{BODY}` tooltip assembly, and THE gotcha —
+  MSA caches a COPY of the template text at registration, so a text-only change never reaches an
+  existing install without walking the stored template in place, and needs NO `settingsVersion`
+  bump) lives in the **wotmod-i18n-settings** harness skill. This mod's *concretes* only
+  (`adapter/settings_i18n.py`):
+  - **Only the panel LABELS are localized** — NOT tooltips, NOT anything outside the panel.
+    `settingsVersion` is **3**.
+  - **Two label sources.** (1) **WG feature names** (Research, Upgrades, Field Modifications,
+    Elite System, Elite Rewards, Tier XI) reuse WG's OWN localized strings via
+    `i18n.widget_labels()` — `FEATURE_WG` maps each checkbox → its widget-labels key, so they match
+    the game exactly. NEVER hand-translate a term the game already ships (that's how "модифікації"
+    vs the correct "модернізація" / an un-localized "Elite" slip in); "Show"+noun composition is
+    impossible (grammar/case), so the label just IS the WG noun. (2) **Mod-invented labels** (the
+    two hide toggles, the "Bar modes"/"Bar position" labels, the two position steppers) use
+    lang-major `_LABELS` tables.
+  - **Tooltips are FIXED ENGLISH** for every control (`_TOOLTIPS_EN`, header+body) — never routed
+    through i18n.
+  - `render_panel(wg_labels, lang)` is pure (testable with a fake label dict); `panel_text()` feeds
+    it `i18n.widget_labels()`; `client_language()` is the one guarded `getClientLanguage()` read.
+    Ships `cs de en es fr hu it pl ru tr uk`; verify exact client codes live (gpb-debug-repl).
+  - The propagate-to-existing-installs step is `_sync_template_text(api)`, called unconditionally
+    per candidate api in `init()` (same in-place-mutation trick `_label_defaults` uses for the
+    "default N" stepper labels).
 - **Bar position is resolution-aware, and the recompute lives in the WIDGET, not Python.**
   `posX`/`posY` are px, `0/0` = auto (resolution-relative CSS default). A *pinned* position also
   stores `posW`/`posH` — the Gameface viewport it was captured at — so the JS can rescale it

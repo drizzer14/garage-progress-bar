@@ -53,18 +53,9 @@ Unit tests (engine-free domain layer, Python 3):
   `wgmod_research`, it conflicts with the real mod and WoT ignores it.
 
 ### Handy REPL snippets
-```python
-# current vehicle -> snapshot -> model
-from CurrentVehicle import g_currentVehicle
-from wgmod_research.adapter import engine_adapter
-from wgmod_research.domain.builder import build_model
-m = build_model(engine_adapter.build_snapshot())
-(m.mode, m.scale_min, m.scale_max, m.fill_vehicle, m.fill_free, len(m.ticks))
-
-# force a refresh of the mounted widget
-from wgmod_research.bridge import gameface_bridge as B
-B.refresh()
-```
+The canonical probe snippets (current-vehicle → snapshot → model; force a widget refresh)
+live in the **gpb-debug-repl** skill's "Handy snippets" section — kept there so the two
+copies can't drift. See `.claude/skills/gpb-debug-repl/SKILL.md`.
 
 ## Decompiled source (re-clone as needed; not in repo)
 Match the client's branch/region — use the **EU** branch (`2.3`):

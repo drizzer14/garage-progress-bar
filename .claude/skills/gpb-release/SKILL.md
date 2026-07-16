@@ -37,6 +37,11 @@ Conventional commits, landing directly on `main` (no branch). Fixes as their own
 commits first, then `chore(release): X.Y.Z`. Annotated tag `vX.Y.Z`. Push `main` + tag.
 `dist/` is gitignored — binaries are NEVER committed.
 
+Because releases land directly on `main`, the push runs the CI gates
+(`.github/workflows/ci.yml`: `check_version.py`, `ruff check .`, `pytest -q`) — run them
+locally first (see gpb-build-deploy) so a drifted version, ruff error, or red test doesn't
+turn the release commit red after the fact.
+
 ## 3. Build the artifacts (into gitignored dist/)
 ```powershell
 python build\clean_dist.py            # tidy dist/ to one release's files; --dry-run to preview
@@ -59,9 +64,13 @@ Compress-Archive -Path dist\com.14th_ua.garageprogressbar_X.Y.Z.wotmod,dist\INST
 python build\build_wgmods_zip.py       # -> dist\GarageProgressBar-Bundle_X.Y.Z.zip
 ```
 Runs on either Python (only zips already-built files). Needs the `.wotmod` + both
-`installer\vendor\*.wotmod`; bundles mod + vendor deps under `mods\2.3.0.1\` plus a bilingual
+`installer\vendor\*.wotmod`; bundles mod + vendor deps under `mods\2.3.1.0\` plus a bilingual
 `readme.txt` (generated from `installer\readme.wgmods.txt`, `{VERSION}` auto-stamped). The
-`2.3.0.1` folder is `CLIENT_VERSION` in the generator; bump when the supported client changes.
+`2.3.1.0` folder is `CLIENT_VERSION` in the generator; bump when the supported client changes.
+When the game CLIENT version itself changes (a new WoT patch), do NOT hand-edit these version
+strings — run **wotmod-upgrade-analyzer** then **wotmod-upgrade-implementer** (they own the
+seam-diff, the client-vs-mod-version distinction, and the major-bump-per-patch rule; the last
+run's plan is `TASKS/upgrade-<clientver>.json`).
 
 ## 4. Publish the GitHub Release (all 3 assets)
 ```powershell

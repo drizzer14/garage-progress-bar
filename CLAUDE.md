@@ -15,8 +15,10 @@ background lives in the **wotmod harness** plugin (skill `wotmod-basics`); this 
 
 The game runs compiled `.pyc`, and **bytecode is version-locked**: package with
 **Python 2.7.18** (`C:\Python27\python.exe`) — Python 3 bytecode will NOT load.
-Tests and dev tools run on **Python 3.13**. There is no npm/linter/CI; builds are
-plain Python scripts.
+Tests and dev tools run on **Python 3.13**. Builds are plain Python scripts (no npm).
+CI (`.github/workflows/ci.yml`) runs on push/PR: `check_version.py`, `ruff check .`,
+and `pytest -q` on Python 3.13 — it does NOT build the `.wotmod` (Py 2.7 is unavailable
+on runners), so a green CI does not prove the package builds.
 
 ## Task-scoped skills
 
@@ -33,8 +35,8 @@ dev dependency, installed via the local `wotmod-harness` marketplace):
 **This mod's specifics — the in-repo `gpb-*` skills** (each references its `wotmod-*`
 counterpart for the shared pattern):
 - **gpb-build-deploy** — this mod's exact build/deploy/test/hot-reload commands + paths.
-- **gpb-release** — the exact 7 files to bump, artifact names, vendor payloads.
-- **gpb-architecture** — the `wgmod_research` tree, the six modes, resolvers, done-marker reconcile (+ `references/game-api.md` usage map).
+- **gpb-release** — the exact 6 files to bump, artifact names, vendor payloads.
+- **gpb-architecture** — the `wgmod_research` tree, the seven bar modes, resolvers, done-marker reconcile (+ `references/game-api.md` usage map).
 - **gpb-widget** — the `WGModResearch` widget: DOM, icon URLs, render branches, hover/click.
 - **gpb-debug-repl** — this mod's debug REPL package + probe snippets.
 - **gpb-planner** — the `TASKS.md`/`TASKS/` backlog workflow + cross-session sync hooks.

@@ -15,7 +15,7 @@ skill is the concrete wiring for the Garage Progress Bar.
 & "C:\Python27\python.exe" build/build_wotmod.py
 
 # Clean-build-and-deploy into a local install (Py 2.7, CLIENT CLOSED — file locks)
-& "C:\Python27\python.exe" build/deploy_wotmod.py "D:/Games/World_of_Tanks_EU" 2.3.0.1
+& "C:\Python27\python.exe" build/deploy_wotmod.py "D:/Games/World_of_Tanks_EU" 2.3.1.0
 & "C:\Python27\python.exe" build/deploy_wotmod.py          # uses deploy.local.json (gitignored)
 
 # Domain-layer tests (Py 3.13) — engine-free, no game needed
@@ -23,7 +23,7 @@ skill is the concrete wiring for the Garage Progress Bar.
 & "<py3>" -m pytest tests/test_resolver_techtree.py -q     # single file
 
 # Hot-reload JS/CSS ONLY, no relaunch (Py 3.13) — then switch screens in-game to refresh
-& "<py3>" tools/dev/sync_gameface.py "D:/Games/World_of_Tanks_EU" 2.3.0.1
+& "<py3>" tools/dev/sync_gameface.py "D:/Games/World_of_Tanks_EU" 2.3.1.0
 ```
 `<py3>` = `%LOCALAPPDATA%\Programs\Python\Python313\python.exe`.
 
@@ -43,7 +43,9 @@ skill is the concrete wiring for the Garage Progress Bar.
   fresh package); before a clean ship-verification, REMOVE the overlay so you test the
   packaged assets. Only `WGModResearch.js`/`.css` hot-reload — Python (mount/data) changes
   need build + deploy + full relaunch.
-- **Target:** EU/global `2.3.0.1` only.
+- **Target:** EU/global `2.3.1.0` only (the current `deploy.local.json` client version — the
+  literal above is only an example; a client bump is run via **wotmod-upgrade-analyzer** /
+  **wotmod-upgrade-implementer**, not hand-edited here).
 - **Dependencies (same `mods/<version>/`):** OpenWG GameFace is a **hard** dependency; the
   bar itself renders without ModsSettingsAPI (`izeberg.modssettingsapi`), but the settings
   panel, per-mode toggles, and drag-position persistence need it.
@@ -61,6 +63,10 @@ syntax-checked headless: `node --check` the raw `.js` as a `.mjs`, and extract+`
 minified copy from the built `.wotmod` (Py2 on Windows can't write to Git Bash `/tmp` — use a
 repo-relative path when extracting). So: a domain/adapter-recent/mod_settings fix ships behind
 green tests; a reader/bridge/JS/CSS/MSA change is code-complete only until an in-game pass.
+
+These same gates run in CI (`.github/workflows/ci.yml`) on every push/PR — `check_version.py`,
+`ruff check .`, `pytest -q` (Python 3.13; CI does NOT build the `.wotmod`). Run them locally
+before pushing a release so a version drift, ruff error, or red test doesn't fail CI after the fact.
 
 ## Verifying a change actually works
 Build+deploy+relaunch (or hot-reload for JS/CSS), open the Garage, select a vehicle with

@@ -14,7 +14,7 @@ A separate debug package runs a TCP REPL on **127.0.0.1:2223** inside the client
 MoE Calculator's debug REPL uses **2224**, so both mods' debug servers can run simultaneously).
 ```sh
 # Build/deploy the debug package (Py 2.7, client CLOSED)
-& "C:\Python27\python.exe" tools/dev/build_debug_wotmod.py "D:\Games\World_of_Tanks_EU" 2.3.0.1
+& "C:\Python27\python.exe" tools/dev/build_debug_wotmod.py "D:\Games\World_of_Tanks_EU" 2.3.1.0
 # Drive it from the host (Py 3.13, client RUNNING, in Garage)
 & "<py3>" tools/dev/repl_client.py "<expr>"
 & "<py3>" tools/dev/repl_client.py --file cmds.txt
