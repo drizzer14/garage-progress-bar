@@ -52,6 +52,11 @@ INJECT_FIELD = "ModInjectModel"
 # and the dev REPL can drive refreshes without poking module-private state.
 _active = None
 
+# Monotonic push counter written into ResearchVM.rev on every push. The widget's JS poll
+# re-renders whenever `rev` changes -- the cold-mount self-heal (see the root-cause note in
+# push()). Just has to differ from the previous push; wraps harmlessly.
+_push_seq = 0
+
 # intCD of the vehicle in the most recent push, so the header mode-switch handler
 # (which carries only the chosen Mode string) knows which vehicle to store it against.
 _cur_int_cd = 0
@@ -714,7 +719,15 @@ def push(rvm, host_vm=None):
         except Exception:
             LOG_CURRENT_EXCEPTION()
             labels_json = "{}"
+        global _push_seq
+        _push_seq = (_push_seq + 1) & 0x7fffffff
         with rvm.transaction() as tx:
+            # Monotonic per-push counter. When the widget is freshly mounted (cold), the
+            # engine does NOT deliver its data-changed event to the subview until the view
+            # composites (e.g. the garage camera moves), so the JS ModelObserver never fires
+            # and the bar looks frozen after a mode/tank switch. The widget polls this `rev`
+            # as a cheap change-signal and re-renders when it moves -- see WGModResearch.js.
+            tx.setRev(_push_seq)
             tx.setVisible(bar_visible(_bar_visible(), mod_settings.hide_always(),
                                       mod_settings.hide_when_complete(), model.mode,
                                       _in_garage()))
@@ -796,13 +809,5 @@ def push(rvm, host_vm=None):
                 uv.setDone(bool(getattr(up, "done", False)))
                 ua.addViewModel(uv)
             ua.invalidate()
-        # Nudge the host sub-view so its data re-syncs to JS (nested-model
-        # updates may not bubble a data-changed event on their own).
-        if host_vm is not None:
-            try:
-                with host_vm.transaction() as _h:
-                    pass
-            except Exception:
-                pass
     except Exception:
         LOG_CURRENT_EXCEPTION()

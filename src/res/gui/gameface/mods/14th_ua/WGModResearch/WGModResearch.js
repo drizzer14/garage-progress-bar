@@ -2070,10 +2070,42 @@ function onViewportResize() {
     });
 }
 
+// Cold-mount self-heal. The widget repaints only when its ModelObserver's data-changed
+// callback fires (observer.onUpdate -> render). But on a freshly mounted subview the engine
+// does NOT deliver that callback until the view next composites -- which in the idle garage
+// only happens when the camera moves. So after a mode/tank switch the bar looks frozen until
+// the player nudges the camera (then every queued update lands at once). The first paint
+// works only because it's a DIRECT render() call below, not observer-driven.
+//
+// Fix: poll a cheap monotonic counter (wgResearch.rev, bumped by Python on every push) and
+// render when it changes. This runs even when the data-changed event is dormant, so the bar
+// follows pushes within one poll interval. Idle cost is a shallow field read + compare; a
+// real render happens only when rev actually moves, so no spurious tick rebuilds.
+let _lastRev = null;
+
+function revOf(model) {
+    const data = unwrap(model && model.wgResearch);
+    return data && data.rev !== undefined ? data.rev : null;
+}
+
+function renderAndTrack(model) {
+    _lastRev = revOf(model);
+    render(model);
+}
+
+function pollForChanges() {
+    const rev = revOf(observer.model);
+    if (rev !== null && rev !== _lastRev) renderAndTrack(observer.model);
+}
+
 engine.whenReady.then(() => {
-    observer.onUpdate(render);
+    observer.onUpdate(renderAndTrack);   // warm path: instant repaint when the event fires
     observer.subscribe();
-    render(observer.model);
+    renderAndTrack(observer.model);      // direct initial paint (observer event not needed)
+    // Cold fallback: re-created per mount (cleared first) so intervals never stack and the
+    // closure always targets the current observer.
+    if (window.__wgPoll) clearInterval(window.__wgPoll);
+    window.__wgPoll = setInterval(pollForChanges, 250);
     // Add the viewport listener once, even if this module is re-executed on a later
     // hangar mount (guarded so we don't stack duplicate handlers on the shared document).
     if (!window._wgResizeHooked) {
