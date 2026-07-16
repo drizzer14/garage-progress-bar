@@ -10,7 +10,7 @@ places at release time (see the gpb-release skill) and drift has slipped through
 before (a stale CONTRIBUTING.md filename).
 
 To avoid false positives on the *other* version numbers in the repo (the target
-client 2.3.1.0, bundled ModsSettingsAPI 1.7.0 / OpenWG GameFace 1.1.6, etc.) this
+client 2.3.1.0, bundled ModsSettingsAPI 1.6.4 / OpenWG GameFace 1.1.6, etc.) this
 matches only patterns that unambiguously carry THIS mod's version:
 
   * com.14th_ua.garageprogressbar_<v>.wotmod   (the packaged filename)

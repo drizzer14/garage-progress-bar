@@ -49,7 +49,7 @@ upgrades without leaving the Garage. **Hover** any tick or icon for a tooltip.
 |-------------|--------|
 | **Game** | World of Tanks **EU 2.3.1.0** (Wargaming global client). Built and tested against this version. |
 | **Required** | **OpenWG GameFace** 1.1.6+ — install it first, or the bar will not appear. From [wgmods.net](https://wgmods.net) or [gitlab.com/openwg/wot.gameface](https://gitlab.com/openwg/wot.gameface). |
-| **Optional** | **ModsSettingsAPI** 1.7.0+ — adds the in-game settings panel. Without it the bar simply shows everywhere with no toggles. Most modpacks already include it. |
+| **Optional** | **ModsSettingsAPI** + **ModsList** — add the mod's options to the in-game "Modification list" window. The installer bundles both; without them the bar simply shows everywhere with no toggles. Most modpacks already include them. |
 
 ## Download & install
 
@@ -57,8 +57,8 @@ upgrades without leaving the Garage. **Hover** any tick or icon for a tooltip.
 **`GarageProgressBar-Setup-<version>.exe`** from the
 [**GitHub Releases**](https://github.com/drizzer14/garage-research-progress/releases)
 page and run it (close the game first). It finds your World of Tanks folder, installs
-the mod into `mods\<version>\`, and adds **OpenWG GameFace** and **ModsSettingsAPI**
-if you don't already have them. On each run it also checks GitHub and offers to
+the mod into `mods\<version>\`, and adds **OpenWG GameFace**, **ModsSettingsAPI** and
+**ModsList** if you don't already have them. On each run it also checks GitHub and offers to
 fetch the newest installer, so a copy you keep around stays current.
 
 **Manual installation.** Grab
@@ -155,7 +155,7 @@ Building, deploying, testing, and the repo layout are documented in
 |--------|--------|
 | **Гра** | World of Tanks **EU 2.3.1.0** (глобальний клієнт Wargaming). Зібрано й перевірено для цієї версії. |
 | **Обов'язково** | **OpenWG GameFace** 1.1.6+ — встановіть першим, інакше смуга не з'явиться. З [wgmods.net](https://wgmods.net) або [gitlab.com/openwg/wot.gameface](https://gitlab.com/openwg/wot.gameface). |
-| **Необов'язково** | **ModsSettingsAPI** 1.7.0+ — додає панель налаштувань у грі. Без неї смуга просто показується скрізь без перемикачів. Більшість модпаків уже містять її. |
+| **Необов'язково** | **ModsSettingsAPI** + **ModsList** — додають параметри мода у вікно «Список модифікацій» у грі. Інсталятор містить обидва; без них смуга просто показується скрізь без перемикачів. Більшість модпаків уже містять їх. |
 
 ## Завантаження та встановлення
 
@@ -163,8 +163,8 @@ Building, deploying, testing, and the repo layout are documented in
 **`GarageProgressBar-Setup-<version>.exe`** зі сторінки
 [**релізів на GitHub**](https://github.com/drizzer14/garage-research-progress/releases)
 і запустіть (спершу закрийте гру). Він знаходить папку World of Tanks, встановлює мод
-у `mods\<version>\` і додає **OpenWG GameFace** та **ModsSettingsAPI**, якщо їх ще
-немає. Під час кожного запуску він також перевіряє GitHub і пропонує завантажити
+у `mods\<version>\` і додає **OpenWG GameFace**, **ModsSettingsAPI** та **ModsList**,
+якщо їх ще немає. Під час кожного запуску він також перевіряє GitHub і пропонує завантажити
 найновіший інсталятор, тож збережена копія залишається актуальною.
 
 **Встановлення вручну.** Візьміть `com.14th_ua.garageprogressbar_<version>.wotmod` з

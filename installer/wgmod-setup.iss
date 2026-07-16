@@ -13,10 +13,11 @@
 ;         .wotmod already built into ..\dist by build\build_wotmod.py).
 
 #define ModId         "com.14th_ua.garageprogressbar"
-#define ModVersion    "1.1.1"
-#define ModWotmod     "com.14th_ua.garageprogressbar_1.1.1.wotmod"
+#define ModVersion    "1.2.0"
+#define ModWotmod     "com.14th_ua.garageprogressbar_1.2.0.wotmod"
 #define OpenWgWotmod  "net.openwg.gameface_1.1.6.wotmod"
-#define MsaWotmod     "izeberg.modssettingsapi_1.7.0.wotmod"
+#define MsaWotmod     "aslain.modssettingsapi_1.6.4.wotmod"
+#define ModsListWotmod "me.poliroid.modslistapi_1.7.8.wotmod"
 ; Used by the GitHub update check (see [Code]): the Atom feed + release-asset URLs
 ; are built from these, and SetupBaseName must match this .exe's filename convention.
 #define RepoOwner     "drizzer14"
@@ -54,6 +55,9 @@ Source: "vendor\{#OpenWgWotmod}"; DestDir: "{code:GetModsVersionDir}"; Flags: ig
 ; Bundled ModsSettingsAPI dependency (provides the in-game settings panel). Same
 ; policy: only copied when absent, never removed on uninstall (shared by many mods).
 Source: "vendor\{#MsaWotmod}"; DestDir: "{code:GetModsVersionDir}"; Flags: ignoreversion uninsneveruninstall; Check: NeedMsa
+; Bundled ModsList API dependency (the "Modification list" window that surfaces the
+; settings). Same policy: only copied when absent, never removed on uninstall.
+Source: "vendor\{#ModsListWotmod}"; DestDir: "{code:GetModsVersionDir}"; Flags: ignoreversion uninsneveruninstall; Check: NeedModsList
 
 [Messages]
 ; Repurpose the "Select Destination Location" page for picking the WoT root.
@@ -221,15 +225,15 @@ begin
   Result := not FindOpenWgIn(GetModsVersionDir(''));
 end;
 
-{ Recursive search for *.modssettingsapi*.wotmod under a directory (matches both
-  izeberg.modssettingsapi* and aslain.modssettingsapi* and any other variant). }
+{ Recursive search for aslain.modssettingsapi*.wotmod under a directory (the bundled
+  build; any already-present Aslain ModsSettingsAPI copy satisfies the dependency). }
 function FindMsaIn(Dir: string): Boolean;
 var
   FR: TFindRec;
 begin
   Result := False;
   { files in this dir }
-  if FindFirst(Dir + '\*modssettingsapi*.wotmod', FR) then
+  if FindFirst(Dir + '\aslain.modssettingsapi*.wotmod', FR) then
   begin
     try
       Result := True;
@@ -261,6 +265,47 @@ end;
 function NeedMsa(): Boolean;
 begin
   Result := not FindMsaIn(GetModsVersionDir(''));
+end;
+
+{ Recursive search for me.poliroid.modslistapi*.wotmod under a directory. }
+function FindModsListIn(Dir: string): Boolean;
+var
+  FR: TFindRec;
+begin
+  Result := False;
+  { files in this dir }
+  if FindFirst(Dir + '\me.poliroid.modslistapi*.wotmod', FR) then
+  begin
+    try
+      Result := True;
+      Exit;
+    finally
+      FindClose(FR);
+    end;
+  end;
+  { recurse into subdirs }
+  if FindFirst(Dir + '\*', FR) then
+  begin
+    try
+      repeat
+        if (FR.Attributes and FILE_ATTRIBUTE_DIRECTORY) <> 0 then
+          if (FR.Name <> '.') and (FR.Name <> '..') then
+            if FindModsListIn(Dir + '\' + FR.Name) then
+            begin
+              Result := True;
+              Exit;
+            end;
+      until not FindNext(FR);
+    finally
+      FindClose(FR);
+    end;
+  end;
+end;
+
+{ [Files] Check: copy bundled ModsList API only when none is already present. }
+function NeedModsList(): Boolean;
+begin
+  Result := not FindModsListIn(GetModsVersionDir(''));
 end;
 
 { ---- WoT-running guard (file locks) -------------------------------------- }

@@ -21,9 +21,10 @@ $ErrorActionPreference = 'Stop'
 $InstallerDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RepoRoot     = Split-Path -Parent $InstallerDir
 $Iss          = Join-Path $InstallerDir 'wgmod-setup.iss'
-$ModWotmod    = Join-Path $RepoRoot 'dist\com.14th_ua.garageprogressbar_1.1.1.wotmod'
+$ModWotmod    = Join-Path $RepoRoot 'dist\com.14th_ua.garageprogressbar_1.2.0.wotmod'
 $OpenWg       = Join-Path $InstallerDir 'vendor\net.openwg.gameface_1.1.6.wotmod'
-$Msa          = Join-Path $InstallerDir 'vendor\izeberg.modssettingsapi_1.7.0.wotmod'
+$Msa          = Join-Path $InstallerDir 'vendor\aslain.modssettingsapi_1.6.4.wotmod'
+$ModsList     = Join-Path $InstallerDir 'vendor\me.poliroid.modslistapi_1.7.8.wotmod'
 
 function Find-ISCC {
     $candidates = @(
@@ -47,6 +48,9 @@ if (-not (Test-Path $OpenWg)) {
 if (-not (Test-Path $Msa)) {
     throw "Bundled ModsSettingsAPI dependency not found: $Msa"
 }
+if (-not (Test-Path $ModsList)) {
+    throw "Bundled ModsList API dependency not found: $ModsList"
+}
 $iscc = Find-ISCC
 if (-not $iscc) {
     throw "ISCC.exe (Inno Setup compiler) not found. Install it:`n    winget install -e --id JRSoftware.InnoSetup"
@@ -56,6 +60,7 @@ Write-Host "ISCC:       $iscc"
 Write-Host "Mod:        $ModWotmod"
 Write-Host "OpenWG:     $OpenWg"
 Write-Host "MSA:        $Msa"
+Write-Host "ModsList:   $ModsList"
 Write-Host "Script:     $Iss"
 Write-Host ''
 

@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """User settings, surfaced through ModsSettingsAPI (the community settings panel).
 
-ModsSettingsAPI (izeberg.modssettingsapi, also shipped by Aslain's modpack) is an
-OPTIONAL dependency: we import it guarded, and if it's absent the bar simply uses
-the defaults (shown everywhere) with no settings panel -- never a crash. MSA owns
-persistence, so there's no config file of our own.
+ModsSettingsAPI (Aslain's gui.aslainMenu build -- our bundled dependency -- or izeberg's
+older gui.modsSettingsApi) is an OPTIONAL dependency: we resolve it guarded via
+_primary_api(), preferring Aslain, and if neither is present the bar simply uses the
+defaults (shown everywhere) with no settings panel -- never a crash. MSA owns persistence,
+so there's no config file of our own.
 
 Two independent "hide" checkboxes, both default OFF (bar shown):
 - hideAlways       -- hide the whole widget on every vehicle (master switch).
@@ -298,9 +299,8 @@ def init():
     global _registered
     if _registered:
         return
-    try:
-        from gui.modsSettingsApi import g_modsSettingsApi
-    except ImportError:
+    g_modsSettingsApi = _primary_api()
+    if g_modsSettingsApi is None:
         LOG_NOTE("[wgmod] ModsSettingsAPI not present -- using default visibility "
                  "(bar shown, no settings panel)")
         return
@@ -327,15 +327,11 @@ def init():
         # Wire the panel's "reset to defaults" button. It fires onResetMod (NOT
         # onSettingsChanged), on whichever api actually stores this client's settings.
         # Verified live: with Aslain installed our data lives in Aslain's api
-        # (gui.aslainMenu.g_modsSettingsApi) -- a SEPARATE object from the izeberg api we
-        # import here, and the one that has onResetMod. So subscribe on BOTH (de-duped,
-        # guarded); pure-izeberg installs simply skip the one without onResetMod.
-        _subscribe_reset(g_modsSettingsApi)
-        try:
-            from gui.aslainMenu import g_modsSettingsApi as _aslain_api
-            _subscribe_reset(_aslain_api)
-        except Exception:
-            pass
+        # (gui.aslainMenu.g_modsSettingsApi), the one that has onResetMod. Subscribe on
+        # EVERY candidate api (de-duped by id, guarded); an api without onResetMod (pure
+        # izeberg) is simply skipped.
+        for _api in _candidate_apis():
+            _subscribe_reset(_api)
         # Refresh the stored template text to the client's active language. Required for
         # EXISTING installs: the saved-truthy branch above re-uses the stored (possibly
         # stale-language) template, so without this a language change never reaches the
@@ -390,23 +386,33 @@ def _subscribe_reset(api):
 
 
 def _candidate_apis():
-    """The settings-api instance(s) this client exposes. With Aslain installed there are
-    TWO separate objects (izeberg's gui.modsSettingsApi + Aslain's gui.aslainMenu), and our
-    data/defaults live in Aslain's; on a plain install there's just izeberg's. Return
-    whichever import(s) succeed so callers can act on all of them, de-duped."""
+    """The settings-api instance(s) this client exposes, PRIMARY first. Aslain's build
+    exposes gui.aslainMenu (the de-facto standard, now our bundled dependency); izeberg's
+    older build exposes gui.modsSettingsApi. A client may have either -- or (rarely) both as
+    SEPARATE objects -- and our data/defaults live in whichever is active. Probe Aslain
+    FIRST, izeberg as a fallback, returning whichever import(s) succeed so callers can act on
+    all of them, de-duped."""
     apis = []
     try:
-        from gui.modsSettingsApi import g_modsSettingsApi as a
+        from gui.aslainMenu import g_modsSettingsApi as a
         apis.append(a)
     except Exception:
         pass
     try:
-        from gui.aslainMenu import g_modsSettingsApi as b
+        from gui.modsSettingsApi import g_modsSettingsApi as b
         if b not in apis:
             apis.append(b)
     except Exception:
         pass
     return apis
+
+
+def _primary_api():
+    """The preferred settings-api instance (Aslain's gui.aslainMenu if present, else
+    izeberg's gui.modsSettingsApi), or None if neither is loaded. Every register/write path
+    routes through this so the migration to Aslain needs no per-call hard import."""
+    apis = _candidate_apis()
+    return apis[0] if apis else None
 
 
 def _store_default_position(x, y):
@@ -555,17 +561,17 @@ def set_position(x, y, is_default=False, w=0, h=0):
         # Record the viewport the pin was captured at (for later proportional rescale).
         _settings["posW"] = clamp_pos(w)
         _settings["posH"] = clamp_pos(h)
-    try:
-        from gui.modsSettingsApi import g_modsSettingsApi
-        g_modsSettingsApi.updateModSettings(LINKAGE, _full_settings_for_write(g_modsSettingsApi))
+    g = _primary_api()
+    if g is not None:
         try:
-            g_modsSettingsApi.saveState()
+            g.updateModSettings(LINKAGE, _full_settings_for_write(g))
+            try:
+                g.saveState()
+            except Exception:
+                LOG_CURRENT_EXCEPTION()
         except Exception:
             LOG_CURRENT_EXCEPTION()
-    except ImportError:
-        pass  # MSA absent -> position still applies this session, just not persisted
-    except Exception:
-        LOG_CURRENT_EXCEPTION()
+    # else MSA absent -> position still applies this session, just not persisted
     if is_default:
         _store_default_position(x, y)
     # Re-push so the (echoed) position reaches the widget immediately, even without MSA.
@@ -667,17 +673,17 @@ def set_mode_override(int_cd, mode):
     except Exception:
         LOG_CURRENT_EXCEPTION()
         return
-    try:
-        from gui.modsSettingsApi import g_modsSettingsApi
-        g_modsSettingsApi.updateModSettings(LINKAGE, _full_settings_for_write(g_modsSettingsApi))
+    g = _primary_api()
+    if g is not None:
         try:
-            g_modsSettingsApi.saveState()
+            g.updateModSettings(LINKAGE, _full_settings_for_write(g))
+            try:
+                g.saveState()
+            except Exception:
+                LOG_CURRENT_EXCEPTION()
         except Exception:
             LOG_CURRENT_EXCEPTION()
-    except ImportError:
-        pass  # MSA absent -> selection applies this session, just not persisted
-    except Exception:
-        LOG_CURRENT_EXCEPTION()
+    # else MSA absent -> selection applies this session, just not persisted
     # Re-push so the chosen mode reaches the widget immediately (Class-B local-state
     # command: the game fires no sync, so we must refresh -- like set_position).
     try:

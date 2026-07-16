@@ -28,7 +28,7 @@ This build targets the Wargaming EU/global client (version 2.3.1.0).
 ## Install with the installer (recommended)
 
 1. Close World of Tanks completely (exit the Game Center launcher too).
-2. Run **`GarageProgressBar-Setup-1.1.1.exe`**.
+2. Run **`GarageProgressBar-Setup-1.2.0.exe`**.
 3. Confirm your World of Tanks folder when the installer shows it — the folder that
    contains `version.xml`. The installer detects it automatically in most cases.
 4. If a newer version is available on GitHub, the installer offers to download and
@@ -48,8 +48,9 @@ installer. OpenWG GameFace and ModsSettingsAPI stay in place for other mods that
 1. Get **OpenWG GameFace** from the official WG mod portal (**wgmods.net**) or the
    OpenWG project's GitLab releases, and install its `.wotmod` into your game's
    `mods\<version>\` folder. If you already run other GameFace mods you likely have it.
-   Optionally also install **ModsSettingsAPI** (izeberg) the same way for the in-game
-   settings panel — most modpacks (e.g. Aslain's) already include it.
+   Optionally also install **ModsSettingsAPI** (Aslain's build) and **ModsList** the
+   same way for the in-game "Modification list" options window — most modpacks (e.g.
+   Aslain's) already include them.
 2. Open your World of Tanks folder and the version-matched mods folder inside it:
 
    ```
@@ -59,14 +60,14 @@ installer. OpenWG GameFace and ModsSettingsAPI stay in place for other mods that
    The folder name matches your installed client version. After a game update the
    version changes and you move the mod into the new version folder.
 
-3. Copy **`com.14th_ua.garageprogressbar_1.1.1.wotmod`** into that folder.
+3. Copy **`com.14th_ua.garageprogressbar_1.2.0.wotmod`** into that folder.
 4. Delete any older version of this mod from the same folder first. **If you used a
    release before the rename, also delete the old `com.drizzer14.wgmod_*.wotmod`** —
    otherwise both load and you get two bars.
 5. Fully restart the game client: exit completely and relaunch.
 
 The `mods\2.3.1.0\` folder then holds the OpenWG GameFace `.wotmod` and
-`com.14th_ua.garageprogressbar_1.1.1.wotmod`.
+`com.14th_ua.garageprogressbar_1.2.0.wotmod`.
 
 ---
 
@@ -112,7 +113,7 @@ The `mods\2.3.1.0\` folder then holds the OpenWG GameFace `.wotmod` and
 ## Uninstalling
 
 Remove the mod through its Windows **Apps & features** entry, or delete
-`com.14th_ua.garageprogressbar_1.1.1.wotmod` from `mods\<version>\`, then restart the client.
+`com.14th_ua.garageprogressbar_1.2.0.wotmod` from `mods\<version>\`, then restart the client.
 
 ---
 

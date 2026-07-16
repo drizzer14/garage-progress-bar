@@ -2,7 +2,8 @@
 
 A one-double-click `setup.exe` (built with [Inno Setup](https://jrsoftware.org/isinfo.php)) that
 installs the Garage Progress Bar mod and its dependencies — **OpenWG GameFace**
-(required) and **ModsSettingsAPI** (for the in-game settings panel).
+(required), **ModsSettingsAPI** (for the settings) and **ModsList** (the in-game
+"Modification list" window the options appear in).
 
 ## What the installer does for end users
 
@@ -16,18 +17,22 @@ installs the Garage Progress Bar mod and its dependencies — **OpenWG GameFace*
    via ModsList, Aslain, etc.). If absent, it copies the bundled
    `net.openwg.gameface_1.1.6.wotmod` in.
 4. **Installs ModsSettingsAPI only if missing** — recursively checks for any
-   `*modssettingsapi*.wotmod` (matches the izeberg or Aslain builds many packs
-   already ship). If absent, it copies the bundled
-   `izeberg.modssettingsapi_1.7.0.wotmod` in. This powers the in-game settings panel;
-   the bar still works without it (it just falls back to its default visibility).
-5. **Cleans + installs the mod** — removes older `com.14th_ua.garageprogressbar_*.wotmod`
+   `aslain.modssettingsapi*.wotmod` (the Aslain build, bundled in most packs). If
+   absent, it copies the bundled `aslain.modssettingsapi_1.6.4.wotmod` in. This powers
+   the settings; the bar still works without it (it just falls back to its default
+   visibility).
+5. **Installs ModsList only if missing** — recursively checks for any
+   `me.poliroid.modslistapi*.wotmod`. If absent, it copies the bundled
+   `me.poliroid.modslistapi_1.7.8.wotmod` in. This provides the in-game "Modification
+   list" window where the mod's options appear.
+6. **Cleans + installs the mod** — removes older `com.14th_ua.garageprogressbar_*.wotmod`
    builds (and stale loose `res_mods\<version>\` leftovers that would shadow the
    package), then installs the current `.wotmod`.
-6. **Reminds** the user to fully restart the client.
+7. **Reminds** the user to fully restart the client.
 
 The installer refuses to run while `WorldOfTanks.exe` is open (file locks). On
-uninstall it removes the mod but **leaves OpenWG and ModsSettingsAPI in place**
-(other mods may use them).
+uninstall it removes the mod but **leaves OpenWG, ModsSettingsAPI and ModsList in
+place** (other mods may use them).
 
 ## Update check
 
@@ -55,25 +60,30 @@ updating that define, or the updater won't find the new build.
 asset is not directly downloadable by an automated client (login/Cloudflare gated).
 OpenWG is open source and is routinely redistributed in WoT mod packs.
 
-`vendor/izeberg.modssettingsapi_1.7.0.wotmod` is the ModsSettingsAPI library mod
-(izeberg), the de-facto standard in-game settings framework, also bundled in modpacks
-like Aslain's. It is redistributed the same way.
+`vendor/aslain.modssettingsapi_1.6.4.wotmod` is the ModsSettingsAPI library mod
+(Aslain's build, exposing `gui.aslainMenu`), the de-facto standard in-game settings
+framework bundled in modpacks like Aslain's. It is redistributed the same way.
 
-To update either: download the newer `.wotmod`, replace the file in `vendor/`, and
-bump the matching `OpenWgWotmod` / `MsaWotmod` define in `wgmod-setup.iss`
-(and the `$Msa` path in `build_installer.ps1` if its filename changed).
+`vendor/me.poliroid.modslistapi_1.7.8.wotmod` is the ModsList library mod, which
+provides the in-game "Modification list" window that the mod's options appear in. It is
+redistributed the same way.
+
+To update any of them: download the newer `.wotmod`, replace the file in `vendor/`, and
+bump the matching `OpenWgWotmod` / `MsaWotmod` / `ModsListWotmod` define in
+`wgmod-setup.iss` (and the `$OpenWg` / `$Msa` / `$ModsList` path in `build_installer.ps1`
+if its filename changed).
 
 ## Building the installer
 
 ```powershell
 # 1. Build the mod package (Python 2.7 — bytecode is version-locked):
-& "C:\Python27\python.exe" build\build_wotmod.py        # -> dist\com.14th_ua.garageprogressbar_1.1.1.wotmod
+& "C:\Python27\python.exe" build\build_wotmod.py        # -> dist\com.14th_ua.garageprogressbar_1.2.0.wotmod
 
 # 2. Install Inno Setup once (provides ISCC.exe):
 winget install -e --id JRSoftware.InnoSetup
 
 # 3. Compile:
-pwsh installer\build_installer.ps1                      # -> dist\GarageProgressBar-Setup-1.1.1.exe
+pwsh installer\build_installer.ps1                      # -> dist\GarageProgressBar-Setup-1.2.0.exe
 ```
 
 `build_installer.ps1` locates `ISCC.exe`, verifies the mod package and bundled

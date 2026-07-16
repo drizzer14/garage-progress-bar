@@ -48,10 +48,11 @@ python build\clean_dist.py            # tidy dist/ to one release's files; --dry
 & "C:\Python27\python.exe" build\build_wotmod.py    # -> dist\com.14th_ua.garageprogressbar_X.Y.Z.wotmod
 pwsh installer\build_installer.ps1                   # -> dist\GarageProgressBar-Setup-X.Y.Z.exe
 ```
-The installer needs the `.wotmod` already built and BOTH vendor payloads present
-(`build_installer.ps1` throws if either is missing):
-`installer\vendor\net.openwg.gameface_1.1.6.wotmod` and
-`installer\vendor\izeberg.modssettingsapi_1.7.0.wotmod`.
+The installer needs the `.wotmod` already built and ALL THREE vendor payloads present
+(`build_installer.ps1` throws if any is missing):
+`installer\vendor\net.openwg.gameface_1.1.6.wotmod`,
+`installer\vendor\aslain.modssettingsapi_1.6.4.wotmod`, and
+`installer\vendor\me.poliroid.modslistapi_1.7.8.wotmod`.
 
 Consumer zip (no committed generator — hand-assemble): bump `dist\INSTALL.txt` version, then
 ```powershell
@@ -63,7 +64,7 @@ Compress-Archive -Path dist\com.14th_ua.garageprogressbar_X.Y.Z.wotmod,dist\INST
 ```powershell
 python build\build_wgmods_zip.py       # -> dist\GarageProgressBar-Bundle_X.Y.Z.zip
 ```
-Runs on either Python (only zips already-built files). Needs the `.wotmod` + both
+Runs on either Python (only zips already-built files). Needs the `.wotmod` + all three
 `installer\vendor\*.wotmod`; bundles mod + vendor deps under `mods\2.3.1.0\` plus a bilingual
 `readme.txt` (generated from `installer\readme.wgmods.txt`, `{VERSION}` auto-stamped). The
 `2.3.1.0` folder is `CLIENT_VERSION` in the generator; bump when the supported client changes.
