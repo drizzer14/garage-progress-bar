@@ -18,6 +18,24 @@ verbatim. Every branch/resolver/class-builder switches on these — never a raw 
 fails silently). `MODE.HIDDEN` exists for completeness only: the HIDDEN model arrives
 `visible=false`, which `render` honors before branching on mode.
 
+## Render lifecycle & cold-mount self-heal
+`engine.whenReady` wires `observer.onUpdate(renderAndTrack)`, `observer.subscribe()`, a DIRECT
+initial `renderAndTrack(observer.model)`, and `window.__wgPoll = setInterval(pollForChanges, 250)`
+(cleared first, so it re-arms per mount and never stacks). The poll is this mod's fix for OpenWG's
+**cold-mount dormant `viewEnv.onDataChanged`** event (the generic finding lives in
+wotmod-gameface-widget → Lifecycle): on a freshly-mounted sub-view the engine withholds the
+data-changed event until the view next composites, so after a mode/tank switch in an idle garage
+the observer never fires and the bar looked **frozen until the camera moved** (the first paint
+survived only because it's the direct call, not observer-driven). `revOf(model)` reads
+`unwrap(model.wgResearch).rev` — a monotonic counter Python bumps every push (`ResearchVM` prop 32
+`rev`/`setRev` in `view_models.py`; module global `_push_seq` in `bridge/gameface_bridge.py`,
+written as the FIRST `tx.setRev(_push_seq)` inside `push()`'s `rvm.transaction()`). `pollForChanges`
+re-renders (via `renderAndTrack`, which records `_lastRev`) only when `rev` actually moved — idle
+cost is a shallow read + compare, a real render only on a genuine change (no spurious tick
+rebuilds). Verified in-game with camera-on-cursor DISABLED (rules out incidental composites): both
+the header mode-switch AND a REPL-driven tank switch self-heal within ~250ms. Do NOT remove the
+poll to "simplify" — the direct-call + observer path alone leaves the cold-mount freeze.
+
 ## DOM structure
 ```
 #wgmod-root (pointer-events:none)
