@@ -130,7 +130,7 @@ class UpgradeVM(ViewModel):
 
 
 class ResearchVM(ViewModel):
-    def __init__(self, properties=33, commands=8):
+    def __init__(self, properties=34, commands=8):
         super(ResearchVM, self).__init__(properties=properties, commands=commands)
 
     def _initialize(self):
@@ -170,6 +170,7 @@ class ResearchVM(ViewModel):
         self._addStringProperty("availModes", "")  # 30 (comma-joined Mode strings for the header mode switch; <2 -> no switch)
         self._addBoolProperty("ignoreFreeXp", False)  # 31 ("Ignore Free XP" setting: draw the combat-XP glyph, hide the free-XP tone)
         self._addNumberProperty("rev", 0)  # 32 (monotonic push counter; the JS poll re-renders when it changes -- cold-mount self-heal, see WGModResearch.js)
+        self._addNumberProperty("scale", 0)  # 33 (bar scale index: 0 = Default, 1 = Large; the JS folds the .wg-large override class when 1)
         # Reverse channel: JS click handlers invoke these commands. Each returns a
         # command object that connect_commands() wires to a Python handler. Wulf
         # delivers the JS-supplied argument(s) to those handlers.
@@ -282,6 +283,9 @@ class ResearchVM(ViewModel):
 
     def setRev(self, v):
         self._setNumber(32, v)
+
+    def setScale(self, v):
+        self._setNumber(33, v)
 
     @staticmethod
     def getTicksType():

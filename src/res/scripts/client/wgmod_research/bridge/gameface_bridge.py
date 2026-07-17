@@ -732,6 +732,9 @@ def push(rvm, host_vm=None):
             # (fill/spendable/affordability); this flag tells the widget to draw the
             # combat-XP glyph instead of the total-XP star and drop the free-XP tone.
             tx.setIgnoreFreeXp(mod_settings.ignore_free_xp())
+            # Bar scale (0 = Default, 1 = Large): the widget folds the .wg-large override
+            # class when 1, enlarging the bar. View-only -- build_model is untouched.
+            tx.setScale(mod_settings.scale())
             # Localized widget labels (client-language, sourced from WG's own strings);
             # JSON so the whole bundle rides one field. ensure_ascii escapes non-ASCII
             # (e.g. Cyrillic) to \uXXXX, which JS JSON.parse decodes back.

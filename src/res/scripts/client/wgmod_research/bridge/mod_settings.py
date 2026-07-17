@@ -69,6 +69,13 @@ DEFAULTS = {# showBar is the MASTER switch (default ON = bar shown everywhere). 
             # each vehicle toward its progress, dropping the account-global free XP from the
             # bar, affordability, and tooltips (see domain.builder.build_model ignore_free_xp).
             "ignoreFreeXp": False,
+            # Bar scale (Dropdown, 0-based int index -- Aslain MSA stores/returns the
+            # selection as an integer): 0 = Default (byte-for-byte the current rendering),
+            # 1 = Large (~2x bar width, 1.5x track/font/icon dims). scale() reads it back;
+            # the widget folds the .wg-large override class when it's 1. Coerced by
+            # _clamp_scale (an out-of-range/non-int value -> 0). Lives in column2, above
+            # the Bar position controls (see _template + settings_i18n scale options).
+            "scale": 0,
             "posX": 0, "posY": 0,
             # Viewport (px) a custom posX/posY was captured at, so the widget can rescale
             # the pinned position proportionally after a resolution / UI-scale change (see
@@ -106,6 +113,17 @@ def clamp_pos(v):
     if v > POS_MAX:
         return POS_MAX
     return v
+
+
+def _clamp_scale(v):
+    """Coerce the scale-dropdown selection to a known 0-based index: 0 = Default,
+    1 = Large. Aslain MSA returns the selection as an int; a non-int / out-of-range
+    value guards back to 0 (Default). Pure + engine-free (unit-tested)."""
+    try:
+        v = int(v)
+    except (TypeError, ValueError):
+        return 0
+    return v if v in (0, 1) else 0
 
 # Current effective settings. Starts at defaults so accessors are always safe to call,
 # even before init() runs or when MSA is absent.
@@ -169,7 +187,11 @@ def _template():
         # by settingsVersion, so without a bump an existing install keeps rendering the
         # stored structure (ignoreFreeXp still nested under the master) and ignores the
         # relocation. Bumping forces MSA to re-register the new flat layout.
-        "settingsVersion": 6,
+        # Bumped 6 -> 7 when the "scale" Dropdown was added to column2 (a new varName +
+        # a new control with option labels). Aslain folds the option labels into the
+        # template's structure signature, so the bump is mandatory to push the new
+        # control (and its localized options) to an existing install.
+        "settingsVersion": 7,
         "column1": [
             # MASTER: the whole-bar switch. Its children (below) grey out when it's off.
             {
@@ -201,6 +223,19 @@ def _template():
             },
         ],
         "column2": [
+            # Bar scale selector -- a Dropdown ABOVE the Bar position controls. Aslain's
+            # 1.6.4 shape: value = the current 0-based index, options = a list of
+            # {"label": <text>}. The label / option labels / tooltip all follow the client
+            # language (settings_i18n.panel_text() attaches the localized option labels on
+            # t["scale"]["options"], sourced from the _SCALE_OPTIONS table there).
+            {
+                "type": "Dropdown",
+                "text": t["scale"]["text"],
+                "value": DEFAULTS["scale"],
+                "options": [{"label": lbl} for lbl in t["scale"]["options"]],
+                "tooltip": t["scale"]["tooltip"],
+                "varName": "scale",
+            },
             {
                 "type": "Label",
                 "text": t["barPosition"]["text"],
@@ -279,6 +314,10 @@ def _apply(settings):
             continue
         if key in ("posX", "posY", "posW", "posH"):
             _settings[key] = clamp_pos(settings[key])
+        elif key == "scale":
+            # An INTEGER dropdown index (0/1), NOT a bool -- coerce it as one so the
+            # generic bool() branch below can't clobber the selection.
+            _settings[key] = _clamp_scale(settings[key])
         elif key == "modeOverrides":
             # A JSON string (per-vehicle mode switch map); keep it verbatim, guarding a
             # non-string / missing value back to the empty map.
@@ -507,6 +546,12 @@ def show_when_complete():
 
 def ignore_free_xp():
     return _settings["ignoreFreeXp"]
+
+
+def scale():
+    """The bar scale index: 0 = Default (current rendering), 1 = Large. Pushed to the
+    widget (setScale), which folds the .wg-large override class when it's 1."""
+    return _settings["scale"]
 
 
 def pos_x():

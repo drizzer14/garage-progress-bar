@@ -39,8 +39,9 @@ def _col1():
 
 # --- version ----------------------------------------------------------------
 
-def test_settings_version_is_6():
-    assert M._template()["settingsVersion"] == 6
+def test_settings_version_is_7():
+    # Bumped 6 -> 7 when the scale Dropdown was added to column2.
+    assert M._template()["settingsVersion"] == 7
 
 
 # --- master / children ------------------------------------------------------
@@ -140,3 +141,58 @@ def test_col1_keys_match_template_wire_order():
     # (_sync_template_text). It must match the template's actual order.
     from wgmod_research.adapter import settings_i18n as S
     assert list(S.COL1_KEYS) == [c["varName"] for c in _col1()]
+
+
+# --- scale dropdown (column2) -----------------------------------------------
+
+def _col2():
+    return M._template()["column2"]
+
+
+def test_scale_default_is_zero():
+    assert M.DEFAULTS["scale"] == 0
+
+
+def test_clamp_scale_coerces_to_known_index():
+    # Aslain returns a 0-based int; a bad / out-of-range value guards back to 0.
+    assert M._clamp_scale(0) == 0
+    assert M._clamp_scale(1) == 1
+    assert M._clamp_scale(2) == 0
+    assert M._clamp_scale(-1) == 0
+    assert M._clamp_scale(u"1") == 1
+    assert M._clamp_scale(None) == 0
+    assert M._clamp_scale(u"nope") == 0
+
+
+def test_scale_dropdown_is_first_in_column2_above_bar_position():
+    dd = _col2()[0]
+    assert dd["type"] == "Dropdown"
+    assert dd["varName"] == "scale"
+    assert dd["value"] == 0
+    assert len(dd["options"]) == 2                     # Default / Large
+    assert all(o.get("label") for o in dd["options"])  # both option labels present
+    # The Bar position Label follows the dropdown (lockstep with COL2_KEYS below).
+    assert _col2()[1]["type"] == "Label"
+
+
+def test_col2_keys_match_template_wire_order():
+    # settings_i18n.COL2_KEYS is walked in lockstep with the stored template; the
+    # Label carries no varName, so pair positionally (scale, barPosition, posX, posY).
+    from wgmod_research.adapter import settings_i18n as S
+    col2 = _col2()
+    assert list(S.COL2_KEYS) == ["scale", "barPosition", "posX", "posY"]
+    assert len(col2) == len(S.COL2_KEYS)
+    assert col2[0].get("varName") == "scale"
+    assert col2[2].get("varName") == "posX"
+    assert col2[3].get("varName") == "posY"
+
+
+def test_scale_reads_back_stored_int():
+    # scale() defaults to 0 and reads back a stored int index through _apply.
+    assert M.scale() == 0
+    M._apply({"scale": 1})
+    try:
+        assert M.scale() == 1
+        assert isinstance(M.scale(), int)
+    finally:
+        M._apply({"scale": 0})   # restore default for other tests

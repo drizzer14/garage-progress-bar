@@ -65,7 +65,7 @@ _FEATURE_EN = {
 COL1_KEYS = (u"showBar", u"showTechTree", u"showFieldMods", u"showPotentialTierXI",
              u"showSkillTree", u"showEliteRewards", u"showElite", u"showWhenComplete",
              u"ignoreFreeXp")
-COL2_KEYS = (u"barPosition", u"posX", u"posY")
+COL2_KEYS = (u"scale", u"barPosition", u"posX", u"posY")
 
 
 def _norm(code):
@@ -94,6 +94,7 @@ _LABELS = {
         u"showBar": u"Show Progress Bar",
         u"showWhenComplete": u"Fully Progressed",
         u"ignoreFreeXp": u"Ignore Free XP",
+        u"scale": u"Scale",
         u"barPosition": u"Bar position (px)",
         u"posX": u"Horizontal (center X)",
         u"posY": u"Vertical (top Y)",
@@ -102,6 +103,7 @@ _LABELS = {
         u"showBar": u"Fortschrittsleiste anzeigen",
         u"showWhenComplete": u"Vollständig fortgeschritten",
         u"ignoreFreeXp": u"Freie Erfahrung ignorieren",
+        u"scale": u"Skalierung",
         u"barPosition": u"Leistenposition (px)",
         u"posX": u"Horizontal (Mitte X)",
         u"posY": u"Vertikal (oben Y)",
@@ -110,6 +112,7 @@ _LABELS = {
         u"showBar": u"Afficher la barre de progression",
         u"showWhenComplete": u"Entièrement progressé",
         u"ignoreFreeXp": u"Ignorer l'expérience libre",
+        u"scale": u"Échelle",
         u"barPosition": u"Position de la barre (px)",
         u"posX": u"Horizontale (centre X)",
         u"posY": u"Verticale (haut Y)",
@@ -118,6 +121,7 @@ _LABELS = {
         u"showBar": u"Mostrar la barra de progreso",
         u"showWhenComplete": u"Progreso completo",
         u"ignoreFreeXp": u"Ignorar la experiencia libre",
+        u"scale": u"Escala",
         u"barPosition": u"Posición de la barra (px)",
         u"posX": u"Horizontal (centro X)",
         u"posY": u"Vertical (arriba Y)",
@@ -126,6 +130,7 @@ _LABELS = {
         u"showBar": u"Mostra la barra di avanzamento",
         u"showWhenComplete": u"Completamente progredito",
         u"ignoreFreeXp": u"Ignora l'esperienza libera",
+        u"scale": u"Scala",
         u"barPosition": u"Posizione della barra (px)",
         u"posX": u"Orizzontale (centro X)",
         u"posY": u"Verticale (alto Y)",
@@ -134,6 +139,7 @@ _LABELS = {
         u"showBar": u"Pokaż pasek postępu",
         u"showWhenComplete": u"W pełni ukończone",
         u"ignoreFreeXp": u"Ignoruj wolne doświadczenie",
+        u"scale": u"Skala",
         u"barPosition": u"Pozycja paska (px)",
         u"posX": u"Poziomo (środek X)",
         u"posY": u"Pionowo (góra Y)",
@@ -142,6 +148,7 @@ _LABELS = {
         u"showBar": u"Zobrazit lištu postupu",
         u"showWhenComplete": u"Plně dokončeno",
         u"ignoreFreeXp": u"Ignorovat volné zkušenosti",
+        u"scale": u"Měřítko",
         u"barPosition": u"Pozice lišty (px)",
         u"posX": u"Vodorovně (střed X)",
         u"posY": u"Svisle (nahoře Y)",
@@ -150,6 +157,7 @@ _LABELS = {
         u"showBar": u"Показывать полосу прогресса",
         u"showWhenComplete": u"Полностью пройдено",
         u"ignoreFreeXp": u"Игнорировать свободный опыт",
+        u"scale": u"Масштаб",
         u"barPosition": u"Положение полосы (px)",
         u"posX": u"По горизонтали (центр X)",
         u"posY": u"По вертикали (верх Y)",
@@ -158,6 +166,7 @@ _LABELS = {
         u"showBar": u"Показувати смугу прогресу",
         u"showWhenComplete": u"Повністю пройдено",
         u"ignoreFreeXp": u"Ігнорувати вільний досвід",
+        u"scale": u"Масштаб",
         u"barPosition": u"Розташування смуги (px)",
         u"posX": u"По горизонталі (центр X)",
         u"posY": u"По вертикалі (верх Y)",
@@ -166,6 +175,7 @@ _LABELS = {
         u"showBar": u"Folyamatjelző sáv megjelenítése",
         u"showWhenComplete": u"Teljesen kész",
         u"ignoreFreeXp": u"Szabad tapasztalat mellőzése",
+        u"scale": u"Méretezés",
         u"barPosition": u"A sáv helyzete (px)",
         u"posX": u"Vízszintes (középpont X)",
         u"posY": u"Függőleges (felső Y)",
@@ -174,10 +184,32 @@ _LABELS = {
         u"showBar": u"İlerleme çubuğunu göster",
         u"showWhenComplete": u"Tamamen ilerlemiş",
         u"ignoreFreeXp": u"Serbest deneyimi yok say",
+        u"scale": u"Ölçek",
         u"barPosition": u"Çubuk konumu (px)",
         u"posX": u"Yatay (merkez X)",
         u"posY": u"Dikey (üst Y)",
     },
+}
+
+
+# --- SCALE DROPDOWN OPTION LABELS (hand-translated) -----------------------------------
+# The two option labels for the "scale" Dropdown: (Default, Large). Kept in their OWN
+# table -- NOT in _LABELS -- because options are not per-control label/tooltip rows, so
+# folding them into _LABELS would break the label/tooltip key partition (see the
+# settings_i18n tests). render_panel attaches the localized pair on t["scale"]["options"];
+# English master + per-language fallback (marked on fallback), same policy as _LABELS.
+_SCALE_OPTIONS = {
+    u"en": (u"Default", u"Large"),
+    u"de": (u"Standard", u"Groß"),
+    u"fr": (u"Par défaut", u"Grand"),
+    u"es": (u"Predeterminado", u"Grande"),
+    u"it": (u"Predefinito", u"Grande"),
+    u"pl": (u"Domyślny", u"Duży"),
+    u"cs": (u"Výchozí", u"Velký"),
+    u"ru": (u"По умолчанию", u"Большой"),
+    u"uk": (u"За замовчуванням", u"Великий"),
+    u"hu": (u"Alapértelmezett", u"Nagy"),
+    u"tr": (u"Varsayılan", u"Büyük"),
 }
 
 
@@ -216,6 +248,10 @@ _TOOLTIPS_EN = {
                              u"banked XP (vehicle XP + Free XP) toward the fixed price "
                              u"a Tier XI costs to unlock. Replaces the Elite-Levels bar "
                              u"on those tanks. Off by default."),
+    u"scale": (u"Scale",
+              u"Sets the on-screen size of the progress bar. Default keeps the standard "
+              u"size; Large roughly doubles the bar's width and enlarges its text, icons, "
+              u"and tooltip - handy on high-resolution or far-away displays."),
     u"barPosition": (u"Bar position",
                      u"Ctrl+drag the bar in the garage to move it, or type exact "
                      u"on-screen pixel coordinates below. Reset returns it to the "
@@ -253,7 +289,21 @@ def render_panel(wg_labels, lang=None):
         header, body = _TOOLTIPS_EN[key]
         out[key] = {u"text": text,
                     u"tooltip": u"{HEADER}%s{/HEADER}{BODY}%s{/BODY}" % (header, body)}
+        # The scale Dropdown also carries its localized option labels (see _template()).
+        if key == u"scale":
+            out[key][u"options"] = _scale_options(code)
     return out
+
+
+def _scale_options(code):
+    """The localized scale-Dropdown option labels ``[Default, Large]`` for language
+    ``code`` (English fallback, marked on fallback -- same policy as the mod-invented
+    labels). ``code`` is already a normalized ``_norm()`` key."""
+    fb = code not in _SCALE_OPTIONS
+    opts = _SCALE_OPTIONS[DEFAULT_LANGUAGE] if fb else _SCALE_OPTIONS[code]
+    if fb:
+        return [i18n._mark(o) for o in opts]
+    return list(opts)
 
 
 def client_language():

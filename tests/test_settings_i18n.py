@@ -71,6 +71,24 @@ def test_unknown_language_labels_are_english():
     assert xx == en
 
 
+# --- scale dropdown option labels -------------------------------------------
+
+def test_scale_options_localized_with_english_fallback():
+    en = S.render_panel(_FAKE_WL, lang=u"en")
+    assert en[u"scale"][u"options"] == [u"Default", u"Large"]
+    de = S.render_panel(_FAKE_WL, lang=u"de")
+    assert de[u"scale"][u"options"] == [u"Standard", u"Groß"]
+    xx = S.render_panel(_FAKE_WL, lang=u"xx")   # unknown code -> English options
+    assert xx[u"scale"][u"options"] == [u"Default", u"Large"]
+
+
+def test_scale_options_cover_every_shipped_language():
+    # The option table ships the same languages as the label table.
+    assert set(S._SCALE_OPTIONS.keys()) == set(S._LABELS.keys())
+    for code, opts in S._SCALE_OPTIONS.items():
+        assert len(opts) == 2, u"lang %s must have exactly 2 scale options" % code
+
+
 # --- tooltips are FIXED ENGLISH, never translated ---------------------------
 
 def test_tooltips_are_english_in_every_language():

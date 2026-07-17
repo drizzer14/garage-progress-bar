@@ -1220,7 +1220,9 @@
 }
 #wgmod-root .wg-tip-buff-ico {
     flex: 0 0 auto;
-    align-self: center;
+    align-self: flex-start;     /* top-align the icon with the first line of the buff text
+                                   (both Default and Large -- the .wg-large override doesn't
+                                   restate align-self, so it inherits this) */
     width: 18.75rem;
     height: 18.75rem;
     margin-right: 3rem;
@@ -1405,3 +1407,387 @@
     z-index: 5;                 /* paints above .wg-hot so the chips are visible... */
     pointer-events: none;       /* ...but events pass through to .wg-hot, which hit-tests them */
 }
+
+/* ============================================================================
+   LARGE SCALE (.wg-large) -- the "Scale: Large" setting. An EXPLICIT override class
+   (folded onto #wgmod-root by the JS when data.scale === 1), NOT transform:scale and
+   NOT calc()/var() -- so the Default path is byte-for-byte untouched and ALL risk is
+   isolated to this block. Bar WIDTH is x2.0; every other sized dim (track height +
+   borders, tick-layer offsets, font-sizes, category/skill/elite icons, tick glyphs,
+   the vehicle node, field-mod hexes, and the full tooltip set) is x1.5. Selectors add
+   .wg-large on top of the rule they enlarge, so each out-specifies its Default rule
+   (an extra class on the #wgmod-root id side; mode/state combos add .wg-elite/.wg-skill
+   to clear the mode rules' own specificity). Multiplied values are kept exact
+   (13 -> 19.5rem, 36 -> 54rem, ...); sub-rem precision is left as-is. */
+
+/* Root: width x2.0 (center-anchored via translateX(-50%), so it stays centered and
+   posX/posY still apply). The decorative glow cloud grows with it (x1.5). */
+#wgmod-root.wg-large {
+    width: 1040rem;
+}
+#wgmod-root.wg-large::before {
+    top: -15rem;
+    left: -132rem;
+    right: -132rem;
+    bottom: -51rem;
+}
+
+/* --- header ------------------------------------------------------------------ */
+#wgmod-root.wg-large .wg-head {
+    margin-bottom: 7.5rem;
+}
+#wgmod-root.wg-large .wg-head-left {
+    margin-left: 21rem;
+}
+#wgmod-root.wg-large .wg-cat-icon {
+    width: 54rem;
+    height: 54rem;
+    margin-top: -1.5rem;
+}
+#wgmod-root.wg-large.wg-skill .wg-cat-icon {
+    width: 45rem;
+    height: 45rem;
+}
+#wgmod-root.wg-large.wg-elite .wg-cat-icon {
+    width: 34.5rem;
+    height: 34.5rem;
+}
+#wgmod-root.wg-large.wg-elite .wg-cat-icon .wg-emblem-digit {
+    width: 6.3rem;
+    height: 12.6rem;
+}
+#wgmod-root.wg-large.wg-elite .wg-cat-icon .wg-emblem-digit-one {
+    width: 4.5rem;
+}
+#wgmod-root.wg-large .wg-label {
+    font-size: 19.5rem;
+    letter-spacing: 1.5rem;
+}
+#wgmod-root.wg-large .wg-upgrades {
+    margin-left: 12rem;
+    font-size: 19.5rem;
+    letter-spacing: 1.5rem;
+}
+#wgmod-root.wg-large .wg-switch {
+    margin-left: 18rem;
+    font-size: 19.5rem;
+    letter-spacing: 1.5rem;
+}
+#wgmod-root.wg-large .wg-xp {
+    right: -10.5rem;
+}
+#wgmod-root.wg-large .wg-xp-val,
+#wgmod-root.wg-large .wg-xp2-val {
+    font-size: 19.5rem;
+    letter-spacing: 1.5rem;
+}
+#wgmod-root.wg-large .wg-xp-ico,
+#wgmod-root.wg-large .wg-xp2-ico {
+    width: 24rem;
+    height: 24rem;
+    margin-left: 6rem;
+}
+#wgmod-root.wg-large .wg-xp2-val {
+    margin-left: 15rem;
+}
+#wgmod-root.wg-large.wg-elite .wg-xp-ico,
+#wgmod-root.wg-large.wg-ignore-free .wg-xp-ico,
+#wgmod-root.wg-large.wg-ignore-free .wg-xp2-ico {
+    top: -1.5rem;              /* low-art nudge, scaled with the box (bg-size % unchanged) */
+}
+
+/* --- track + notches + current marker + hover overlay ------------------------ */
+#wgmod-root.wg-large .wg-track {
+    height: 19.5rem;
+    border-width: 3rem;        /* x1.5; color/style kept from the base rule */
+}
+#wgmod-root.wg-large .wg-track::after {
+    border-width: 1.5rem;
+    background-position: 3.15rem 50%;
+    background-size: 4.5rem 100%;
+}
+#wgmod-root.wg-large .wg-cur {
+    width: 3.75rem;
+    margin-left: -3rem;
+}
+#wgmod-root.wg-large .wg-hot {
+    left: -27rem;
+    top: -39rem;
+    bottom: -58.5rem;
+}
+
+/* --- elite arrowhead "tab" badges (cat icon + below-bar ticks) --------------- */
+#wgmod-root.wg-large.wg-elite .wg-cat-icon-tab {
+    width: 54rem;
+    height: 24rem;
+    transform: translate(-50%, -50%) translateX(2.25rem);
+}
+#wgmod-root.wg-large .wg-tick-tab {
+    width: 54rem;
+    height: 24rem;
+    margin-top: 6rem;
+}
+#wgmod-root.wg-large.wg-elite .wg-tab-short  { margin-left: -13.5rem; }
+#wgmod-root.wg-large.wg-elite .wg-tab-medium { margin-left: -9rem; }
+#wgmod-root.wg-large.wg-elite .wg-tab-long   { margin-left: 0; }
+#wgmod-root.wg-large.wg-elite .wg-tab .wg-tab-num {
+    padding-right: 9rem;
+    font-size: 21rem;
+}
+
+/* --- ticks + below-bar glyphs ------------------------------------------------ */
+#wgmod-root.wg-large .wg-ticks {
+    top: -4.5rem;
+    bottom: -4.5rem;
+}
+#wgmod-root.wg-large .wg-tick {
+    width: 1.5rem;
+    margin-left: -0.75rem;
+}
+#wgmod-root.wg-large .wg-tick.wg-aff {
+    width: 3rem;
+    margin-left: -1.5rem;
+}
+#wgmod-root.wg-large .wg-tick.wg-locked {
+    width: 2.25rem;
+    margin-left: -1.125rem;
+}
+#wgmod-root.wg-large .wg-tick-img {
+    margin-top: 6rem;
+    width: 144rem;
+    height: 36rem;
+}
+#wgmod-root.wg-large .wg-cat-upgrade .wg-tick-img {
+    width: 39rem;
+    height: 39rem;
+}
+#wgmod-root.wg-large .wg-cat-vehicle .wg-tick-img {
+    width: 67.5rem;
+    height: 42rem;
+}
+#wgmod-root.wg-large .wg-tick-hex {
+    width: 27rem;
+    height: 30rem;
+    margin-top: 6rem;
+}
+#wgmod-root.wg-large .wg-tick-hex span {
+    font-size: 13.5rem;
+}
+
+/* --- session "done" markers -------------------------------------------------- */
+#wgmod-root.wg-large .wg-done-badge {
+    right: -4.5rem;
+    bottom: -4.5rem;
+    width: 18rem;
+    height: 18rem;
+}
+#wgmod-root.wg-large .wg-done-glyph {
+    margin-top: 6rem;
+    width: 39rem;
+    height: 39rem;
+}
+
+/* --- elite marks (pips / rewards / grade emblems + level digits) ------------- */
+#wgmod-root.wg-large .wg-tick-pip {
+    margin-top: 7.5rem;
+    width: 16.5rem;
+    height: 16.5rem;
+}
+#wgmod-root.wg-large .wg-tick-reward {
+    margin-top: 7.5rem;
+    width: 45rem;
+    height: 45rem;
+}
+#wgmod-root.wg-large .wg-tick-emblem {
+    margin-top: 6rem;
+    width: 45rem;
+    height: 45rem;
+}
+#wgmod-root.wg-large .wg-emblem-digit {
+    width: 8.25rem;
+    height: 16.5rem;
+}
+#wgmod-root.wg-large .wg-emblem-digit-one {
+    width: 6rem;
+}
+
+/* --- hover tooltip (the full set) -------------------------------------------- */
+#wgmod-root.wg-large .wg-tooltip {
+    margin-top: 54rem;
+    min-width: 252rem;
+    max-width: 660rem;          /* still < the 1040rem bar so clampTip fits it */
+    padding: 18rem 24rem 21rem;
+    border-width: 6rem;
+    border-image-width: 6rem;
+}
+#wgmod-root.wg-large .wg-tip-main-icon   { padding-right: 120rem; min-height: 97.5rem; }
+#wgmod-root.wg-large .wg-tip-main-hex    { padding-right: 78.75rem; min-height: 61.875rem; }
+#wgmod-root.wg-large .wg-tip-main-elite  { padding-right: 105rem; min-height: 82.5rem; }
+#wgmod-root.wg-large .wg-tip-main-veh    { padding-right: 157.5rem; min-height: 75rem; }
+#wgmod-root.wg-large .wg-tip-main-reward { padding-right: 97.5rem; min-height: 75rem; }
+#wgmod-root.wg-large .wg-tip-main-mod    { padding-right: 97.5rem; min-height: 75rem; }
+#wgmod-root.wg-large .wg-tip-icon {
+    width: 97.5rem;
+    height: 97.5rem;
+}
+#wgmod-root.wg-large .wg-tip-icon-veh {
+    width: 135rem;
+    height: 75rem;
+}
+#wgmod-root.wg-large .wg-tip-icon-reward {
+    width: 75rem;
+    height: 75rem;
+}
+#wgmod-root.wg-large .wg-tip-icon-mod {
+    width: 75rem;
+    height: 75rem;
+}
+#wgmod-root.wg-large .wg-tip-icon-elite {
+    width: 82.5rem;
+    height: 82.5rem;
+}
+#wgmod-root.wg-large .wg-tip-icon-num {
+    top: 3rem;
+}
+#wgmod-root.wg-large .wg-tip-icon-num .wg-emblem-digit {
+    width: 12.1875rem;
+    height: 24.375rem;
+}
+#wgmod-root.wg-large .wg-tip-icon-num .wg-emblem-digit-one {
+    width: 8.4375rem;
+}
+#wgmod-root.wg-large .wg-tip-hex {
+    width: 56.25rem;
+    height: 61.875rem;
+}
+#wgmod-root.wg-large .wg-tip-hex span {
+    font-size: 28.125rem;
+}
+#wgmod-root.wg-large .wg-tip-name {
+    font-size: 24rem;
+}
+#wgmod-root.wg-large .wg-tip-caption {
+    font-size: 16.5rem;
+    letter-spacing: 0.75rem;
+    margin-bottom: 4.5rem;
+}
+#wgmod-root.wg-large .wg-tip-variant {
+    font-size: 24rem;
+}
+#wgmod-root.wg-large .wg-tip-or {
+    font-size: 16.5rem;
+    letter-spacing: 0.75rem;
+    margin: 13.5rem 0 12rem;
+}
+#wgmod-root.wg-large .wg-tip-xp {
+    margin-top: 4.5rem;
+    font-size: 24rem;
+}
+#wgmod-root.wg-large .wg-tip-credits .wg-tip-xp-ico {
+    width: 25.5rem;
+    height: 25.5rem;
+    margin-left: 6rem;
+    top: -1.5rem;
+}
+#wgmod-root.wg-large .wg-tip-xp-ico {
+    width: 21rem;
+    height: 21rem;
+    margin-left: 4.5rem;
+}
+#wgmod-root.wg-large .wg-tip-xp-ico-combat {
+    top: -1.5rem;
+}
+#wgmod-root.wg-large .wg-tip-xp-rem {
+    margin-top: 3rem;
+    font-size: 18rem;
+}
+#wgmod-root.wg-large .wg-tip-xp-rem .wg-tip-xp-ico {
+    width: 18rem;
+    height: 18rem;
+}
+#wgmod-root.wg-large .wg-tip-xp-rem .wg-tip-xp-ico-combat {
+    width: 21rem;
+    height: 21rem;
+    top: -0.75rem;
+}
+#wgmod-root.wg-large .wg-tip-rem-veh {
+    margin-right: 15rem;
+}
+#wgmod-root.wg-large .wg-tip-battles {
+    margin-left: 15rem;
+}
+#wgmod-root.wg-large .wg-tip-xp-rem .wg-tip-xp-ico-battle {
+    width: 25.5rem;
+    height: 25.5rem;
+}
+#wgmod-root.wg-large .wg-tip-status {
+    margin-top: 6rem;
+    font-size: 19.5rem;
+    letter-spacing: 0.75rem;
+}
+#wgmod-root.wg-large .wg-tip-effect {
+    margin-top: 7.5rem;
+    font-size: 22.5rem;
+}
+#wgmod-root.wg-large .wg-tip-buff-ico {
+    width: 28.125rem;
+    height: 28.125rem;
+    margin-right: 4.5rem;
+}
+#wgmod-root.wg-large .wg-tip-buff-val {
+    margin-right: 4.5rem;
+}
+#wgmod-root.wg-large .wg-tip-div {
+    height: 13.5rem;
+    margin: 6rem 0;
+}
+#wgmod-root.wg-large .wg-tip-variant-eff {
+    margin-top: 7.5rem;
+    font-size: 22.5rem;
+}
+
+/* --- tier-XI upgrade chips + skill-tree final tick + next-available row ------- */
+#wgmod-root.wg-large .wg-chip {
+    width: 45rem;
+    height: 45rem;
+    margin-right: 12rem;
+}
+#wgmod-root.wg-large .wg-chip-frame {
+    border-width: 3rem;
+}
+#wgmod-root.wg-large .wg-chip-minor .wg-chip-frame {
+    width: 39rem;
+    height: 39rem;
+    margin: -19.5rem 0 0 -19.5rem;
+}
+#wgmod-root.wg-large .wg-chip-major .wg-chip-frame {
+    width: 30rem;
+    height: 30rem;
+    margin: -15rem 0 0 -15rem;
+}
+#wgmod-root.wg-large .wg-chip-minor .wg-chip-ico {
+    width: 24rem;
+    height: 24rem;
+    margin: -12rem 0 0 -12rem;
+}
+#wgmod-root.wg-large .wg-chip-major .wg-chip-ico {
+    width: 19.5rem;
+    height: 19.5rem;
+    margin: -9.75rem 0 0 -9.75rem;
+}
+#wgmod-root.wg-large .wg-final {
+    margin-top: 6rem;
+    width: 45rem;
+    height: 45rem;
+}
+#wgmod-root.wg-large .wg-chip-tip {
+    margin-top: 9rem;
+    width: 480rem;
+    padding: 18rem 24rem 21rem;
+    border-width: 6rem;
+    border-image-width: 6rem;
+}
+#wgmod-root.wg-large .wg-next {
+    margin-top: 6rem;
+}
+/* ============================================================================ */

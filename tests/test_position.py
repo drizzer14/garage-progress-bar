@@ -212,7 +212,7 @@ def test_reset_returns_to_auto_not_seeded_px():
 # fails soft to English -- _template() renders the English master here.
 _VARNAMES = {"showBar", "showWhenComplete", "ignoreFreeXp", "showTechTree",
              "showSkillTree", "showFieldMods", "showEliteRewards", "showElite",
-             "showPotentialTierXI", "posX", "posY"}
+             "showPotentialTierXI", "scale", "posX", "posY"}
 
 # The seven controls nested under the showBar master (greyed while it's off). ignoreFreeXp
 # is NOT here -- it's a standalone control after the group (see below).
@@ -223,7 +223,7 @@ _CHILDREN = {"showTechTree", "showFieldMods", "showPotentialTierXI", "showSkillT
 def test_template_structure_and_english_text():
     tpl = mod_settings._template()
     # Structure the host owns is language-independent.
-    assert tpl["settingsVersion"] == 6           # bumped for ignoreFreeXp -> standalone
+    assert tpl["settingsVersion"] == 7           # bumped for the scale Dropdown
     assert tpl["modDisplayName"] == "Garage Progress Bar"   # brand, never translated
     varnames = [c["varName"] for col in ("column1", "column2")
                 for c in tpl[col] if "varName" in c]
@@ -254,7 +254,8 @@ def test_template_structure_and_english_text():
     assert "masterVarName" not in col1[-1]
     # Mod-invented text comes from the tables (English in the test env).
     assert col1[0]["text"] == u"Show Progress Bar"                   # showBar master
-    assert tpl["column2"][0]["text"] == u"Bar position (px)"         # barPosition Label
+    assert tpl["column2"][0]["text"] == u"Scale"                     # scale Dropdown (first)
+    assert tpl["column2"][1]["text"] == u"Bar position (px)"         # barPosition Label
     # Per-mode checkbox labels come from WG's own strings (i18n.widget_labels(), which
     # fails soft to English feature names here).
     assert col1[1]["text"] == u"Research"                            # showTechTree

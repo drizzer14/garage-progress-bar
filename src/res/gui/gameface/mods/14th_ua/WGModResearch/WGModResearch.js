@@ -99,6 +99,12 @@ function xpCurrencyIcon() {
     return IGNORE_FREE_XP ? COMBAT_XP_ICON : XP_ICON;
 }
 
+// Bar scale (pushed on data.scale, latched each render()). 0 = Default (current
+// rendering), 1 = Large. When Large, render() folds the " wg-large" override class onto
+// the root, which the CSS keys off to enlarge every sized element, and ticksWidthRem()
+// switches to the doubled-width basis for glyph de-crowding. Default stays byte-for-byte.
+let SCALE_LARGE = false;
+
 // Credits glyph for the "done" tick footer (a researched item still costs credits to
 // buy). Matches the top-right account-balance credits icon.
 const CREDITS_ICON = "img://gui/maps/icons/library/CreditsIcon-3.png";
@@ -994,7 +1000,14 @@ function setActiveChip(hotEl, chip) {
 // LANE and drop it a row (with a thin stem back to its tick) so every glyph stays
 // legible. Lane 0 is the normal spot, so a bar with no crowding is unchanged, and
 // hover/click stay purely x-based (unaffected by the vertical offset).
-const TICKS_WIDTH_REM = 516;   // .wg-ticks span (root 520rem minus the track's 2rem borders)
+// .wg-ticks span (the ticks layer that defines the 0..100% basis for glyph de-crowding).
+// Scale-aware: Default = root 520rem minus the track's 2x2rem borders (516); Large = root
+// 1040rem minus the track's 2x3rem (borders x1.5) borders (1034). The glyph %-clearance
+// math (glyphHalfPct) keys off the ACTIVE value so lane assignment stays correct at the
+// doubled width. ticksWidthRem() reads the SCALE_LARGE latch set each render().
+const TICKS_WIDTH_REM = 516;
+const TICKS_WIDTH_REM_LARGE = 1034;
+function ticksWidthRem() { return SCALE_LARGE ? TICKS_WIDTH_REM_LARGE : TICKS_WIDTH_REM; }
 const LANE_STEP_REM = 30;      // vertical drop per extra lane -- clears a ~24-30rem glyph
 const MAX_LANES = 2;           // cap the stagger at two rows (lane 0 + one dropped row)
 // Baseline below-track drop for the tick tooltip -- mirrors `.wg-tooltip { margin-top:36rem }`
@@ -1016,7 +1029,7 @@ function glyphFootprintRem(t, mode) {
     return 24;                                                  // module glyph
 }
 function glyphHalfPct(t, mode) {
-    return ((glyphFootprintRem(t, mode) / 2) + 3) / TICKS_WIDTH_REM * 100;
+    return ((glyphFootprintRem(t, mode) / 2) + 3) / ticksWidthRem() * 100;
 }
 // Greedy interval colouring over glyph-bearing ticks (entries {left%, half},
 // nulls for tickless gaps). Sorted by x, each glyph takes the lowest lane whose
@@ -1454,6 +1467,10 @@ function render(model) {
     // later, on hover) and the header readouts all pick the combat-XP glyph via
     // xpCurrencyIcon(). The root class drives the CSS glyph-size + shortfall-color tweaks.
     IGNORE_FREE_XP = !!data.ignoreFreeXp;
+    // Bar scale: latch Large for this render so the class folds below (both render sites)
+    // and ticksWidthRem() uses the doubled-width basis. index 1 == Large; anything else
+    // (0 / absent / older Python build) stays Default.
+    SCALE_LARGE = data.scale === 1;
 
     // Show the bar ONLY in the plain garage. Python pushes visible=false while a
     // tank-setup / ammo loadout overlay is open (the params panel stays mounted to
@@ -1595,7 +1612,7 @@ function render(model) {
     // tick loop below skips hover wiring for this mode). wg-skill gives the fill its
     // own steel-blue tone (.wg-skill .wg-fill-veh in CSS), distinct from tech-tree.
     root.className = (mode === MODE.SKILL_TREE ? "wg-skill" : "") + cbClass(data) +
-        (IGNORE_FREE_XP ? " wg-ignore-free" : "");
+        (IGNORE_FREE_XP ? " wg-ignore-free" : "") + (SCALE_LARGE ? " wg-large" : "");
 
     label.textContent = mode === MODE.SKILL_TREE ? L("headerSkillTree", "Upgrades")
         : mode === MODE.POTENTIAL_TIER_XI ? L("capTierXI", "Tier XI")
@@ -1726,7 +1743,7 @@ function eliteTooltipHtml(t, isRewards, combatXp, est) {
 // readout, an "Elite Lvl N/350" counter, and grade-pip / reward-thumbnail ticks.
 function renderElite(root, data, isRewards) {
     root.className = "wg-elite" + (isRewards ? " wg-elite-rewards" : "") + cbClass(data) +
-        (IGNORE_FREE_XP ? " wg-ignore-free" : "");
+        (IGNORE_FREE_XP ? " wg-ignore-free" : "") + (SCALE_LARGE ? " wg-large" : "");
     const label = root.querySelector(".wg-label");
     const catIcon = root.querySelector(".wg-cat-icon");
     const upgradesEl = root.querySelector(".wg-upgrades");
