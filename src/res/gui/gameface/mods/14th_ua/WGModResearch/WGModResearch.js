@@ -1135,20 +1135,17 @@ function currentVP() {
     return { w: window.innerWidth || 0, h: window.innerHeight || 0 };
 }
 
-// Apply the user's dragged bar position (px), or fall back to the CSS default and seed
-// the settings fields from the live layout. posX = bar CENTER-x, posY = bar TOP (px),
-// both 0 == "auto". Both paths are VIEWPORT-AWARE so the bar tracks a resolution / UI-
-// scale change instead of freezing at the resolution it was placed on:
+// Apply the user's dragged bar position (px), or fall back to the CSS default. posX = bar
+// CENTER-x, posY = bar TOP (px), both 0 == "auto". Both paths are VIEWPORT-AWARE so the bar
+// tracks a resolution / UI-scale change instead of freezing at the resolution it was placed on:
 //   - PINNED (posX/posY > 0): stored px were captured at data.posW x data.posH. If the
 //     current viewport differs, rescale the px proportionally, apply, and echo the
 //     rescaled px + new capture size back via setPosition so the settings steppers track
 //     it (and the next push, now matching, won't re-rescale). A pre-fix pin with no
 //     posW/posH just applies as-is and self-heals on the next drag.
 //   - AUTO (0/0): clear inline left/top so the resolution-relative CSS default (centered,
-//     17.6vh) re-derives, and (re-)seed the panel's default label -- ONCE PER VIEWPORT
-//     SIZE (keyed on w x h), so a new resolution re-measures the default instead of
-//     showing the old one. Python stores the seed only as the "default N" label, never as
-//     posX/posY (Option 1 drift fix), so auto stays resolution-relative.
+//     17.6vh) re-derives. Nothing is measured or sent back -- the panel's position steppers
+//     just show a plain 0 for "auto", so there's no default to feed.
 // Fail-open: an older Python build without posX -> leave the CSS default untouched.
 function applyPosition(root, data) {
     if (root._wgDragging) return;   // never fight an in-progress drag
@@ -1157,7 +1154,6 @@ function applyPosition(root, data) {
     const x = data.posX | 0;
     const y = data.posY | 0;
     if (x > 0 && y > 0) {
-        root._wgSeedPending = false;
         let ax = x, ay = y;
         const rw = data.posW | 0, rh = data.posH | 0;
         if (rw && rh && vp.w && vp.h && (rw !== vp.w || rh !== vp.h)) {
@@ -1178,32 +1174,11 @@ function applyPosition(root, data) {
         root.style.top = ay + "px";
         return;
     }
-    // auto / unseeded: keep the CSS default position...
+    // auto: keep the resolution-relative CSS default position (centered, 17.6vh) by clearing
+    // any inline override. Nothing is measured or sent -- posX/posY stay 0 (auto) and the
+    // panel's position steppers just show a plain 0.
     root.style.left = "";
     root.style.top = "";
-    // ...and seed the settings fields from the live layout, once PER VIEWPORT SIZE (so a
-    // resolution change re-measures the default). _wgSeededVP records the size last seeded;
-    // _wgSeedPending guards against a second seed while one is in flight for this size.
-    const key = vp.w + "x" + vp.h;
-    if (root._wgSeedPending || root._wgSeededVP === key) return;
-    root._wgSeedPending = true;
-    const raf = window.requestAnimationFrame || function (f) { f(); };
-    raf(function () {
-        root._wgSeedPending = false;
-        const r = root.getBoundingClientRect();
-        if (!r || !r.width) return;
-        const cx = Math.round(r.left + r.width / 2);
-        const cy = Math.round(r.top);
-        // seed:1 marks this as the DEFAULT position (measured at the CSS default spot).
-        // Python records it ONLY as the panel's "default N" stepper label -- it does NOT
-        // persist it as posX/posY (Option 1 drift fix), so posX/posY stay 0 (auto) and the
-        // resolution-relative CSS default keeps applying. Reset returns to that auto default.
-        // w/h let Python note which resolution the default was measured at.
-        if (cx > 0 && cy > 0) {
-            root._wgSeededVP = key;
-            invokeCommand(CMD.SET_POSITION, { x: cx, y: cy, seed: 1, w: vp.w, h: vp.h });
-        }
-    });
 }
 
 // Keep a shown tooltip on-screen: clamp it horizontally within the BAR's own width
@@ -1490,7 +1465,7 @@ function render(model) {
     }
     root.style.display = "";
 
-    // Apply the user's dragged/typed bar position (or the CSS default + seed) before any
+    // Apply the user's dragged/typed bar position (or the CSS default) before any
     // mode branch, so every mode -- including the elite early-return below -- honors it.
     // Stash the data so the window-resize handler can re-run applyPosition on a live
     // resolution / UI-scale change (which never re-pushes the model on its own).
@@ -1995,8 +1970,8 @@ function ensureHover(hotEl, tipEl) {
             let cx = ev.clientX - offX;
             let cy = ev.clientY - offY;
             // clamp so the bar can't be dragged off-screen (whole width kept visible).
-            // Floor y at 1, not 0: y=0 is the "auto/unseeded" sentinel Python re-seeds
-            // from, so a flush-to-top drag stored as 0 would be discarded on the next push.
+            // Floor y at 1, not 0: y=0 is the "auto" sentinel, so a flush-to-top drag stored
+            // as 0 would be discarded (treated as auto) on the next push.
             if (w) cx = Math.max(halfW, Math.min(w - halfW, cx));
             if (h) cy = Math.max(1, Math.min(h - 20, cy));
             root.style.left = Math.round(cx) + "px";
@@ -2010,7 +1985,7 @@ function ensureHover(hotEl, tipEl) {
             const vp = currentVP();
             invokeCommand(CMD.SET_POSITION, {
                 x: Math.round(r.left + r.width / 2),
-                y: Math.max(1, Math.round(r.top)),   // never 0 (the unseeded sentinel)
+                y: Math.max(1, Math.round(r.top)),   // never 0 (the auto sentinel)
                 // record the viewport this px was captured at, so a later resolution /
                 // UI-scale change rescales it proportionally (see applyPosition).
                 w: vp.w, h: vp.h,
@@ -2051,9 +2026,8 @@ function ensureHover(hotEl, tipEl) {
 
 // A screen-resolution / UI-scale change resizes the Gameface viewport but does NOT
 // re-push the model, so render()/applyPosition wouldn't otherwise re-run and the bar
-// would keep its stale geometry (and the panel its stale "default N"). Re-run
-// applyPosition on resize against the last-pushed data: auto re-derives the CSS default
-// + re-seeds (keyed on the new viewport size), a pinned position rescales proportionally.
+// would keep its stale geometry. Re-run applyPosition on resize against the last-pushed
+// data: auto re-derives the CSS default, a pinned position rescales proportionally.
 // rAF-coalesced so a burst of resize events (e.g. dragging the scale slider) collapses to
 // one recompute. (The Python g_guiResetters / settings listeners are a backstop for
 // change types this event may not fire on.)

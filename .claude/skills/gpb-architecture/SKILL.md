@@ -61,7 +61,7 @@ for resolution-aware rescale), `eliteCurrentIcon`, `spendableXp`, done-tick `pri
 JS `invokeCommand()` calls a Wulf command on `wgResearch`. Six commands (`view_models.py`):
 `researchUnlock` (tech-tree int_cd) / `unlockFieldMod` (field-mod or skill-tree step_id) /
 `openSkillTree` / `openResearch` / `openFieldMods` (no arg — done-marker clicks open the
-native screen) / `setPosition` ({x, y[, w, h][, seed]} px; w/h = capture viewport). Handlers
+native screen) / `setPosition` ({x, y[, w, h]} px; w/h = capture viewport; `0/0` = auto). Handlers
 parse args via `wulf_args.cmd_int_arg` / `cmd_xy_arg` / `cmd_wh_arg` and delegate to `actions.py`
 or `mod_settings.set_position`. Before a research
 action the bridge calls `_record_click()` → `recent.record(...)` so the item can render as a
@@ -144,7 +144,7 @@ hide-when-complete option, the tank-setup-overlay state, and the fail-closed gar
     `masterVarName`/`enableWhen`/`visibleWhen`, `column1..column4` — is in
     wotmod-architecture -> ModsSettingsAPI.)
   - **`settings_i18n.COL1_KEYS` must stay in lockstep with `_template()` column1 wire order.**
-    `_sync_template_text` / `_label_defaults` walk the STORED template POSITIONALLY against
+    `_sync_template_text` walks the STORED template POSITIONALLY against
     `COL1_KEYS`/`COL2_KEYS`, so reordering column1 without updating `COL1_KEYS` silently
     mislabels controls (no crash). Guard test: `test_col1_keys_match_template_wire_order` in
     `tests/test_mod_settings_template.py`.
@@ -164,19 +164,21 @@ hide-when-complete option, the tank-setup-overlay state, and the fail-closed gar
     it `i18n.widget_labels()`; `client_language()` is the one guarded `getClientLanguage()` read.
     Ships `cs de en es fr hu it pl ru tr uk`; verify exact client codes live (gpb-debug-repl).
   - The propagate-to-existing-installs step is `_sync_template_text(api)`, called unconditionally
-    per candidate api in `init()` (same in-place-mutation trick `_label_defaults` uses for the
-    "default N" stepper labels).
+    per candidate api in `init()` (walks the STORED template and rewrites its label text in place).
 - **Bar position is resolution-aware, and the recompute lives in the WIDGET, not Python.**
-  `posX`/`posY` are px, `0/0` = auto (resolution-relative CSS default). A *pinned* position also
+  `posX`/`posY` are px, `0/0` = auto (the resolution-relative CSS default position — centered,
+  ~17.6vh). The two position steppers (`posX` "Horizontal (center X)", `posY` "Vertical (top Y)")
+  carry PLAIN base labels — no dynamic default suffix. When a coordinate is `0` the widget clears
+  its inline `left`/`top` so the bar falls back to the CSS default; a nonzero value pins it. The
+  widget never sends any auto measurement; `_on_reset` forces `0/0`. A *pinned* position also
   stores `posW`/`posH` — the Gameface viewport it was captured at — so the JS can rescale it
   proportionally after a resolution / UI-scale change (auto just re-derives the CSS default).
-  Python's role is only to (a) persist `posW`/`posH` in `set_position(x, y, is_default, w, h)`
+  Python's role is only to (a) persist `posW`/`posH` in `set_position(x, y, w, h)`
   and push them, and (b) TRIGGER a recompute when the viewport changes, via two added signals in
   the bridge: a `gui.g_guiResetters` callback (`_arm_gui_resetters`, a set — not the `+=`/`setattr`
   Event pattern; set-add is idempotent so re-arm-per-mount is safe) and a broadened
   `_on_settings_changed` (COLOR_BLIND **or** any geometry key from `_geometry_setting_keys()`).
-  The JS `window` `resize` listener is the primary self-heal; these are the backstop. The seed
-  still never persists as `posX/posY` (the Option-1 drift fix) — auto stays auto. See gpb-widget
+  The JS `window` `resize` listener is the primary self-heal; these are the backstop. See gpb-widget
   for the JS `applyPosition` rescale/adopt logic.
 
 ## Key data types

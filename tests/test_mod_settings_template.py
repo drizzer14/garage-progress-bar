@@ -137,6 +137,6 @@ def test_child_values_track_defaults():
 
 def test_col1_keys_match_template_wire_order():
     # settings_i18n.COL1_KEYS is walked in lockstep with the stored template
-    # (_sync_template_text / _label_defaults). It must match the template's actual order.
+    # (_sync_template_text). It must match the template's actual order.
     from wgmod_research.adapter import settings_i18n as S
     assert list(S.COL1_KEYS) == [c["varName"] for c in _col1()]

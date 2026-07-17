@@ -227,23 +227,6 @@ _TOOLTIPS_EN = {
 }
 
 
-# Per-language suffix for the position steppers' "default N" LABEL (see mod_settings
-# _label_defaults). "%d" is the default coordinate. Falls back to English per _norm.
-_DEFAULT_SUFFIX = {
-    u"en": u" - default %d",
-    u"de": u" - Standard %d",
-    u"fr": u" - par défaut %d",
-    u"es": u" - predeterminado %d",
-    u"it": u" - predefinito %d",
-    u"pl": u" - domyślnie %d",
-    u"cs": u" - výchozí %d",
-    u"ru": u" - по умолчанию %d",
-    u"uk": u" - типово %d",
-    u"hu": u" - alapértelmezett %d",
-    u"tr": u" - varsayılan %d",
-}
-
-
 def render_panel(wg_labels, lang=None):
     """The full rendered panel text: ``{key: {"text", "tooltip"}}`` for every control
     (PURE given ``wg_labels`` + ``lang``).
@@ -289,16 +272,3 @@ def panel_text(lang=None):
     """The rendered panel text for the client's active language (public entry for
     mod_settings). Pulls WG's localized feature names from ``i18n.widget_labels()``."""
     return render_panel(i18n.widget_labels(), lang)
-
-
-def default_suffix(lang):
-    """The localized ``" - default %d"`` format for ``lang`` (PURE). English fallback."""
-    return _DEFAULT_SUFFIX.get(_norm(lang), _DEFAULT_SUFFIX[DEFAULT_LANGUAGE])
-
-
-def default_label(base, n, lang=None):
-    """A position-stepper LABEL = the localized ``base`` + the localized default-N suffix.
-    ``lang`` defaults to the client's active language (the one engine read)."""
-    if lang is None:
-        lang = client_language()
-    return base + (default_suffix(lang) % n)

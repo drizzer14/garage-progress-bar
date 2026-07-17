@@ -29,8 +29,8 @@ def test_clamp_pos_negative_becomes_auto():
 
 
 def test_clamp_pos_top_edge_survives_zero_sentinel():
-    # Bug 4: y=0 is the "auto/unseeded" sentinel (re-seeded on the next push), so a
-    # flush-to-top drag must land at 1, not 0. clamp_pos itself keeps 0 mapping to 0
+    # Bug 4: y=0 is the "auto" sentinel, so a flush-to-top drag must land at 1, not 0.
+    # clamp_pos itself keeps 0 mapping to 0
     # (unchanged) -- the JS drag + bridge guard are what floor the coord at 1; this
     # locks in that 1 is a legal stored placement while 0 stays the sentinel.
     assert mod_settings.clamp_pos(0) == 0    # sentinel preserved (auto)
@@ -157,25 +157,15 @@ def test_on_reset_ignores_other_mods():
     assert mod_settings._settings["posY"] == 888
 
 
-# --- position-seed drift fix (Option 1: never persist the seed as a position) --------
-
-def test_seed_does_not_persist_as_position():
-    # The widget's SEED (is_default=True) records the panel's default target / stepper
-    # label only -- it must NOT pin posX/posY. Leaving them 0 (auto) keeps the
-    # resolution-relative CSS default in force, so the bar never drifts when the game
-    # resolution changes. (MSA calls inside set_position degrade to no-ops in the test env.)
-    mod_settings._settings["posX"] = 0
-    mod_settings._settings["posY"] = 0
-    mod_settings.set_position(960, 190, is_default=True)
-    assert mod_settings._settings["posX"] == 0
-    assert mod_settings._settings["posY"] == 0
-
+# --- bar position: a drag/stepper edit pins the chosen px (auto is never sent) --------
 
 def test_real_drag_persists_as_position():
-    # A real drag / stepper edit (is_default=False) DOES pin the chosen px.
+    # A real drag / stepper edit pins the chosen px. (An auto default -- posX/posY 0 -- is
+    # never sent from the widget; it keeps the CSS default. MSA calls inside set_position
+    # degrade to no-ops in the test env.)
     mod_settings._settings["posX"] = 0
     mod_settings._settings["posY"] = 0
-    mod_settings.set_position(700, 300, is_default=False)
+    mod_settings.set_position(700, 300)
     assert mod_settings._settings["posX"] == 700
     assert mod_settings._settings["posY"] == 300
 
@@ -187,7 +177,7 @@ def test_real_drag_stores_capture_viewport():
     # can rescale the pin proportionally after a resolution / UI-scale change.
     mod_settings._settings["posW"] = 0
     mod_settings._settings["posH"] = 0
-    mod_settings.set_position(700, 300, is_default=False, w=3840, h=2160)
+    mod_settings.set_position(700, 300, w=3840, h=2160)
     assert mod_settings._settings["posW"] == 3840
     assert mod_settings._settings["posH"] == 2160
     assert mod_settings.pos_w() == 3840 and mod_settings.pos_h() == 2160
@@ -195,17 +185,7 @@ def test_real_drag_stores_capture_viewport():
 
 def test_capture_viewport_is_clamped():
     # w/h go through the same clamp as posX/posY (non-numeric / negative -> 0).
-    mod_settings.set_position(700, 300, is_default=False, w=-5, h="nope")
-    assert mod_settings._settings["posW"] == 0
-    assert mod_settings._settings["posH"] == 0
-
-
-def test_seed_does_not_store_capture_viewport():
-    # The seed (is_default=True) doesn't pin px, so it must not record a capture viewport
-    # either (posW/posH stay as-is / auto).
-    mod_settings._settings["posW"] = 0
-    mod_settings._settings["posH"] = 0
-    mod_settings.set_position(960, 190, is_default=True, w=3840, h=2160)
+    mod_settings.set_position(700, 300, w=-5, h="nope")
     assert mod_settings._settings["posW"] == 0
     assert mod_settings._settings["posH"] == 0
 

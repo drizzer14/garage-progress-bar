@@ -35,7 +35,7 @@ from wgmod_research.domain.types import Mode
 from wgmod_research.bridge import mod_settings
 from wgmod_research.bridge.view_models import ResearchVM, TickVM, UpgradeVM
 from wgmod_research.bridge.wulf_args import (
-    map_get as _map_get, cmd_int_arg as _cmd_int_arg, cmd_xy_arg as _cmd_xy_arg,
+    cmd_int_arg as _cmd_int_arg, cmd_xy_arg as _cmd_xy_arg,
     cmd_wh_arg as _cmd_wh_arg, cmd_str_arg as _cmd_str_arg)
 import openwg_gameface
 
@@ -510,18 +510,14 @@ def _on_set_position(*args):
         # Capture viewport (px) the coords were measured at, so a pinned position can be
         # rescaled proportionally after a resolution / UI-scale change (see applyPosition).
         w, h = _cmd_wh_arg(args)
-        # The widget marks its default-position SEED with seed=1 (measured while the bar
-        # sits at its CSS default). That value becomes the reset target; a plain drag omits
-        # it. See mod_settings.set_position / _store_default_position.
-        is_seed = bool(_map_get(args[0], "seed")) if args else False
-        LOG_NOTE("[wgmod] setPosition x=%s y=%s w=%s h=%s seed=%s" % (x, y, w, h, is_seed))
-        # A non-seed drag with a coord <= 0 is not a real placement: 0 is the
-        # auto/unseeded sentinel, and the _cmd_xy_arg failure signature is (0, 0).
-        # Dropping it keeps a bad measurement from clobbering the stored position.
-        # Seed writes are always allowed -- they carry real measured default coords.
-        if not is_seed and (x <= 0 or y <= 0):
+        LOG_NOTE("[wgmod] setPosition x=%s y=%s w=%s h=%s" % (x, y, w, h))
+        # A drag with a coord <= 0 is not a real placement: 0 is the auto sentinel, and the
+        # _cmd_xy_arg failure signature is (0, 0). Dropping it keeps a bad measurement from
+        # clobbering the stored position. (The widget only ever sends a real pin -- an auto
+        # default keeps the CSS position and sends nothing.)
+        if x <= 0 or y <= 0:
             return
-        mod_settings.set_position(x, y, is_default=is_seed, w=w, h=h)
+        mod_settings.set_position(x, y, w=w, h=h)
     except Exception:
         LOG_CURRENT_EXCEPTION()
 

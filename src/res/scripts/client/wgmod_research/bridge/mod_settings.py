@@ -26,12 +26,12 @@ Plus a draggable bar position, stored as two on-screen PIXEL coordinates:
 - posY -- the bar's TOP in px.
 Both default to 0, which means "auto" -- the bar keeps its CSS default position
 (centered, 17.6vh, resolution-relative). posX/posY stay 0 until the user actually
-DRAGS the bar (or edits a stepper): a real drag pins the chosen px, but the widget's
-one-time SEED does NOT (is_default=True in set_position) -- it only feeds the panel's
-"default N" stepper label. This is deliberate: pixels have no resolution-independent
-meaning, so persisting the seeded px would freeze one resolution's layout and the bar
-would drift off-header after any resolution change. Leaving posX/posY at 0 keeps the
-CSS default live, so it re-derives correctly at every resolution. Reset returns to auto.
+DRAGS the bar (or edits a stepper): a real drag pins the chosen px. This is deliberate:
+pixels have no resolution-independent meaning, so persisting a measured default px would
+freeze one resolution's layout and the bar would drift off-header after any resolution
+change. Leaving posX/posY at 0 keeps the CSS default live, so it re-derives correctly at
+every resolution -- the widget therefore never sends an "auto" measurement, and the panel's
+position steppers just read a plain 0. Reset returns to auto.
 The position round-trips 1:1: JS reports a dragged position via the `setPosition`
 command (see gameface_bridge) -> set_position() persists it here and re-pushes.
 
@@ -337,13 +337,6 @@ def init():
         # panel. No-op on a fresh install (setModTemplate just stored the localized text).
         for _api in _candidate_apis():
             _sync_template_text(_api)
-        # Label the position steppers with the stored default coords (from a prior seed) so
-        # the panel shows the default target even when this session won't re-seed (the seed
-        # only fires when the position is auto; a saved custom position skips it).
-        _dx, _dy = _stored_default()
-        if _dx and _dy:
-            for _api in _candidate_apis():
-                _label_defaults(_api, _dx, _dy)
         _registered = True
         LOG_NOTE("[wgmod] ModsSettingsAPI registered: %s" % (_settings,))
     except Exception:
@@ -414,85 +407,14 @@ def _primary_api():
     return apis[0] if apis else None
 
 
-def _store_default_position(x, y):
-    """Record the widget-measured DEFAULT position (px) as the host's stored 'defaults' for
-    our mod, so the panel's reset button repaints the X/Y fields to the real default spot
-    (centered, near the top) instead of a meaningless 0/0. The widget reports this via the
-    `setPosition` seed (fired while the bar sits at its CSS default), see set_position.
-    Touches state['defaults'] directly (no public API); guarded, all candidate apis."""
-    x = clamp_pos(x)
-    y = clamp_pos(y)
-    for api in _candidate_apis():
-        try:
-            defaults = (getattr(api, "state", None) or {}).get("defaults", {}).get(LINKAGE)
-            if isinstance(defaults, dict) and (defaults.get("posX") != x or
-                                               defaults.get("posY") != y):
-                defaults["posX"] = x
-                defaults["posY"] = y
-                if hasattr(api, "saveState"):
-                    api.saveState()
-                LOG_NOTE("[wgmod] stored default position for reset: %s,%s" % (x, y))
-            _label_defaults(api, x, y)   # show the default in the stepper labels
-        except Exception:
-            LOG_CURRENT_EXCEPTION()
-
-
-def _stored_default():
-    """The widget-measured default position (px) previously recorded by the seed, read from
-    the first candidate api that has it. (None, None) if not seeded yet."""
-    for api in _candidate_apis():
-        try:
-            d = (getattr(api, "state", None) or {}).get("defaults", {}).get(LINKAGE)
-            if isinstance(d, dict) and d.get("posX") and d.get("posY"):
-                return int(d["posX"]), int(d["posY"])
-        except Exception:
-            LOG_CURRENT_EXCEPTION()
-    return None, None
-
-
-def _label_defaults(api, dx, dy):
-    """Show the DEFAULT position in the stepper labels (so the panel displays the reset
-    target, not the currently-applied value). Patches the stored template's posX/posY label
-    text in place -- the panel deep-copies the template on each open, so the new label shows
-    next time it's opened. Guarded; no-op if the template/coords aren't available.
-
-    The base label AND the "default N" suffix are localized: the base comes from
-    settings_i18n.panel_text() (the same source _sync_template_text uses, already marked if
-    it fell back to English) and settings_i18n.default_label appends the localized suffix --
-    e.g. EN "Horizontal (center X) - default 1920", DE "... - Standard 1920"."""
-    if not dx or not dy:
-        return
-    try:
-        tmpl = (getattr(api, "state", None) or {}).get("templates", {}).get(LINKAGE)
-        if not isinstance(tmpl, dict):
-            return
-        t = settings_i18n.panel_text()
-        wanted = {"posX": settings_i18n.default_label(t["posX"]["text"], dx),
-                  "posY": settings_i18n.default_label(t["posY"]["text"], dy)}
-        changed = False
-        for col in ("column1", "column2"):
-            for comp in tmpl.get(col, []) or []:
-                if isinstance(comp, dict) and comp.get("varName") in wanted:
-                    new_text = wanted[comp["varName"]]
-                    if comp.get("text") != new_text:
-                        comp["text"] = new_text
-                        changed = True
-        if changed and hasattr(api, "saveState"):
-            api.saveState()
-            LOG_NOTE("[wgmod] labelled position steppers with defaults %d,%d" % (dx, dy))
-    except Exception:
-        LOG_CURRENT_EXCEPTION()
-
-
 def _on_reset(linkage, defaults):
     """Panel 'reset to defaults' button. The settings host fires onResetMod (NOT
     onSettingsChanged) when the user resets a mod, so this hook is what makes the reset
     button move our bar. `defaults` is the host's stored snapshot (hide flags + per-mode
     toggles); we apply it, then force the position back to AUTO (0/0). Under the drift fix
     the default position IS auto -- the resolution-relative CSS default, re-measured live --
-    so reset never pins a stale seeded px and is resolution-independent. The widget re-seeds
-    the panel's default label on the next mount. Guarded + linkage-scoped (the event is
-    global across every mod)."""
+    so reset never pins a stale seeded px and is resolution-independent. Guarded +
+    linkage-scoped (the event is global across every mod)."""
     try:
         if linkage != LINKAGE:
             return
@@ -532,34 +454,26 @@ def _full_settings_for_write(g_modsSettingsApi):
     return data
 
 
-def set_position(x, y, is_default=False, w=0, h=0):
+def set_position(x, y, w=0, h=0):
     """Persist a new bar position (px) and re-push it to the widget. Called from the JS
-    `setPosition` reverse command.
+    `setPosition` reverse command -- a real drag / stepper edit that pins posX/posY to the
+    chosen px. (An auto default -- posX/posY == 0 -- is never sent from the widget; it just
+    keeps the resolution-relative CSS default, so pixels only ever arrive from a real pin.)
 
-    `is_default` is True for the widget's SEED -- the px it measures while the bar sits at
-    its CSS default. Under the drift fix (Option 1) the seed is NOT stored as the applied
-    position: it only records the panel's default-target label (see _store_default_position),
-    leaving posX/posY at 0 (auto). Keeping them 0 means the resolution-relative CSS default
-    stays in force, so the bar never drifts to stale pixels when the game resolution changes.
-    Only a real drag / stepper edit (is_default=False) pins posX/posY to the chosen px.
-
-    `w`/`h` are the Gameface viewport size the px were captured at. For a real pin we store
-    them (posW/posH) so the widget can rescale the pinned position proportionally after a
-    resolution / UI-scale change (see applyPosition in WGModResearch.js). The seed doesn't
-    pin px, so its w/h are ignored here.
+    `w`/`h` are the Gameface viewport size the px were captured at; we store them (posW/posH)
+    so the widget can rescale the pinned position proportionally after a resolution / UI-scale
+    change (see applyPosition in WGModResearch.js).
 
     Writes the FULL settings through ModsSettingsAPI so the panel's numeric fields track the
     position; guarded so a missing/broken MSA never breaks the bar. updateModSettings only
     mutates in-memory state, so saveState() flushes it to disk (survives a client restart)."""
     x = clamp_pos(x)
     y = clamp_pos(y)
-    if not is_default:
-        # A real drag/stepper edit pins the chosen px; the seed leaves posX/posY at auto.
-        _settings["posX"] = x
-        _settings["posY"] = y
-        # Record the viewport the pin was captured at (for later proportional rescale).
-        _settings["posW"] = clamp_pos(w)
-        _settings["posH"] = clamp_pos(h)
+    _settings["posX"] = x
+    _settings["posY"] = y
+    # Record the viewport the pin was captured at (for later proportional rescale).
+    _settings["posW"] = clamp_pos(w)
+    _settings["posH"] = clamp_pos(h)
     g = _primary_api()
     if g is not None:
         try:
@@ -571,8 +485,6 @@ def set_position(x, y, is_default=False, w=0, h=0):
         except Exception:
             LOG_CURRENT_EXCEPTION()
     # else MSA absent -> position still applies this session, just not persisted
-    if is_default:
-        _store_default_position(x, y)
     # Re-push so the (echoed) position reaches the widget immediately, even without MSA.
     try:
         from wgmod_research.bridge import gameface_bridge as B

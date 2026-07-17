@@ -124,19 +124,6 @@ def test_english_client_never_marks(monkeypatch):
         assert not entry[u"text"].startswith(u"_")
 
 
-# --- default suffix / label -------------------------------------------------
-
-def test_default_suffix_per_language():
-    assert S.default_suffix(u"en") == u" - default %d"
-    assert S.default_suffix(u"uk") == u" - типово %d"
-    assert S.default_suffix(u"xx") == S.default_suffix(u"en")
-
-
-def test_default_label_composes():
-    assert S.default_label(u"Base", 1920, lang=u"en") == u"Base - default 1920"
-    assert S.default_label(u"База", 100, lang=u"uk") == u"База - типово 100"
-
-
 # --- client_language guard + panel_text -------------------------------------
 
 def test_client_language_reads_helpers(monkeypatch):
