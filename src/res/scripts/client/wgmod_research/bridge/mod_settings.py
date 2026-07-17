@@ -7,14 +7,19 @@ _primary_api(), preferring Aslain, and if neither is present the bar simply uses
 defaults (shown everywhere) with no settings panel -- never a crash. MSA owns persistence,
 so there's no config file of our own.
 
-Two independent "hide" checkboxes, both default OFF (bar shown):
-- hideAlways       -- hide the whole widget on every vehicle (master switch).
-- hideWhenComplete -- hide only on fully-progressed (Mode.COMPLETE) vehicles.
+Master + child "show" checkboxes (all default ON = bar shown):
+- showBar          -- MASTER switch: show the whole widget (unchecked -> hide on every
+                      vehicle). The controls below are its children (greyed while it's off).
+- showWhenComplete -- keep the bar on fully-progressed (Mode.COMPLETE) vehicles.
+(These are the INVERSE polarity of the old hideAlways/hideWhenComplete flags; the net
+default behavior is unchanged. bar_visible in domain/builder.py hides when NOT showBar,
+and hides a complete vehicle when NOT showWhenComplete.)
 
-Plus five per-mode "show" checkboxes, all default ON, one per bar mode
-(showTechTree / showSkillTree / showFieldMods / showEliteRewards / showElite).
-enabled_modes() turns these into the set of enabled Mode strings that build_model
-consumes: a vehicle whose resolved mode is off hides the bar (no fall-through).
+Plus six per-mode "show" checkboxes, all default ON (bar tier XI is the opt-in exception,
+default OFF), one per bar mode (showTechTree / showSkillTree / showFieldMods /
+showEliteRewards / showElite / showPotentialTierXI). enabled_modes() turns these into the
+set of enabled Mode strings that build_model consumes: a vehicle whose resolved mode is off
+hides the bar (no fall-through).
 
 Plus a draggable bar position, stored as two on-screen PIXEL coordinates:
 - posX -- the bar's CENTER-x in px (matches the CSS translateX(-50%) center-anchor).
@@ -55,7 +60,11 @@ except NameError:
 # typed/echoed value is clamped into [0, POS_MAX], with 0 meaning "auto / unseeded".
 POS_MAX = 20000
 
-DEFAULTS = {"hideAlways": False, "hideWhenComplete": False,
+DEFAULTS = {# showBar is the MASTER switch (default ON = bar shown everywhere). showWhenComplete
+            # (default ON) keeps the bar on fully-progressed vehicles. Both are the INVERSE of
+            # the old hideAlways/hideWhenComplete flags -- same net default behavior (bar shown,
+            # shown-when-complete), opposite polarity. See bar_visible in domain/builder.py.
+            "showBar": True, "showWhenComplete": True,
             # "Ignore Free XP" -- opt-in (default off): count only the combat XP earned on
             # each vehicle toward its progress, dropping the account-global free XP from the
             # bar, affordability, and tooltips (see domain.builder.build_model ignore_free_xp).
@@ -108,11 +117,32 @@ _settings = dict(DEFAULTS)
 _registered = False
 
 
+def _child(t, var):
+    """A CheckBox bound as a CHILD of the showBar master. Aslain's createControlsGroup
+    just sets a `masterVarName` key on each child (its docstring: "you can also set that key
+    by hand instead of using this helper") -- so we set it inline, keeping _template() a pure
+    dict (unit-testable, no gui.aslainMenu import, and harmless under izeberg / pytest where
+    the key is simply ignored). While showBar is unchecked, Aslain greys + disables every
+    child; bar_visible independently hides the bar (they stay consistent). No `masterIndent`
+    key means the children render INDENTED (createControlsGroup's default), the visual nest."""
+    return {
+        "type": "CheckBox",
+        "text": t[var]["text"],
+        "value": DEFAULTS[var],
+        "tooltip": t[var]["tooltip"],
+        "varName": var,
+        "masterVarName": "showBar",
+    }
+
+
 def _template():
-    """The MSA panel descriptor. Two hide checkboxes (both default False so a fresh
-    install shows the bar everywhere) plus the draggable-position fields: two numeric
-    px steppers. The steppers show 0 until the widget seeds them from the live layout on
-    the first hangar mount. Reset is the panel's own per-mod reset button (see _on_reset),
+    """The MSA panel descriptor. A showBar MASTER checkbox (default True so a fresh install
+    shows the bar everywhere) with the six per-mode toggles + showWhenComplete nested under it
+    as children (greyed while showBar is off), then ignoreFreeXp as a STANDALONE checkbox last
+    in column1 (NOT a child -- it changes which XP counts, not whether the bar shows, so it
+    stays live when the master is off), plus the draggable-position fields in column2: two
+    numeric px steppers. The steppers show 0 until the widget seeds them from the live layout
+    on the first hangar mount. Reset is the panel's own per-mod reset button (see _on_reset),
     so there is no custom reset control here.
 
     Every visible label/tooltip is pulled from settings_i18n.panel_text() at the CLIENT's
@@ -130,75 +160,44 @@ def _template():
         # edits; localizing the text is text-only, so it stays at its current number).
         # Verified against the Aslain 1.3.2 + izeberg 1.7.0 compareTemplates bytecode.
         # Bumped 3 -> 4 when the "ignoreFreeXp" checkbox was added (a new varName).
-        "settingsVersion": 4,
+        # Bumped 4 -> 5 when hideAlways/hideWhenComplete were inverted to showBar/
+        # showWhenComplete (varName + polarity change) and the controls were nested under
+        # the showBar master (layout change). On the bump MSA resets to the new defaults,
+        # which preserve the current default behavior -- so no value migration is needed.
+        # Bumped 5 -> 6 when ignoreFreeXp was moved OUT of the showBar master group to a
+        # standalone column1 checkbox (layout change): MSA caches the panel template keyed
+        # by settingsVersion, so without a bump an existing install keeps rendering the
+        # stored structure (ignoreFreeXp still nested under the master) and ignores the
+        # relocation. Bumping forces MSA to re-register the new flat layout.
+        "settingsVersion": 6,
         "column1": [
+            # MASTER: the whole-bar switch. Its children (below) grey out when it's off.
             {
                 "type": "CheckBox",
-                "text": t["hideAlways"]["text"],
-                "value": DEFAULTS["hideAlways"],
-                "tooltip": t["hideAlways"]["tooltip"],
-                "varName": "hideAlways",
+                "text": t["showBar"]["text"],
+                "value": DEFAULTS["showBar"],
+                "tooltip": t["showBar"]["tooltip"],
+                "varName": "showBar",
             },
-            {
-                "type": "CheckBox",
-                "text": t["hideWhenComplete"]["text"],
-                "value": DEFAULTS["hideWhenComplete"],
-                "tooltip": t["hideWhenComplete"]["tooltip"],
-                "varName": "hideWhenComplete",
-            },
+            # Children -- order per spec: Research, Field Modifications, Tier XI, Upgrades,
+            # Elite Rewards, Elite System, Fully Progressed.
+            _child(t, "showTechTree"),
+            _child(t, "showFieldMods"),
+            _child(t, "showPotentialTierXI"),
+            _child(t, "showSkillTree"),
+            _child(t, "showEliteRewards"),
+            _child(t, "showElite"),
+            _child(t, "showWhenComplete"),
+            # STANDALONE (not a child of showBar): ignoreFreeXp changes WHICH XP counts
+            # toward progress, not WHETHER the bar shows -- so it stays live even when the
+            # master is off, and carries NO masterVarName. Placed last in column1, after
+            # the showBar group. Its default (False) and varName are unchanged.
             {
                 "type": "CheckBox",
                 "text": t["ignoreFreeXp"]["text"],
                 "value": DEFAULTS["ignoreFreeXp"],
                 "tooltip": t["ignoreFreeXp"]["tooltip"],
                 "varName": "ignoreFreeXp",
-            },
-            {
-                "type": "Label",
-                "text": t["barModes"]["text"],
-                "tooltip": t["barModes"]["tooltip"],
-            },
-            {
-                "type": "CheckBox",
-                "text": t["showTechTree"]["text"],
-                "value": DEFAULTS["showTechTree"],
-                "tooltip": t["showTechTree"]["tooltip"],
-                "varName": "showTechTree",
-            },
-            {
-                "type": "CheckBox",
-                "text": t["showSkillTree"]["text"],
-                "value": DEFAULTS["showSkillTree"],
-                "tooltip": t["showSkillTree"]["tooltip"],
-                "varName": "showSkillTree",
-            },
-            {
-                "type": "CheckBox",
-                "text": t["showFieldMods"]["text"],
-                "value": DEFAULTS["showFieldMods"],
-                "tooltip": t["showFieldMods"]["tooltip"],
-                "varName": "showFieldMods",
-            },
-            {
-                "type": "CheckBox",
-                "text": t["showEliteRewards"]["text"],
-                "value": DEFAULTS["showEliteRewards"],
-                "tooltip": t["showEliteRewards"]["tooltip"],
-                "varName": "showEliteRewards",
-            },
-            {
-                "type": "CheckBox",
-                "text": t["showElite"]["text"],
-                "value": DEFAULTS["showElite"],
-                "tooltip": t["showElite"]["tooltip"],
-                "varName": "showElite",
-            },
-            {
-                "type": "CheckBox",
-                "text": t["showPotentialTierXI"]["text"],
-                "value": DEFAULTS["showPotentialTierXI"],
-                "tooltip": t["showPotentialTierXI"]["tooltip"],
-                "varName": "showPotentialTierXI",
             },
         ],
         "column2": [
@@ -582,12 +581,16 @@ def set_position(x, y, is_default=False, w=0, h=0):
         LOG_CURRENT_EXCEPTION()
 
 
-def hide_always():
-    return _settings["hideAlways"]
+def show_bar():
+    """Master switch: True -> the bar may render (default); False -> hidden everywhere.
+    Inverse polarity of the old hide_always(). bar_visible hides when NOT show_bar."""
+    return _settings["showBar"]
 
 
-def hide_when_complete():
-    return _settings["hideWhenComplete"]
+def show_when_complete():
+    """True (default) -> keep the bar on fully-progressed (Mode.COMPLETE) vehicles;
+    False -> hide it there. Inverse of the old hide_when_complete()."""
+    return _settings["showWhenComplete"]
 
 
 def ignore_free_xp():
@@ -613,7 +616,7 @@ def pos_h():
 def enabled_modes():
     """The set of bar Mode strings the user has left ON, for domain.builder.build_model
     (a vehicle whose resolved mode is absent hides the bar -- no fall-through). COMPLETE
-    is never toggleable here (it's the genuine end-state, governed by hideWhenComplete)."""
+    is never toggleable here (it's the genuine end-state, governed by showWhenComplete)."""
     from wgmod_research.domain import types as t
     modes = set()
     if _settings["showTechTree"]:

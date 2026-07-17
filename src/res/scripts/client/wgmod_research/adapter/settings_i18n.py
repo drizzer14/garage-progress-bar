@@ -10,9 +10,9 @@ Scope, deliberately narrow:
      Rewards, Tier XI) — the per-mode checkbox labels reuse WG's own localized strings via
      ``i18n.widget_labels()`` (``FEATURE_WG`` maps each checkbox → its widget-labels key),
      so they match the game exactly in every language and never drift.
-  2. **Mod-invented labels** (the two hide toggles, the "Bar modes"/"Bar position" section
-     Labels, the two position steppers) — bundled ``{lang: {key: label}}`` tables here,
-     English master + per-key fallback.
+  2. **Mod-invented labels** (the ``showBar`` master toggle, the ``showWhenComplete`` and
+     ``ignoreFreeXp`` toggles, the "Bar position" section Label, the two position steppers) —
+     bundled ``{lang: {key: label}}`` tables here, English master + per-key fallback.
 * **Tooltips are NOT localized.** Every control's tooltip (header + body) is fixed English
   (``_TOOLTIPS_EN``) — it's explanatory help, not a setting, and has no WG string to reuse.
   It is never translated and never routed through i18n.
@@ -57,9 +57,14 @@ _FEATURE_EN = {
 
 # Ordered key lists per column -- the wire order of the controls in ``_template()``. Used
 # by mod_settings to walk a stored template in lockstep (Labels carry no varName).
-COL1_KEYS = (u"hideAlways", u"hideWhenComplete", u"ignoreFreeXp", u"barModes",
-             u"showTechTree", u"showSkillTree", u"showFieldMods", u"showEliteRewards",
-             u"showElite", u"showPotentialTierXI")
+# showBar is the MASTER checkbox; the six per-mode toggles and showWhenComplete are its
+# greyed-when-off children, then ignoreFreeXp is a STANDALONE control last in column1 (not
+# bound to the master -- see mod_settings._template()). The order here MUST match the wire
+# order of the controls in _template() column1 (Aslain's master-group returns a flat
+# [master, ...children] list -- no Label rows any more).
+COL1_KEYS = (u"showBar", u"showTechTree", u"showFieldMods", u"showPotentialTierXI",
+             u"showSkillTree", u"showEliteRewards", u"showElite", u"showWhenComplete",
+             u"ignoreFreeXp")
 COL2_KEYS = (u"barPosition", u"posX", u"posY")
 
 
@@ -86,100 +91,89 @@ def _norm(code):
 # per-mode checkboxes are NOT here (their labels come from WG via FEATURE_WG).
 _LABELS = {
     u"en": {
-        u"hideAlways": u"Hide the bar completely",
-        u"hideWhenComplete": u"Hide when fully progressed",
+        u"showBar": u"Show Progress Bar",
+        u"showWhenComplete": u"Fully Progressed",
         u"ignoreFreeXp": u"Ignore Free XP",
-        u"barModes": u"Bar modes",
         u"barPosition": u"Bar position (px)",
         u"posX": u"Horizontal (center X)",
         u"posY": u"Vertical (top Y)",
     },
     u"de": {
-        u"hideAlways": u"Leiste komplett ausblenden",
-        u"hideWhenComplete": u"Bei vollem Fortschritt ausblenden",
+        u"showBar": u"Fortschrittsleiste anzeigen",
+        u"showWhenComplete": u"Vollständig fortgeschritten",
         u"ignoreFreeXp": u"Freie Erfahrung ignorieren",
-        u"barModes": u"Leistenmodi",
         u"barPosition": u"Leistenposition (px)",
         u"posX": u"Horizontal (Mitte X)",
         u"posY": u"Vertikal (oben Y)",
     },
     u"fr": {
-        u"hideAlways": u"Masquer complètement la barre",
-        u"hideWhenComplete": u"Masquer une fois entièrement progressé",
+        u"showBar": u"Afficher la barre de progression",
+        u"showWhenComplete": u"Entièrement progressé",
         u"ignoreFreeXp": u"Ignorer l'expérience libre",
-        u"barModes": u"Modes de la barre",
         u"barPosition": u"Position de la barre (px)",
         u"posX": u"Horizontale (centre X)",
         u"posY": u"Verticale (haut Y)",
     },
     u"es": {
-        u"hideAlways": u"Ocultar la barra por completo",
-        u"hideWhenComplete": u"Ocultar al completar el progreso",
+        u"showBar": u"Mostrar la barra de progreso",
+        u"showWhenComplete": u"Progreso completo",
         u"ignoreFreeXp": u"Ignorar la experiencia libre",
-        u"barModes": u"Modos de la barra",
         u"barPosition": u"Posición de la barra (px)",
         u"posX": u"Horizontal (centro X)",
         u"posY": u"Vertical (arriba Y)",
     },
     u"it": {
-        u"hideAlways": u"Nascondi completamente la barra",
-        u"hideWhenComplete": u"Nascondi a progresso completato",
+        u"showBar": u"Mostra la barra di avanzamento",
+        u"showWhenComplete": u"Completamente progredito",
         u"ignoreFreeXp": u"Ignora l'esperienza libera",
-        u"barModes": u"Modalità della barra",
         u"barPosition": u"Posizione della barra (px)",
         u"posX": u"Orizzontale (centro X)",
         u"posY": u"Verticale (alto Y)",
     },
     u"pl": {
-        u"hideAlways": u"Całkowicie ukryj pasek",
-        u"hideWhenComplete": u"Ukryj po pełnym ukończeniu",
+        u"showBar": u"Pokaż pasek postępu",
+        u"showWhenComplete": u"W pełni ukończone",
         u"ignoreFreeXp": u"Ignoruj wolne doświadczenie",
-        u"barModes": u"Tryby paska",
         u"barPosition": u"Pozycja paska (px)",
         u"posX": u"Poziomo (środek X)",
         u"posY": u"Pionowo (góra Y)",
     },
     u"cs": {
-        u"hideAlways": u"Zcela skrýt lištu",
-        u"hideWhenComplete": u"Skrýt při plném dokončení",
+        u"showBar": u"Zobrazit lištu postupu",
+        u"showWhenComplete": u"Plně dokončeno",
         u"ignoreFreeXp": u"Ignorovat volné zkušenosti",
-        u"barModes": u"Režimy lišty",
         u"barPosition": u"Pozice lišty (px)",
         u"posX": u"Vodorovně (střed X)",
         u"posY": u"Svisle (nahoře Y)",
     },
     u"ru": {
-        u"hideAlways": u"Полностью скрыть полосу",
-        u"hideWhenComplete": u"Скрывать при полном прогрессе",
+        u"showBar": u"Показывать полосу прогресса",
+        u"showWhenComplete": u"Полностью пройдено",
         u"ignoreFreeXp": u"Игнорировать свободный опыт",
-        u"barModes": u"Режимы полосы",
         u"barPosition": u"Положение полосы (px)",
         u"posX": u"По горизонтали (центр X)",
         u"posY": u"По вертикали (верх Y)",
     },
     u"uk": {
-        u"hideAlways": u"Повністю сховати смугу",
-        u"hideWhenComplete": u"Ховати за повного прогресу",
+        u"showBar": u"Показувати смугу прогресу",
+        u"showWhenComplete": u"Повністю пройдено",
         u"ignoreFreeXp": u"Ігнорувати вільний досвід",
-        u"barModes": u"Режими смуги",
         u"barPosition": u"Розташування смуги (px)",
         u"posX": u"По горизонталі (центр X)",
         u"posY": u"По вертикалі (верх Y)",
     },
     u"hu": {
-        u"hideAlways": u"A sáv teljes elrejtése",
-        u"hideWhenComplete": u"Elrejtés teljes haladásnál",
+        u"showBar": u"Folyamatjelző sáv megjelenítése",
+        u"showWhenComplete": u"Teljesen kész",
         u"ignoreFreeXp": u"Szabad tapasztalat mellőzése",
-        u"barModes": u"Sávmódok",
         u"barPosition": u"A sáv helyzete (px)",
         u"posX": u"Vízszintes (középpont X)",
         u"posY": u"Függőleges (felső Y)",
     },
     u"tr": {
-        u"hideAlways": u"Çubuğu tamamen gizle",
-        u"hideWhenComplete": u"Tamamen ilerlediğinde gizle",
+        u"showBar": u"İlerleme çubuğunu göster",
+        u"showWhenComplete": u"Tamamen ilerlemiş",
         u"ignoreFreeXp": u"Serbest deneyimi yok say",
-        u"barModes": u"Çubuk modları",
         u"barPosition": u"Çubuk konumu (px)",
         u"posX": u"Yatay (merkez X)",
         u"posY": u"Dikey (üst Y)",
@@ -191,19 +185,18 @@ _LABELS = {
 # (header, body). The header mirrors the control's English name; the body is the mod's
 # own explanatory prose. Deliberately English on every client -- see the module docstring.
 _TOOLTIPS_EN = {
-    u"hideAlways": (u"Hide the bar completely",
-                    u"Hides the progress bar on every vehicle."),
-    u"hideWhenComplete": (u"Hide when fully progressed",
-                          u"Hides the bar only on vehicles with nothing left to "
-                          u"research, upgrade, or unlock."),
+    u"showBar": (u"Show Progress Bar",
+                 u"Master switch: shows the progress bar on the selected vehicle. Uncheck "
+                 u"to hide the bar completely on every vehicle. The options below turn its "
+                 u"individual modes on or off, and grey out while it's unchecked."),
+    u"showWhenComplete": (u"Fully Progressed",
+                          u"Keeps the bar visible on vehicles with nothing left to "
+                          u"research, upgrade, or unlock. Uncheck to hide the bar once a "
+                          u"vehicle is fully progressed."),
     u"ignoreFreeXp": (u"Ignore Free XP",
                       u"Counts only the combat XP you earn on each vehicle toward its "
                       u"progress. Free XP is excluded from the bar, the totals, and the "
                       u"tooltips. Off by default."),
-    u"barModes": (u"Bar modes",
-                  u"Turn off the bar modes you don't care about. When a vehicle's "
-                  u"progress falls under a mode you've hidden, the bar is hidden for it "
-                  u"(it does not switch to another mode)."),
     u"showTechTree": (u"Research",
                       u"The tech-tree progress toward the vehicle's remaining module "
                       u"and next-vehicle unlocks."),

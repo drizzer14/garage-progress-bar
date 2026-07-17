@@ -728,8 +728,8 @@ def push(rvm, host_vm=None):
             # and the bar looks frozen after a mode/tank switch. The widget polls this `rev`
             # as a cheap change-signal and re-renders when it moves -- see WGModResearch.js.
             tx.setRev(_push_seq)
-            tx.setVisible(bar_visible(_bar_visible(), mod_settings.hide_always(),
-                                      mod_settings.hide_when_complete(), model.mode,
+            tx.setVisible(bar_visible(_bar_visible(), mod_settings.show_bar(),
+                                      mod_settings.show_when_complete(), model.mode,
                                       _in_garage()))
             tx.setColorBlind(engine_adapter.is_color_blind())
             # "Ignore Free XP" setting: the domain already zeroed free XP in the model

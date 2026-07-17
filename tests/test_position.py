@@ -80,20 +80,20 @@ def test_full_settings_preserves_host_enabled_key():
     # 'enabled' (and honor its stored value) while overlaying our own varNames.
     mod_settings._settings["posX"] = 111
     mod_settings._settings["posY"] = 222
-    stored = {"enabled": False, "hideAlways": True, "hideWhenComplete": False,
+    stored = {"enabled": False, "showBar": True, "showWhenComplete": True,
               "posX": 5, "posY": 6}
     out = mod_settings._full_settings_for_write(_FakeApi(stored))
     assert out["enabled"] is False          # host toggle preserved, not clobbered
     assert out["posX"] == 111 and out["posY"] == 222   # our live values overlaid
     # every managed varName is present (updateModSettings replaces the whole dict)
-    for k in ("hideAlways", "hideWhenComplete", "posX", "posY", "enabled"):
+    for k in ("showBar", "showWhenComplete", "posX", "posY", "enabled"):
         assert k in out
 
 
 def test_full_settings_defaults_enabled_when_missing():
     # Repairs a corrupted stored dict (no 'enabled') -> defaults to True so the host
     # renderer never KeyErrors.
-    out = mod_settings._full_settings_for_write(_FakeApi({"hideAlways": False}))
+    out = mod_settings._full_settings_for_write(_FakeApi({"showBar": True}))
     assert out["enabled"] is True
 
 
@@ -142,7 +142,7 @@ def test_full_settings_handles_no_stored():
     # No stored settings (fresh / template mismatch) -> still a complete dict.
     out = mod_settings._full_settings_for_write(_FakeApi(None))
     assert out["enabled"] is True
-    for k in ("hideAlways", "hideWhenComplete", "posX", "posY"):
+    for k in ("showBar", "showWhenComplete", "posX", "posY"):
         assert k in out
 
 
@@ -230,34 +230,58 @@ def test_reset_returns_to_auto_not_seeded_px():
 
 # `helpers` is a game module absent under pytest, so settings_i18n.client_language()
 # fails soft to English -- _template() renders the English master here.
-_VARNAMES = {"hideAlways", "hideWhenComplete", "ignoreFreeXp", "showTechTree",
+_VARNAMES = {"showBar", "showWhenComplete", "ignoreFreeXp", "showTechTree",
              "showSkillTree", "showFieldMods", "showEliteRewards", "showElite",
              "showPotentialTierXI", "posX", "posY"}
 
+# The seven controls nested under the showBar master (greyed while it's off). ignoreFreeXp
+# is NOT here -- it's a standalone control after the group (see below).
+_CHILDREN = {"showTechTree", "showFieldMods", "showPotentialTierXI", "showSkillTree",
+             "showEliteRewards", "showElite", "showWhenComplete"}
 
-def test_template_structure_unchanged_and_english_text():
+
+def test_template_structure_and_english_text():
     tpl = mod_settings._template()
     # Structure the host owns is language-independent.
-    assert tpl["settingsVersion"] == 4
+    assert tpl["settingsVersion"] == 6           # bumped for ignoreFreeXp -> standalone
     assert tpl["modDisplayName"] == "Garage Progress Bar"   # brand, never translated
     varnames = [c["varName"] for col in ("column1", "column2")
                 for c in tpl[col] if "varName" in c]
     assert set(varnames) == _VARNAMES
     assert len(varnames) == len(_VARNAMES)                  # no dupes / drops
-    # Every visible control carries text + tooltip.
+    # Every visible control carries text + tooltip (no Label rows remain in column1).
     for col in ("column1", "column2"):
         for c in tpl[col]:
             assert c.get("text")
             assert c.get("tooltip")
+    # showBar is the MASTER (first control, no masterVarName); the seven group controls are
+    # its children (createControlsGroup's masterVarName key). ignoreFreeXp is the STANDALONE
+    # last control -- not bound to the master.
+    col1 = tpl["column1"]
+    assert col1[0]["varName"] == "showBar"
+    assert "masterVarName" not in col1[0]
+    children = [c for c in col1[1:-1]]            # exclude master and the standalone last
+    assert {c["varName"] for c in children} == _CHILDREN
+    for c in children:
+        assert c["masterVarName"] == "showBar"
+        assert "masterIndent" not in c            # default indent = visual nest
+    # Child order per spec.
+    assert [c["varName"] for c in children] == [
+        "showTechTree", "showFieldMods", "showPotentialTierXI", "showSkillTree",
+        "showEliteRewards", "showElite", "showWhenComplete"]
+    # ignoreFreeXp: standalone last control in column1, NOT bound to the master.
+    assert col1[-1]["varName"] == "ignoreFreeXp"
+    assert "masterVarName" not in col1[-1]
     # Mod-invented text comes from the tables (English in the test env).
-    assert tpl["column1"][0]["text"] == u"Hide the bar completely"   # hideAlways
-    assert tpl["column1"][2]["text"] == u"Ignore Free XP"            # ignoreFreeXp
-    assert tpl["column1"][3]["text"] == u"Bar modes"                 # barModes Label
+    assert col1[0]["text"] == u"Show Progress Bar"                   # showBar master
     assert tpl["column2"][0]["text"] == u"Bar position (px)"         # barPosition Label
     # Per-mode checkbox labels come from WG's own strings (i18n.widget_labels(), which
-    # fails soft to English feature names here) -- NOT the old "Show ..." phrasing.
-    assert tpl["column1"][4]["text"] == u"Research"                  # showTechTree
-    assert tpl["column1"][8]["text"] == u"Elite System"             # showElite
+    # fails soft to English feature names here).
+    assert col1[1]["text"] == u"Research"                            # showTechTree
+    assert col1[6]["text"] == u"Elite System"                        # showElite
+    # showWhenComplete / ignoreFreeXp are mod-invented children.
+    assert col1[7]["text"] == u"Fully Progressed"                    # showWhenComplete
+    assert col1[8]["text"] == u"Ignore Free XP"                      # ignoreFreeXp
 
 
 class _FakeStateApi(object):

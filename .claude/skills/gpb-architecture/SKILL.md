@@ -125,7 +125,29 @@ hide-when-complete option, the tank-setup-overlay state, and the fail-closed gar
   MSA caches a COPY of the template text at registration, so a text-only change never reaches an
   existing install without walking the stored template in place, and needs NO `settingsVersion`
   bump) lives in the **wotmod-i18n-settings** harness skill. This mod's *concretes* only
-  (`adapter/settings_i18n.py`):
+  (`adapter/settings_i18n.py` + `bridge/mod_settings.py`):
+  - **`showBar` is a MASTER checkbox with 7 nested children** — the 6 per-mode toggles +
+    `showWhenComplete` — bound by a hand-set `"masterVarName": "showBar"` on
+    each child in `mod_settings._child()`/`_template()`, NOT via Aslain's `createControlsGroup`
+    (keeps `_template()` a pure, unit-testable dict; the key is simply ignored under
+    izeberg / pytest). Aslain greys + disables the children while `showBar` is off; no
+    `masterIndent` key means they render indented. **`ignoreFreeXp` is a STANDALONE checkbox**
+    (no `masterVarName`), placed last in column1 after the `showBar` group.
+    **Every structural change here needs a `settingsVersion` bump** — MSA caches the panel
+    layout keyed by `settingsVersion` and reuses the STORED template on an existing install
+    until you bump, so nesting AND re-parenting a control between groups both require it
+    (adding/removing a control does too): bumped 4->5 when the modes were inverted into the
+    `showBar` master, then 5->6 when `ignoreFreeXp` was moved OUT of that master to a standalone
+    control — no `varName` and no default changed, yet the relocation alone still needed the
+    bump (confirmed live: it didn't render standalone until 5->6). Text-only label/tooltip
+    edits do NOT bump (see the i18n bullet above). (MSA's full nesting toolkit —
+    `masterVarName`/`enableWhen`/`visibleWhen`, `column1..column4` — is in
+    wotmod-architecture -> ModsSettingsAPI.)
+  - **`settings_i18n.COL1_KEYS` must stay in lockstep with `_template()` column1 wire order.**
+    `_sync_template_text` / `_label_defaults` walk the STORED template POSITIONALLY against
+    `COL1_KEYS`/`COL2_KEYS`, so reordering column1 without updating `COL1_KEYS` silently
+    mislabels controls (no crash). Guard test: `test_col1_keys_match_template_wire_order` in
+    `tests/test_mod_settings_template.py`.
   - **Only the panel LABELS are localized** — NOT tooltips, NOT anything outside the panel.
     `settingsVersion` is **3**.
   - **Two label sources.** (1) **WG feature names** (Research, Upgrades, Field Modifications,

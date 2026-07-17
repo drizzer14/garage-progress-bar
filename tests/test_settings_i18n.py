@@ -60,9 +60,9 @@ def test_feature_label_english_fallback_when_wg_missing():
 def test_mod_invented_labels_localized():
     en = S.render_panel(_FAKE_WL, lang=u"en")
     uk = S.render_panel(_FAKE_WL, lang=u"uk")
-    assert en[u"hideAlways"][u"text"] == u"Hide the bar completely"
-    assert uk[u"hideAlways"][u"text"] == u"Повністю сховати смугу"
-    assert uk[u"barModes"][u"text"] == u"Режими смуги"
+    assert en[u"showBar"][u"text"] == u"Show Progress Bar"
+    assert uk[u"showBar"][u"text"] == u"Показувати смугу прогресу"
+    assert uk[u"showWhenComplete"][u"text"] == u"Повністю пройдено"
 
 
 def test_unknown_language_labels_are_english():
@@ -84,9 +84,11 @@ def test_tooltips_are_english_in_every_language():
 
 def test_tooltip_markup_shape():
     r = S.render_panel(_FAKE_WL, lang=u"de")
-    tip = r[u"hideAlways"][u"tooltip"]
-    assert tip == (u"{HEADER}Hide the bar completely{/HEADER}"
-                   u"{BODY}Hides the progress bar on every vehicle.{/BODY}")
+    tip = r[u"showWhenComplete"][u"tooltip"]
+    assert tip == (u"{HEADER}Fully Progressed{/HEADER}"
+                   u"{BODY}Keeps the bar visible on vehicles with nothing left to "
+                   u"research, upgrade, or unlock. Uncheck to hide the bar once a "
+                   u"vehicle is fully progressed.{/BODY}")
 
 
 # --- _norm ------------------------------------------------------------------
@@ -106,13 +108,13 @@ def test_norm_cases():
 
 def test_marks_only_mod_invented_label_fallbacks(monkeypatch):
     monkeypatch.setattr(i18n, u"MARK_UNTRANSLATED", True)
-    monkeypatch.setitem(S._LABELS, u"zz", {u"hideAlways": u"ZZ"})   # partial language
+    monkeypatch.setitem(S._LABELS, u"zz", {u"showBar": u"ZZ"})   # partial language
     r = S.render_panel(_FAKE_WL, lang=u"zz")
-    assert not r[u"hideAlways"][u"text"].startswith(u"_")    # translated label
-    assert r[u"barModes"][u"text"].startswith(u"_")          # fell back -> marked
+    assert not r[u"showBar"][u"text"].startswith(u"_")       # translated label
+    assert r[u"barPosition"][u"text"].startswith(u"_")       # fell back -> marked
     # Feature labels aren't re-marked here (i18n owns them); tooltips never marked.
     assert r[u"showFieldMods"][u"text"] == u"WG-FieldMods"
-    assert not r[u"barModes"][u"tooltip"].startswith(u"_")
+    assert not r[u"barPosition"][u"tooltip"].startswith(u"_")
 
 
 def test_english_client_never_marks(monkeypatch):
@@ -165,6 +167,6 @@ def test_client_language_falls_back_on_error(monkeypatch):
 def test_panel_text_labels_and_english_tooltips(monkeypatch):
     monkeypatch.delitem(sys.modules, u"helpers", raising=False)   # -> en, WG English
     t = S.panel_text()
-    assert t[u"hideAlways"][u"text"] == u"Hide the bar completely"
+    assert t[u"showBar"][u"text"] == u"Show Progress Bar"
     assert t[u"showFieldMods"][u"text"] == u"Field Modifications"
     assert t[u"showFieldMods"][u"tooltip"].startswith(u"{HEADER}Field Modifications{/HEADER}")

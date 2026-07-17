@@ -56,26 +56,30 @@ def _est(snapshot):
         max_battle_xp=snapshot.max_battle_xp)
 
 
-def bar_visible(overlay_closed, hide_always, hide_when_complete, mode, in_garage):
+def bar_visible(overlay_closed, show_bar, show_when_complete, mode, in_garage):
     """Whether the bar should render, combining the engine state (a tank-setup
     overlay open -> overlay_closed is False; the plain garage is mounted ->
     in_garage is True) with the two user settings. Pure and engine-free so it
     unit-tests on plain inputs.
 
-    - hide_always: master switch -> never show.
+    show_bar / show_when_complete are the INVERSE polarity of the old hide_always /
+    hide_when_complete flags (checkbox default now ON = shown), so the gates test the
+    negation -- same net behavior as before.
+
+    - not show_bar: master switch OFF -> never show.
     - Mode.HIDDEN: the vehicle's resolved mode is turned off by a per-mode user
       toggle (see build_model) -> never show.
     - in_garage: show ONLY in the plain garage view (fail-closed allowlist -- any
       other lobby view, or an unreadable view signal, hides the bar).
-    - hide_when_complete: hide only on fully-progressed vehicles (Mode.COMPLETE).
+    - not show_when_complete: hide on fully-progressed vehicles (Mode.COMPLETE).
     - otherwise follow the overlay state (hidden while a setup overlay is open)."""
-    if hide_always:
+    if not show_bar:
         return False
     if mode == t.Mode.HIDDEN:
         return False
     if not in_garage:
         return False
-    if hide_when_complete and mode == t.Mode.COMPLETE:
+    if not show_when_complete and mode == t.Mode.COMPLETE:
         return False
     return overlay_closed
 
