@@ -929,12 +929,12 @@
 /* Reserved right-hand icon column (padding-right = icon width + a 12rem gap) and a
    min-height floor = icon height, so a SHORT-text tooltip is still tall enough for the
    out-of-flow icon and the divider clears it. Taller text just grows the block. */
-#wgmod-root .wg-tip-main-icon   { padding-right: 64rem; min-height: 52rem; }  /* .wg-tip-icon 52 */
-#wgmod-root .wg-tip-main-hex    { padding-right: 42rem; min-height: 33rem; }  /* .wg-tip-hex 30 */
-#wgmod-root .wg-tip-main-elite  { padding-right: 56rem; min-height: 44rem; }  /* .wg-tip-icon-elite 44 */
-#wgmod-root .wg-tip-main-veh    { padding-right: 84rem; min-height: 40rem; }  /* .wg-tip-icon-veh 72x40 */
-#wgmod-root .wg-tip-main-reward { padding-right: 52rem; min-height: 40rem; }  /* .wg-tip-icon-reward 40 */
-#wgmod-root .wg-tip-main-mod    { padding-right: 52rem; min-height: 40rem; }  /* .wg-tip-icon-mod 40 */
+#wgmod-root .wg-tip-main-icon   { padding-right: 80rem; min-height: 65rem; }  /* .wg-tip-icon 65 */
+#wgmod-root .wg-tip-main-hex    { padding-right: 52.5rem; min-height: 41.25rem; }  /* .wg-tip-hex 37.5 */
+#wgmod-root .wg-tip-main-elite  { padding-right: 70rem; min-height: 55rem; }  /* .wg-tip-icon-elite 55 */
+#wgmod-root .wg-tip-main-veh    { padding-right: 105rem; min-height: 50rem; }  /* .wg-tip-icon-veh 90x50 */
+#wgmod-root .wg-tip-main-reward { padding-right: 65rem; min-height: 50rem; }  /* .wg-tip-icon-reward 50 */
+#wgmod-root .wg-tip-main-mod    { padding-right: 65rem; min-height: 50rem; }  /* .wg-tip-icon-mod 50 */
 #wgmod-root .wg-tip-text {
     min-width: 0;
     overflow-wrap: break-word;  /* break an unbreakable token so it wraps inside .wg-tooltip's max-width */
@@ -945,8 +945,8 @@
                                    for the elite level overlay (.wg-tip-icon-num) */
     top: 0;
     right: 0;
-    width: 52rem;
-    height: 52rem;              /* fixed square; .wg-tip-main-icon's min-height reserves the space */
+    width: 65rem;
+    height: 65rem;              /* fixed square; .wg-tip-main-icon's min-height reserves the space */
     background-repeat: no-repeat;
     background-position: center top;  /* pin the art to the TOP -> no vertical centering on tall titles */
     background-size: contain;   /* scale the art to the box, preserving aspect */
@@ -957,20 +957,20 @@
 /* Vehicle-node art is wide (~160x100): a wide-short box keeps its aspect instead of
    a small centered image in a 52rem square with dead space below it. */
 #wgmod-root .wg-tip-icon-veh {
-    width: 72rem;
-    height: 40rem;
+    width: 90rem;
+    height: 50rem;
 }
 /* Reward thumbnails are frequently portrait: cap the height so `contain` can't run
    the art to the full 52rem and read as elongated. */
 #wgmod-root .wg-tip-icon-reward {
-    width: 40rem;
-    height: 40rem;
+    width: 50rem;
+    height: 50rem;
 }
 /* Module type glyphs are square but read too tall at 52; a smaller square sits better
    beside the short module caption + name. */
 #wgmod-root .wg-tip-icon-mod {
-    width: 40rem;
-    height: 40rem;
+    width: 50rem;
+    height: 50rem;
 }
 /* Elite GRADE tooltip icon: a FIXED square (not stretched to the text-block height),
    so the emblem renders at a known size and the level number centers reliably over it
@@ -978,8 +978,8 @@
 #wgmod-root .wg-tip-icon-elite {
     /* (dead `align-self: flex-start` removed -- the icon is position:absolute under the
        display:block .wg-tip-main, a leftover from the old flex-row tooltip layout.) */
-    width: 44rem;
-    height: 44rem;
+    width: 55rem;
+    height: 55rem;
     background-position: center;
 }
 /* Level painted over the emblem: grade-colored emblemFont digit glyphs, centered over
@@ -995,11 +995,11 @@
     justify-content: center;
 }
 #wgmod-root .wg-tip-icon-num .wg-emblem-digit {
-    width: 6.5rem;
-    height: 13rem;
+    width: 8.125rem;
+    height: 16.25rem;
 }
 #wgmod-root .wg-tip-icon-num .wg-emblem-digit-one {
-    width: 4.5rem;
+    width: 5.625rem;
 }
 /* Field-mod tooltip icon: the signature dark hexagon + tan roman numeral (shares the
    .wg-tick-hex base rules above), NOT a generic section glyph. Fixed size + vertically
@@ -1008,12 +1008,12 @@
    containing block for the ::before dark-fill hex. background-image:none defeats any
    inline icon URL .wg-tip-icon would otherwise carry. */
 #wgmod-root .wg-tip-hex {
-    width: 30rem;
-    height: 33rem;
+    width: 37.5rem;
+    height: 41.25rem;
     background-image: none;
 }
 #wgmod-root .wg-tip-hex span {
-    font-size: 15rem;
+    font-size: 18.75rem;
 }
 /* Title -- native `.Index_title` token (primary parchment, semibold). */
 #wgmod-root .wg-tip-name {
@@ -1201,7 +1201,7 @@
    cost, mirroring the native parameter rows. One row per KPI. */
 #wgmod-root .wg-tip-effect {
     margin-top: 5rem;
-    font-size: 12rem;
+    font-size: 15rem;
     font-weight: 400;
     color: #8e867d;
     line-height: 1.25;
@@ -1221,8 +1221,8 @@
 #wgmod-root .wg-tip-buff-ico {
     flex: 0 0 auto;
     align-self: center;
-    width: 15rem;
-    height: 15rem;
+    width: 18.75rem;
+    height: 18.75rem;
     margin-right: 3rem;
     background-repeat: no-repeat;
     background-position: center;
@@ -1273,7 +1273,7 @@
    The variant NAME keeps the title weight it inherits from .wg-tip-variant. */
 #wgmod-root .wg-tip-variant-eff {
     margin-top: 5rem;
-    font-size: 12rem;
+    font-size: 15rem;
     font-weight: 400;
     color: #8e867d;
     line-height: 1.25;
