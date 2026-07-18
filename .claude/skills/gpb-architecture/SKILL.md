@@ -118,7 +118,22 @@ hide-when-complete option, the tank-setup-overlay state, and the fail-closed gar
   KPI name → vehParams param basename remap is `format.KPI_PARAM_ICON` (ported from the client's
   perk-tooltip bundle; unknown names used verbatim, unresolved → no icon/unit, never a broken
   box). `format.py` holds the pure helpers (unit-tested); the game-symbol lookups live in
-  `_read_common` (live-only). Widget rendering: see gpb-widget "Buff lines".
+  `_read_common` (live-only).
+  - **`isDebuff` color GOTCHA — key it on the MAPPED param name, not the raw KPI name.** The game
+    derives `KPI.isDebuff` by testing the **raw KPI name** (e.g. `vehicleGunAimSpeed`) against
+    `gui.shared.items_parameters.comparator.BACKWARD_QUALITY_PARAMS` (its "lower is better" set).
+    But that set keys several params ONLY under their **vehParams param name** (e.g. `aimingTime`),
+    NOT the KPI name — so a lower-is-better KPI whose KPI-name diverges from its param-name (aim
+    speed at minimum) is mis-colored: a beneficial `-0.1s` aim reduction wrongly takes the
+    red/debuff (`neg`) branch. The KPI→param remap the mod already holds in `format.KPI_PARAM_ICON`
+    (accessor `format.param_icon_name`) is the correct membership key for the COLOR decision too, not
+    just icons/units. Fix (shipped): pure `format.resolve_is_debuff(raw_is_debuff,
+    kpi_name_backward, param_name_backward)` flips the flag when the mapped param name is in
+    `BACKWARD_QUALITY_PARAMS` but the raw KPI name is not; `_read_common` computes the two
+    membership booleans against the game set (fail-soft — falls back to raw `KPI.isDebuff` if the
+    import fails) and defers to the pure helper, which then feeds `format.kpi_record`
+    (`neg`=red / `pos`=green).
+  - Widget rendering: see gpb-widget "Buff lines".
 - **Settings-panel localization — read `wotmod-i18n-settings` FIRST.** The reusable MSA-panel
   pattern (lang-major tables with English master + per-key fallback + untranslated-leak diagnostic,
   `getClientLanguage`/`_norm` incl. `ua`→`uk`, `{HEADER}/{BODY}` tooltip assembly, and THE gotcha —
@@ -139,7 +154,10 @@ hide-when-complete option, the tank-setup-overlay state, and the fail-closed gar
     (adding/removing a control does too): bumped 4->5 when the modes were inverted into the
     `showBar` master, then 5->6 when `ignoreFreeXp` was moved OUT of that master to a standalone
     control — no `varName` and no default changed, yet the relocation alone still needed the
-    bump (confirmed live: it didn't render standalone until 5->6). Text-only label/tooltip
+    bump (confirmed live: it didn't render standalone until 5->6) — then 6->7 when the `scale`
+    Dropdown was added to column2 (a new control + new `varName` + option labels; Aslain folds
+    option labels into the template signature, so the bump is mandatory to push it and its
+    localized options to an existing install — see the scale bullet below). Text-only label/tooltip
     edits do NOT bump (see the i18n bullet above). (MSA's full nesting toolkit —
     `masterVarName`/`enableWhen`/`visibleWhen`, `column1..column4` — is in
     wotmod-architecture -> ModsSettingsAPI.)
@@ -149,7 +167,20 @@ hide-when-complete option, the tank-setup-overlay state, and the fail-closed gar
     mislabels controls (no crash). Guard test: `test_col1_keys_match_template_wire_order` in
     `tests/test_mod_settings_template.py`.
   - **Only the panel LABELS are localized** — NOT tooltips, NOT anything outside the panel.
-    `settingsVersion` is **3**.
+    `settingsVersion` is **7** (bump history in the bullet above).
+  - **The `scale` control is a `Dropdown`** (column2, ABOVE the Bar position controls) — the
+    Default/Large bar-size selector. Its Aslain descriptor uses `value` = the current 0-based
+    index (`_clamp_scale` coerces a bad/out-of-range read to `0`) and `options` =
+    `[{"label": …}]`. `settings_i18n` keeps the two option-label strings (Default / Large) in a
+    SEPARATE `_SCALE_OPTIONS` table, NOT `_LABELS` — options aren't label/tooltip rows, and
+    folding them in would break the positional `COL*_KEYS` / `_sync_template_text` partition
+    (its tests enforce this). `render_panel` resolves them (same `_norm` + English fallback) and
+    attaches the localized pair onto `t["scale"]["options"]`; `_template()` drops it into the
+    descriptor. `COL2_KEYS` = `(scale, barPosition, posX, posY)`. Adding it bumped
+    `settingsVersion` 6->7 (option-set change — see wotmod-i18n-settings "Option-bearing
+    controls"). `mod_settings.scale()` reads the index back; `bridge.push` writes it to
+    `ResearchVM.scale` (prop 33); the widget folds `.wg-large` when it's `1` — the VISUAL
+    mechanism (asymmetric width x2.0 / rest x1.5 via an explicit override class) is gpb-widget.
   - **Two label sources.** (1) **WG feature names** (Research, Upgrades, Field Modifications,
     Elite System, Elite Rewards, Tier XI) reuse WG's OWN localized strings via
     `i18n.widget_labels()` — `FEATURE_WG` maps each checkbox → its widget-labels key, so they match

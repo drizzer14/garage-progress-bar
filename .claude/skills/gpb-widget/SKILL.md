@@ -59,6 +59,30 @@ poll to "simplify" — the direct-call + observer path alone leaves the cold-mou
   (`z-index:3`), spanning the bar + the glyph strip below it (extends past the left edge so
   0%-anchored done markers stay hoverable); tooltip is `z-index:4` but non-interactive.
 
+## Bar scale (the "Large" setting)
+`data.scale` (0 = Default, 1 = Large; `ResearchVM.scale`, pushed from `mod_settings.scale()` —
+Python side in gpb-architecture) is latched into the module global `SCALE_LARGE` at the top of
+BOTH `render()` and `renderElite()` (`SCALE_LARGE = data.scale === 1`) and folded onto
+`#wgmod-root` as a `wg-large` class in the same root-class expression that carries
+`wg-colorblind` / `wg-ignore-free`. Large is an **explicit CSS override class**
+(`#wgmod-root.wg-large …`), deliberately NOT `transform: scale()` and NOT `calc()`/vars: the
+scaling is **asymmetric** — bar WIDTH x2.0 but track heights, all fonts, all icons/glyphs and
+the whole tooltip x1.5 — which a single transform can't express without distorting text, and a
+separate override block keeps the Default path byte-for-byte untouched so all risk is isolated
+to the override. The bar width is ONE CSS constant (`#wgmod-root` `520rem` → `.wg-large`
+`1040rem`) that MUST switch in lockstep with the JS tick-geometry constant: `TICKS_WIDTH_REM`
+516 (Default) / `TICKS_WIDTH_REM_LARGE` 1034 (Large = the scaled width minus the scaled 2×3rem
+track borders), read via `ticksWidthRem()` off the `SCALE_LARGE` latch. rem is the engine root
+font (not settable per-widget), so every `*rem` dimension scales together and the override just
+restates the enlarged values exactly (13→19.5rem, 36→54rem, …). Do NOT try to collapse it into
+`transform:scale` — the width/rest ratio differs, and the tooltip would blur/reflow.
+
+Buff-line icon vertical alignment lives on `.wg-tip-buff-ico` (`align-self: flex-start`,
+top-aligning the vehParams icon to the FIRST line of the buff text in BOTH scale modes — the
+`.wg-large` block deliberately does NOT restate `align-self`, so Large inherits it); the row is
+`.wg-tip-buff` (`display:flex; align-items: baseline`). (Was `center` — swapped to `flex-start`
+in v1.2.0 so multi-line field-mod / Tier XI buff icons top-align.)
+
 ## Icon URLs (this mod's map)
 `CAT_ICON[mode]` (`vehicleMenu/large/{research,fieldModification,vehSkillTree}.png`), `XP_ICON`
 (`vehicle_hub/research_purchase/total_experience.png` — base glyph used everywhere; `_elite`

@@ -32,6 +32,13 @@ CLIENT version (canonical: `build_wgmods_zip.CLIENT_VERSION`) across the shippin
 files, failing on drift. It can't see arbitrary prose, so ALSO `grep -rn "<old version>"`.
 Changing `<id>` would also change the output filename + the cleanup glob in `deploy_wotmod.py`.
 
+**The bump can ride in a `feat` commit, not only a `chore(release)` one.** `check_version.py`
+asserts every reference matches `src/meta.xml` — a green check means NO drift regardless of
+*which* commit bumped `meta.xml` (v1.2.0's bump landed inside the `feat` scale commit, not a
+`chore`). So don't infer drift from an artifact's filename or a commit message alone: trust the
+check. (Conventional-commit hygiene still prefers a dedicated `chore(release): X.Y.Z`, but a
+version that shipped in a feature commit is not a version-integrity problem.)
+
 ## 2. Commit & tag
 Conventional commits, landing directly on `main` (no branch). Fixes as their own `fix(...)`
 commits first, then `chore(release): X.Y.Z`. Annotated tag `vX.Y.Z`. Push `main` + tag.
@@ -75,11 +82,13 @@ run's plan is `TASKS/upgrade-<clientver>.json`).
 
 ## 4. Publish the GitHub Release (all 3 assets)
 ```powershell
-gh release create vX.Y.Z --title "Garage Progress Bar vX.Y.Z" --notes-file <body.md> `
+gh release create vX.Y.Z --title "vX.Y.Z" --notes-file <body.md> `
   dist\GarageProgressBar-Setup-X.Y.Z.exe `
   dist\com.14th_ua.garageprogressbar_X.Y.Z.wotmod `
   dist\GarageProgressBar_X.Y.Z.zip
 ```
+The release title is the bare tag `vX.Y.Z` (user preference) — not "Garage Progress Bar vX.Y.Z".
+
 Body: intro + `### What's new in X.Y.Z` + Requirements + Install (recommended, .exe) + Manual
 install (.wotmod). **Only ever reference Wargaming's World of Tanks.** Never name or contrast
 against any other/regional fork of the game in release notes, readmes, or any doc — these mods
