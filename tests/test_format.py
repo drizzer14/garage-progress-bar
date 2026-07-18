@@ -235,3 +235,40 @@ def test_kpi_record_coerces_missing_fields_to_empty():
     sep = f.KPI_FIELD_SEP
     assert f.kpi_record("", False, "+25%", "") == sep.join(["", "pos", "+25%", ""])
     assert f.kpi_record(None, True, None, None) == sep.join(["", "neg", "", ""])
+
+
+# --- resolve_is_debuff ------------------------------------------------------
+
+def test_resolve_is_debuff_flips_backward_param_with_non_backward_kpi():
+    # the aim-speed bug: game flags a -0.1s aim delta as a debuff (raw True) because
+    # the KPI name 'vehicleGunAimSpeed' misses BACKWARD_QUALITY_PARAMS, but the mapped
+    # param 'aimingTime' IS backward -> flip to False (buff, green).
+    assert f.resolve_is_debuff(True, kpi_name_backward=False,
+                               param_name_backward=True) is False
+    # the reverse: a +aim delta (slower, worse) -> game raw False -> flip -> True (red).
+    assert f.resolve_is_debuff(False, kpi_name_backward=False,
+                               param_name_backward=True) is True
+
+
+def test_resolve_is_debuff_keeps_raw_when_both_backward():
+    # KPI name and param name agree (both in the set) -> no correction.
+    assert f.resolve_is_debuff(True, kpi_name_backward=True,
+                               param_name_backward=True) is True
+    assert f.resolve_is_debuff(False, kpi_name_backward=True,
+                               param_name_backward=True) is False
+
+
+def test_resolve_is_debuff_keeps_raw_when_neither_backward():
+    # a "higher is better" param (e.g. damage) -> game's flag is already correct.
+    assert f.resolve_is_debuff(True, kpi_name_backward=False,
+                               param_name_backward=False) is True
+    assert f.resolve_is_debuff(False, kpi_name_backward=False,
+                               param_name_backward=False) is False
+
+
+def test_resolve_is_debuff_keeps_raw_when_only_kpi_backward():
+    # only the raw KPI name is backward (mapped param isn't) -> no flip.
+    assert f.resolve_is_debuff(True, kpi_name_backward=True,
+                               param_name_backward=False) is True
+    assert f.resolve_is_debuff(False, kpi_name_backward=True,
+                               param_name_backward=False) is False

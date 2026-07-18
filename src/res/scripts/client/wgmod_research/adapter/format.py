@@ -233,6 +233,23 @@ def strip_unit(glyph):
     return s
 
 
+def resolve_is_debuff(raw_is_debuff, kpi_name_backward, param_name_backward):
+    """Correct the game's KPI.isDebuff for KPI names that miss the "lower is better"
+    (BACKWARD_QUALITY_PARAMS) set under their KPI name but hit it under their mapped
+    vehParams param name. The game keys isDebuff off the RAW KPI name, so a backward
+    parameter exposed under a non-backward KPI name (e.g. aim speed: KPI name
+    'vehicleGunAimSpeed' misses the set, param name 'aimingTime' is in it) gets the
+    wrong branch -- a beneficial reduction is flagged as a debuff (red). When the
+    mapped param IS backward but the raw KPI name is NOT, flip; otherwise keep the
+    game's value. Pure -- membership is decided by the (engine-facing) caller.
+
+    Verify: aim add value -0.1 -> game isDebuff=True, param backward, kpi not backward
+    -> flip -> False -> green; a +aim (worse) -> game False -> flip -> True -> red."""
+    if param_name_backward and not kpi_name_backward:
+        return not raw_is_debuff
+    return raw_is_debuff
+
+
 def kpi_record(icon, is_debuff, value_str, desc):
     """Pack one buff line into the widget's delimited record
     (icon <SEP> cls <SEP> value <SEP> desc), where cls is 'neg' for a debuff

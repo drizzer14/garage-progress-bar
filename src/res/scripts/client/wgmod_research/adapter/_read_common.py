@@ -219,6 +219,25 @@ def _param_unit(kpi_name):
         return ""
 
 
+def _resolve_is_debuff(kpi_name, raw_is_debuff):
+    """The buff/nerf colour flag for a KPI, corrected for the mislabelled
+    "lower is better" params. The game computes KPI.isDebuff off the RAW KPI name
+    against BACKWARD_QUALITY_PARAMS, but that set keys some params under their
+    vehParams name only -- e.g. aim time lives there as 'aimingTime', not the KPI
+    name 'vehicleGunAimSpeed' -- so a beneficial reduction misses the set and is
+    flagged red. Decide membership for BOTH the KPI name and its mapped param name
+    and let format.resolve_is_debuff flip the misclassified branch. Guarded: if the
+    comparator import fails, fall back to the game's raw isDebuff."""
+    try:
+        from gui.shared.items_parameters.comparator import BACKWARD_QUALITY_PARAMS
+        mapped = _fmt.param_icon_name(kpi_name)
+        kpi_bw = kpi_name in BACKWARD_QUALITY_PARAMS
+        param_bw = mapped in BACKWARD_QUALITY_PARAMS
+        return _fmt.resolve_is_debuff(raw_is_debuff, kpi_bw, param_bw)
+    except Exception:
+        return raw_is_debuff
+
+
 def _kpi_lines(action, numbers_only=False):
     """The effect/bonus lines for a post-progression action, from its KPI list:
     one enriched RECORD per KPI that carries a description (e.g. an icon + a green
@@ -265,9 +284,9 @@ def _kpi_lines(action, numbers_only=False):
             name = getattr(k, "name", "") or ""
             unit = _param_unit(name) if (getattr(k, "type", "") or "") == "add" else ""
             value_str = (prefix + " " + unit).strip() if unit else prefix
+            is_debuff = _resolve_is_debuff(name, bool(getattr(k, "isDebuff", False)))
             record = _fmt.kpi_record(
-                _param_icon(name), bool(getattr(k, "isDebuff", False)),
-                value_str, desc)
+                _param_icon(name), is_debuff, value_str, desc)
             lines.append(record)
     except Exception:
         LOG_CURRENT_EXCEPTION()
