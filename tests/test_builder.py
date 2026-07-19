@@ -709,3 +709,93 @@ def test_override_honored_even_when_priority_default_disabled():
                        level=10, level_xp={10: 650000})
     m = build_model(snap, _without(t.Mode.ELITE_REWARDS), override=t.Mode.ELITE)
     assert m.mode == t.Mode.ELITE
+
+
+# --- progress_current / progress_required (the "current / required" readout) --
+# Populated per mode so the widget can render "current / required" (progressMode) and
+# a derived percentage (showPercent). XP-fill modes read spendable / scale_max; skill
+# reads spendable / remaining-full-upgrade-cost; elite modes read cumulative combat XP /
+# the trailing milestone's cumulative XP; COMPLETE carries 0 / 0.
+
+def test_progress_readout_tech_tree_is_spendable_over_scale_max():
+    snap = t.VehicleSnapshot(tier=6, is_elite=False, vehicle_xp=500, free_xp=200,
+                             tech_unlocks=[_u(1, 1000), _u(2, 500)])
+    m = build_model(snap)
+    assert m.mode == t.Mode.TECH_TREE
+    assert m.progress_current == 700          # spendable = vehicle + free
+    assert m.progress_current == m.spendable_xp
+    assert m.progress_required == 1000        # == scale_max (max per-item cost)
+    assert m.progress_required == m.scale_max
+
+
+def test_progress_readout_field_mods_is_spendable_over_scale_max():
+    snap = t.VehicleSnapshot(tier=10, is_elite=True, vehicle_xp=1000, free_xp=200,
+                             field_mod_steps=[_step(1, 2000), _step(2, 4000)])
+    m = build_model(snap)
+    assert m.mode == t.Mode.FIELD_MODS
+    assert m.progress_current == 1200         # spendable
+    assert m.progress_required == 6000        # cumulative scale_max
+    assert m.progress_required == m.scale_max
+
+
+def test_progress_readout_potential_is_spendable_over_price():
+    m = build_model(_done_tier_x(vehicle_xp=100000, free_xp=50000), _WITH_PXI)
+    assert m.mode == t.Mode.POTENTIAL_TIER_XI
+    assert m.progress_current == 150000       # spendable
+    assert m.progress_required == 325000      # the fixed tier-XI price == scale_max
+    assert m.progress_required == m.scale_max
+
+
+def test_progress_readout_skill_tree_is_spent_over_total_xp():
+    # readout = XP already invested in the tree (skilltree_spent_xp) / the full-upgrade
+    # total (skilltree_total_xp) -- both ride the snapshot, so the "%" and the
+    # "current / required" text read spent / total (NOT spendable, NOT a derived remaining).
+    m = build_model(_skill_snap(total_xp=325000, spent_xp=130000,
+                                vehicle_xp=40000, free_xp=5000, done=10, total=26))
+    assert m.mode == t.Mode.SKILL_TREE
+    assert m.progress_current == 130000       # skilltree_spent_xp (invested so far)
+    assert m.progress_required == 325000      # skilltree_total_xp (full-upgrade total)
+
+
+def test_progress_readout_skill_tree_reads_spent_and_total_verbatim():
+    # spent_xp / total_xp are read straight off the snapshot -- even a spent >= total
+    # figure passes through unchanged (no derived remaining, no flooring).
+    m = build_model(_skill_snap(total_xp=200000, spent_xp=250000,
+                                vehicle_xp=40000, free_xp=5000, done=10, total=26))
+    assert m.mode == t.Mode.SKILL_TREE
+    assert m.progress_current == 250000       # skilltree_spent_xp verbatim
+    assert m.progress_required == 200000      # skilltree_total_xp verbatim
+
+
+def test_progress_readout_elite_is_within_band_combat_xp():
+    # NEW within-band axis: progress_current is the combat XP earned SINCE the current
+    # grade band started (combat_xp - scale_min = level_xp[band_min]), out of the band's
+    # XP span -- so the readout "%" equals the bar fill width exactly. combat_xp itself
+    # stays the cumulative total (unchanged).
+    snap = _elite_snap(rewards=[], level=10, level_xp={10: 650000, 20: 900000},
+                       current_xp=4000)
+    m = build_model(snap)
+    assert m.mode == t.Mode.ELITE
+    assert m.combat_xp == 654000              # cumulative combat XP (unchanged)
+    assert m.progress_current == 4000         # combat_xp - scale_min (within-band offset)
+    assert m.progress_current == m.fill_vehicle   # fill width == readout numerator
+    assert m.progress_required == 250000      # band XP span (900000 - 650000)
+
+
+def test_progress_readout_elite_rewards_is_combat_xp_over_last_reward_level():
+    # required = cumulative XP of the trailing tick = the LAST reward level.
+    snap = _elite_snap(rewards=[t.EliteReward(50, True), t.EliteReward(100, False)],
+                       level=12, level_xp={12: 800000, 100: 2000000}, current_xp=12345)
+    m = build_model(snap)
+    assert m.mode == t.Mode.ELITE_REWARDS
+    assert m.progress_current == 812345       # == combat_xp
+    assert m.progress_current == m.combat_xp
+    assert m.progress_required == 2000000     # cumulative XP to the last reward (level 100)
+
+
+def test_progress_readout_complete_is_zero_over_zero():
+    snap = t.VehicleSnapshot(tier=8, is_elite=True, vehicle_xp=0, free_xp=0)
+    m = build_model(snap)
+    assert m.mode == t.Mode.COMPLETE
+    assert m.progress_current == 0
+    assert m.progress_required == 0

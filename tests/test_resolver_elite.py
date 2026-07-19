@@ -23,6 +23,12 @@ def _grades():
     ]
 
 
+# A dense cumulative-XP map: every elite level -> its cumulative combat XP. The elite
+# grade band now expresses its scale/fill/readout on this XP axis (not raw levels), so a
+# realistic map is supplied by default; xp = level * 100 keeps the arithmetic legible.
+_XP = {lvl: lvl * 100 for lvl in range(0, 401)}
+
+
 def _snap(level, grades=None, rewards=None, current_xp=0, next_xp=0, max_level=20,
           level_xp=None):
     return t.VehicleSnapshot(
@@ -30,7 +36,8 @@ def _snap(level, grades=None, rewards=None, current_xp=0, next_xp=0, max_level=2
         has_prestige=True, elite_level=level, elite_max_level=max_level,
         elite_current_xp=current_xp, elite_next_xp=next_xp,
         elite_grades=grades if grades is not None else _grades(),
-        elite_rewards=rewards or [], elite_level_xp=level_xp or {})
+        elite_rewards=rewards or [],
+        elite_level_xp=level_xp if level_xp is not None else _XP)
 
 
 # --- grade band ----------------------------------------------------------
@@ -38,10 +45,14 @@ def _snap(level, grades=None, rewards=None, current_xp=0, next_xp=0, max_level=2
 def test_grade_band_picks_current_family():
     res = elite.resolve_grade_band(_snap(12))
     assert res["grade"] == "bronze"
-    assert res["scale_min"] == 10        # bronze sub1
-    assert res["scale_max"] == 20        # next family (prestige/MAX) start
-    # the 4 bronze sub-grades + one extra tick for the next grade's first level
-    assert [tk.xp_position for tk in res["ticks"]] == [10, 13, 16, 19, 20]
+    # scale is now cumulative XP: band start = level_xp[bronze sub1 @10], band end =
+    # level_xp[next family (prestige/MAX) start @20].
+    assert res["scale_min"] == _XP[10]   # 1000
+    assert res["scale_max"] == _XP[20]   # 2000
+    # the 4 bronze sub-grades + one extra tick for the next grade's first level, each at
+    # its cumulative-XP position (level_xp[level]).
+    assert [tk.xp_position for tk in res["ticks"]] == [
+        _XP[10], _XP[13], _XP[16], _XP[19], _XP[20]]      # [1000, 1300, 1600, 1900, 2000]
     assert res["sub"] == 1               # only sub1 (@10) reached at level 12
 
 
@@ -71,12 +82,13 @@ def test_reward_track_ticks_carry_xp_cost():
 def test_grade_band_tick_states_and_completed():
     res = elite.resolve_grade_band(_snap(13))
     states = [(tk.xp_position, tk.state, tk.completed) for tk in res["ticks"]]
+    # xp_position is now the cumulative XP (level_xp[level]); states/completed unchanged.
     assert states == [
-        (10, "achieved", True),   # 13 >= 10
-        (13, "achieved", True),   # 13 >= 13
-        (16, "next", False),      # first unreached
-        (19, "upcoming", False),
-        (20, "upcoming", False),  # next grade's first level (the extra tick)
+        (_XP[10], "achieved", True),   # 13 >= 10
+        (_XP[13], "achieved", True),   # 13 >= 13
+        (_XP[16], "next", False),      # first unreached
+        (_XP[19], "upcoming", False),
+        (_XP[20], "upcoming", False),  # next grade's first level (the extra tick)
     ]
 
 
@@ -91,28 +103,41 @@ def test_grade_band_trailing_tick_is_next_when_band_fully_reached():
     ]
     res = elite.resolve_grade_band(_snap(8, grades=grades, max_level=10))
     states = [(tk.xp_position, tk.state) for tk in res["ticks"]]
+    # xp_position is now cumulative XP (level_xp[level]).
     assert states == [
-        (1, "achieved"), (3, "achieved"), (5, "achieved"), (7, "achieved"),
-        (10, "next"),  # next family's first level -> "next" now the band is done
+        (_XP[1], "achieved"), (_XP[3], "achieved"), (_XP[5], "achieved"),
+        (_XP[7], "achieved"),
+        (_XP[10], "next"),  # next family's first level -> "next" now the band is done
     ]
 
 
-def test_grade_band_fill_offset_includes_fraction():
-    # level 12 in band [10,20], halfway to level 13 -> position 12.5, offset 2.5
-    res = elite.resolve_grade_band(_snap(12, current_xp=50, next_xp=100))
-    assert abs(res["fill"] - 2.5) < 1e-9
-    assert res["scale_min"] == 10
+def test_grade_band_fill_and_readout_are_within_band_xp():
+    # NEW within-band axis: the fill AND the readout are cumulative combat XP measured
+    # from the band start. combat = level_xp[level] + the within-level progress
+    # (elite_current_xp, floored at 0); fill == combat - scale_min, progress_current is
+    # the same offset, and progress_required is the band's XP span (scale_max - scale_min)
+    # -- so the readout "%" equals the bar fill width exactly.
+    res = elite.resolve_grade_band(_snap(12, current_xp=50))
+    combat = _XP[12] + 50
+    assert res["scale_min"] == _XP[10]                               # 1000
+    assert res["scale_max"] == _XP[20]                               # 2000
+    assert res["fill"] == combat - res["scale_min"]                  # 250
+    assert res["progress_current"] == combat - res["scale_min"]      # 250
+    assert res["progress_required"] == res["scale_max"] - res["scale_min"]  # 1000 (span)
+    assert res["progress_required"] > 0
 
 
-def test_grade_band_no_data_sentinel_gives_zero_fraction():
-    res = elite.resolve_grade_band(_snap(12, current_xp=-1, next_xp=-1))
-    assert res["fill"] == 2              # exactly on the level, no fraction
+def test_grade_band_no_data_sentinel_floors_within_level_to_zero():
+    # The -1 "no within-level data" sentinel floors to 0, so the fill sits exactly on the
+    # current level's cumulative XP: fill = level_xp[level] - scale_min (no within-level add).
+    res = elite.resolve_grade_band(_snap(12, current_xp=-1))
+    assert res["fill"] == _XP[12] - _XP[10]     # 200
 
 
 def test_grade_band_below_first_threshold_uses_first_family():
     res = elite.resolve_grade_band(_snap(0))
     assert res["grade"] == "iron"
-    assert res["scale_min"] == 1
+    assert res["scale_min"] == _XP[1]    # 100 -- cumulative XP at the iron band start (@1)
     assert res["sub"] == 0               # nothing reached yet
 
 
@@ -120,8 +145,19 @@ def test_grade_band_max_is_full_bar():
     res = elite.resolve_grade_band(_snap(20, max_level=20))
     assert res["grade"] == "prestige"
     # band falls back to the last real family (bronze) and fills fully
-    assert res["scale_max"] == 20
+    assert res["scale_max"] == _XP[20]   # 2000 -- cumulative XP at the band end
     assert res["fill"] == res["scale_max"] - res["scale_min"]
+
+
+def test_grade_band_terminal_span_zero_gives_zero_readout():
+    # A terminal grade whose band start and end map to the SAME cumulative XP has a
+    # non-positive span -> the within-band readout collapses to 0 / 0 (the widget then
+    # hides the "%" and shows a current-only readout), while the bar still renders.
+    grades = [_grade(1, "iron", 1, True)]
+    res = elite.resolve_grade_band(_snap(1, grades=grades, max_level=1,
+                                         level_xp={1: 500000}))
+    assert res["progress_current"] == 0
+    assert res["progress_required"] == 0
 
 
 def test_grade_band_empty_returns_none():

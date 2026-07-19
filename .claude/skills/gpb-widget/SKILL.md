@@ -40,13 +40,30 @@ poll to "simplify" — the direct-call + observer path alone leaves the cold-mou
 ```
 #wgmod-root (pointer-events:none)
   .wg-head   .wg-cat-icon | .wg-head-left(.wg-label,.wg-upgrades)
-             | .wg-xp(.wg-xp-val,.wg-xp-ico,.wg-xp2-val,.wg-xp2-ico)
+             | .wg-xp(.wg-xp-pct,.wg-xp-val,.wg-xp-ico,.wg-xp2-val,.wg-xp2-ico)
   .wg-track  .wg-fill-veh + .wg-fill-free (stacked) | .wg-ticks(.wg-tick…)
              | .wg-cur | .wg-hot | .wg-tooltip
   .wg-next   .wg-chip…   (skill_tree only; no caption element)
 ```
 - `.wg-xp2-*` is the second readout pair: skill_tree shows the node counter in `.wg-xp-*` AND
   the total-XP figure in `.wg-xp2-*`; other modes leave xp2 empty.
+- `.wg-xp-pct` is the optional leading progress-% span (view-only). Two independent settings
+  drive the readout, latched per `render()`/`renderElite()` into module globals from
+  `data.progressMode` / `data.showPercent` / `data.progressCurrent` / `data.progressRequired`:
+  `PROGRESS_MODE === 1` makes `xpReadoutText(cur)` return `"current / required"` (from the unified
+  scalars, plain `/`) instead of the mode's own single figure; `SHOW_PERCENT` fills `.wg-xp-pct`
+  via `setXpPct()`. Both are gated on `PROGRESS_REQ > 0` — a mode with no denominator (COMPLETE,
+  or `required <= 0`) falls back to the current-only figure and the `%` span stays empty +
+  `display:none` (takes no space). The percent is computed IN JS as
+  `min(100, round(cur/req*100))` on purpose: Wulf's int-truncating number setter would lose
+  precision if it were pushed as a fraction from Python. The Python scalars behind
+  `progressCurrent`/`progressRequired` are per-mode — see gpb-architecture.
+- **`current / required` is ONE text node.** `xpReadoutText(cur)` (~124-129) returns the plain
+  string `"current / required"` (or the single figure), written straight into `.wg-xp-val`'s
+  `textContent` — Python pushes only the numeric scalars (`progressCurrent`/`progressRequired`),
+  never markup. So any request to style the "total"/denominator on its own (e.g. dim the
+  `/ required` half) is a **JS change** — split `xpReadoutText` into `<span>`s — NOT a CSS-only
+  tweak: there's no separate element to target today.
 - `.wg-cur` is the current-position glow marker, placed at the fill edge in BOTH `render`
   (linear modes) and `renderElite`.
 - Mode is applied as a root class (`wg-complete`, `wg-elite`, `wg-elite-rewards`, …) that CSS
@@ -77,6 +94,12 @@ font (not settable per-widget), so every `*rem` dimension scales together and th
 restates the enlarged values exactly (13→19.5rem, 36→54rem, …). Do NOT try to collapse it into
 `transform:scale` — the width/rest ratio differs, and the tooltip would blur/reflow.
 
+**Restatement rule:** because Large is a font-size/dimension OVERRIDE (not a transform), any new
+element added to the `.wg-xp` header region — or anywhere that carries a `*rem` size — MUST ALSO
+be restated in the `#wgmod-root.wg-large` block, or it silently keeps its Default size in Large
+mode. Precedent: the `.wg-xp-pct` span needed its own `#wgmod-root.wg-large .wg-xp-pct` rule
+(x1.5 font/spacing/margin); the base rule stays byte-for-byte untouched.
+
 Buff-line icon vertical alignment lives on `.wg-tip-buff-ico` (`align-self: flex-start`,
 top-aligning the vehParams icon to the FIRST line of the buff text in BOTH scale modes — the
 `.wg-large` block deliberately does NOT restate `align-self`, so Large inherits it); the row is
@@ -96,6 +119,13 @@ resolve. Emblem path arrives as `t.icon` (`prestige/emblem/<size>/<family>/<sub>
 `gradeFamily()` parses `<family>`; level digits are `emblemFont/<family>/<digit>.png` glyph divs
 (NOT CSS text), `enamel`→`gold` fallback, `1` glyph narrower (`wg-emblem-digit-one`). MAX (lvl
 350) = numberless prestige hexagon inside the arrowhead (`ELITE_TAB_FORCE_MAX` to test).
+- **The grade-tick badge NUMBER rides on `t.level`, NOT `t.position`.** `t.level` (= `g.level`,
+  the elite level number like 10/13/16 — matching WoT's own prestige-tab badge) is the numeral;
+  `t.position` (= `xp_position`) is now the cumulative-XP PLACEMENT on the axis, a different
+  quantity. `eliteGlyph`'s tab-badge numeral (via `tabNumber(t.level)`) and `eliteTooltipHtml`'s
+  icon overlay both read `t.level | 0`. Do NOT source the badge from `t.position` — that would
+  render the raw XP figure instead of the milestone level. (Reuses the existing `Tick.level` wire
+  field; no wire widening. Python side: `elite.resolve_grade_band` — see gpb-architecture.)
 
 ## The unified tick-render loop
 `renderTicks(ticksEl, ticks, n, spec)` is ONE loop shared by the linear path (`render`:
@@ -169,8 +199,12 @@ only** — it lives in the header, which the root's `pointer-events:none` covers
   live: motion events AND clicks DO reach `.wg-hot` over the header — an earlier belief that the header
   region was input-blocked was wrong. What failed was a body-level sibling overlay AND a nested
   `.wg-head-hot`; the working answer is the single extended `.wg-hot`.
-- **Dim↔bright is a COLOR swap, inline, driven by `setSwitchHot`** (`#8e867d` ↔ `#ede6d9`) with
-  `transition:color` for the fade — NOT opacity and NOT a `.wg-switch-hot` class. In this Coherent
+- **Dim↔bright is a COLOR swap, inline, driven by `setSwitchHot`** (`#dce0e0` ↔ `#ede6d9`; the
+  JS constants `SWITCH_COLOR`/`SWITCH_COLOR_HOT`) with
+  `transition:color` for the fade — NOT opacity and NOT a `.wg-switch-hot` class. The dim/inactive
+  tone is `#dce0e0` to match the `.wg-xp-val` XP-readout total (it was `#8e867d` before v1.2.x); the
+  hover-bright `#ede6d9` is unchanged. NB the other `#8e867d` uses (locked/status/tick grays) are
+  unrelated and stay as-is. In this Coherent
   build a dynamic **opacity** change (with `transition`) never repaints, and a toggled **class** never
   restyles, but a dynamic inline **color** write does. (Add to the CSS-quirks list alongside
   `:hover`/`:not()` unreliability.)

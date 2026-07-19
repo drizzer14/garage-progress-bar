@@ -139,7 +139,7 @@
     font-weight: 700;
     letter-spacing: 1rem;
     text-transform: uppercase;
-    color: #8e867d;             /* dim / inactive; setSwitchHot brightens to #ede6d9 on hover */
+    color: #dce0e0;             /* inactive; matches the XP-readout total (.wg-xp-val); setSwitchHot brightens to #ede6d9 on hover */
     text-shadow: 0 1rem 4rem rgba(0, 0, 0, 0.9), 0 0 2rem rgba(0, 0, 0, 0.6);
     transition: color 0.12s ease;
 }
@@ -163,6 +163,18 @@
     letter-spacing: 1rem;      /* match the label + upgrades counter rhythm */
     color: #dce0e0;             /* experience tone, pairs with the XP glyph */
     text-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.85);
+}
+/* Leading progress-% span (Show Progress %): reuses the XP value's font/color, with a
+   right margin so it reads as a distinct prefix before the figure. The margin matches the
+   counter->xp2 gap (.wg-xp2-val margin-left) so the % prefix sits at the same rhythm. Hidden
+   by JS (empty + display:none) when the setting is off or there's no denominator. */
+#wgmod-root .wg-xp-pct {
+    font-size: 13rem;
+    font-weight: 700;
+    letter-spacing: 1rem;
+    color: #dce0e0;
+    text-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.85);
+    margin-right: 10rem;
 }
 /* currency glyph -- a div-style background (Gameface clips <img>); the source is
    24x24, contain-scaled into a 16rem box. Sits to the RIGHT of the figure. */
@@ -1480,6 +1492,13 @@
 #wgmod-root.wg-large .wg-xp2-val {
     font-size: 19.5rem;
     letter-spacing: 1.5rem;
+}
+/* Leading progress-% span at Large (x1.5 font/spacing + margin; MANDATORY here or it
+   won't scale in Large mode -- the base rule stays byte-for-byte). */
+#wgmod-root.wg-large .wg-xp-pct {
+    font-size: 19.5rem;
+    letter-spacing: 1.5rem;
+    margin-right: 15rem;
 }
 #wgmod-root.wg-large .wg-xp-ico,
 #wgmod-root.wg-large .wg-xp2-ico {

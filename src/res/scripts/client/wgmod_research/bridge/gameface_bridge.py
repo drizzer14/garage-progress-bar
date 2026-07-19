@@ -735,6 +735,15 @@ def push(rvm, host_vm=None):
             # Bar scale (0 = Default, 1 = Large): the widget folds the .wg-large override
             # class when 1, enlarging the bar. View-only -- build_model is untouched.
             tx.setScale(mod_settings.scale())
+            # XP-readout display controls. The unified per-mode progress scalars ride the
+            # model; progressMode/showPercent are the user settings. The widget shows
+            # "current / required" when progressMode == 1 && progressRequired > 0, and
+            # prepends a "%" (min(100, round(cur/req*100)), computed in JS) when
+            # showPercent is on -- both independent, both view-only.
+            tx.setProgressCurrent(getattr(model, "progress_current", 0) or 0)
+            tx.setProgressRequired(getattr(model, "progress_required", 0) or 0)
+            tx.setProgressMode(mod_settings.progress_mode())
+            tx.setShowPercent(mod_settings.show_percent())
             # Localized widget labels (client-language, sourced from WG's own strings);
             # JSON so the whole bundle rides one field. ensure_ascii escapes non-ASCII
             # (e.g. Cyrillic) to \uXXXX, which JS JSON.parse decodes back.

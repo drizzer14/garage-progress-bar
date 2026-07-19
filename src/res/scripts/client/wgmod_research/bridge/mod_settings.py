@@ -76,6 +76,15 @@ DEFAULTS = {# showBar is the MASTER switch (default ON = bar shown everywhere). 
             # _clamp_scale (an out-of-range/non-int value -> 0). Lives in column2, above
             # the Bar position controls (see _template + settings_i18n scale options).
             "scale": 0,
+            # XP readout display controls (opt-in, view-only -- neither touches the
+            # domain model). "progressMode" (Dropdown, 0-based index): 0 = Current (show
+            # only the current XP figure, as today), 1 = Current / Required (show
+            # "current / required"). Coerced by _clamp_progress_mode. "showPercent"
+            # (CheckBox, default off): prepend a progress percentage to the LEFT of the
+            # readout, independent of progressMode; the widget derives it as
+            # min(100, round(current/required*100)) and hides it when required <= 0.
+            "progressMode": 0,
+            "showPercent": False,
             "posX": 0, "posY": 0,
             # Viewport (px) a custom posX/posY was captured at, so the widget can rescale
             # the pinned position proportionally after a resolution / UI-scale change (see
@@ -119,6 +128,17 @@ def _clamp_scale(v):
     """Coerce the scale-dropdown selection to a known 0-based index: 0 = Default,
     1 = Large. Aslain MSA returns the selection as an int; a non-int / out-of-range
     value guards back to 0 (Default). Pure + engine-free (unit-tested)."""
+    try:
+        v = int(v)
+    except (TypeError, ValueError):
+        return 0
+    return v if v in (0, 1) else 0
+
+
+def _clamp_progress_mode(v):
+    """Coerce the progress-mode dropdown selection to a known 0-based index: 0 = Current,
+    1 = Current / Required. Aslain MSA returns the selection as an int; a non-int /
+    out-of-range value guards back to 0 (Current). Pure + engine-free (unit-tested)."""
     try:
         v = int(v)
     except (TypeError, ValueError):
@@ -191,7 +211,13 @@ def _template():
         # a new control with option labels). Aslain folds the option labels into the
         # template's structure signature, so the bump is mandatory to push the new
         # control (and its localized options) to an existing install.
-        "settingsVersion": 7,
+        # Bumped 7 -> 8 when the "progressMode" Dropdown (column2) + "showPercent"
+        # CheckBox (column1) were added -- two new varNames + a new option-bearing
+        # control, so the bump is mandatory to reach an existing install.
+        # Bumped 8 -> 9 when "showPercent" was MOVED from column1 to column2 (directly
+        # under progressMode) -- re-parenting a control between columns is a layout
+        # change, so MSA must re-register for an existing install to see the move.
+        "settingsVersion": 9,
         "column1": [
             # MASTER: the whole-bar switch. Its children (below) grey out when it's off.
             {
@@ -235,6 +261,27 @@ def _template():
                 "options": [{"label": lbl} for lbl in t["scale"]["options"]],
                 "tooltip": t["scale"]["tooltip"],
                 "varName": "scale",
+            },
+            # Progress-mode selector -- a Dropdown ABOVE the Bar position controls: 0 =
+            # Current, 1 = Current / Required. Same Aslain 1.6.4 shape as the scale
+            # dropdown (value = current index, options = localized {"label"} list).
+            {
+                "type": "Dropdown",
+                "text": t["progressMode"]["text"],
+                "value": DEFAULTS["progressMode"],
+                "options": [{"label": lbl} for lbl in t["progressMode"]["options"]],
+                "tooltip": t["progressMode"]["tooltip"],
+                "varName": "progressMode",
+            },
+            # showPercent sits directly beneath progressMode -- both govern what the XP
+            # readout shows. NOT a child of showBar (a display tweak, not a visibility
+            # gate), so it carries NO masterVarName and stays live when the master is off.
+            {
+                "type": "CheckBox",
+                "text": t["showPercent"]["text"],
+                "value": DEFAULTS["showPercent"],
+                "tooltip": t["showPercent"]["tooltip"],
+                "varName": "showPercent",
             },
             {
                 "type": "Label",
@@ -318,6 +365,9 @@ def _apply(settings):
             # An INTEGER dropdown index (0/1), NOT a bool -- coerce it as one so the
             # generic bool() branch below can't clobber the selection.
             _settings[key] = _clamp_scale(settings[key])
+        elif key == "progressMode":
+            # Likewise an INTEGER dropdown index (0/1), coerced before the bool branch.
+            _settings[key] = _clamp_progress_mode(settings[key])
         elif key == "modeOverrides":
             # A JSON string (per-vehicle mode switch map); keep it verbatim, guarding a
             # non-string / missing value back to the empty map.
@@ -552,6 +602,18 @@ def scale():
     """The bar scale index: 0 = Default (current rendering), 1 = Large. Pushed to the
     widget (setScale), which folds the .wg-large override class when it's 1."""
     return _settings["scale"]
+
+
+def progress_mode():
+    """The XP-readout progress mode: 0 = Current, 1 = Current / Required. Pushed to the
+    widget (setProgressMode); when 1 the readout shows "current / required"."""
+    return _settings["progressMode"]
+
+
+def show_percent():
+    """"Show Progress %" setting: True -> prepend a progress percentage to the XP
+    readout (the widget derives it and hides it when required <= 0)."""
+    return _settings["showPercent"]
 
 
 def pos_x():

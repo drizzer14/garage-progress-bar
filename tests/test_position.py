@@ -210,9 +210,9 @@ def test_reset_returns_to_auto_not_seeded_px():
 
 # `helpers` is a game module absent under pytest, so settings_i18n.client_language()
 # fails soft to English -- _template() renders the English master here.
-_VARNAMES = {"showBar", "showWhenComplete", "ignoreFreeXp", "showTechTree",
-             "showSkillTree", "showFieldMods", "showEliteRewards", "showElite",
-             "showPotentialTierXI", "scale", "posX", "posY"}
+_VARNAMES = {"showBar", "showWhenComplete", "ignoreFreeXp", "showPercent",
+             "showTechTree", "showSkillTree", "showFieldMods", "showEliteRewards",
+             "showElite", "showPotentialTierXI", "scale", "progressMode", "posX", "posY"}
 
 # The seven controls nested under the showBar master (greyed while it's off). ignoreFreeXp
 # is NOT here -- it's a standalone control after the group (see below).
@@ -223,7 +223,7 @@ _CHILDREN = {"showTechTree", "showFieldMods", "showPotentialTierXI", "showSkillT
 def test_template_structure_and_english_text():
     tpl = mod_settings._template()
     # Structure the host owns is language-independent.
-    assert tpl["settingsVersion"] == 7           # bumped for the scale Dropdown
+    assert tpl["settingsVersion"] == 9           # bumped for showPercent moving to column2
     assert tpl["modDisplayName"] == "Garage Progress Bar"   # brand, never translated
     varnames = [c["varName"] for col in ("column1", "column2")
                 for c in tpl[col] if "varName" in c]
@@ -235,12 +235,13 @@ def test_template_structure_and_english_text():
             assert c.get("text")
             assert c.get("tooltip")
     # showBar is the MASTER (first control, no masterVarName); the seven group controls are
-    # its children (createControlsGroup's masterVarName key). ignoreFreeXp is the STANDALONE
-    # last control -- not bound to the master.
+    # its children (createControlsGroup's masterVarName key). ignoreFreeXp is the single
+    # STANDALONE last control in column1 -- not bound to the master. (showPercent moved to
+    # column2, under progressMode.)
     col1 = tpl["column1"]
     assert col1[0]["varName"] == "showBar"
     assert "masterVarName" not in col1[0]
-    children = [c for c in col1[1:-1]]            # exclude master and the standalone last
+    children = [c for c in col1[1:-1]]            # exclude master and the single standalone last
     assert {c["varName"] for c in children} == _CHILDREN
     for c in children:
         assert c["masterVarName"] == "showBar"
@@ -249,18 +250,25 @@ def test_template_structure_and_english_text():
     assert [c["varName"] for c in children] == [
         "showTechTree", "showFieldMods", "showPotentialTierXI", "showSkillTree",
         "showEliteRewards", "showElite", "showWhenComplete"]
-    # ignoreFreeXp: standalone last control in column1, NOT bound to the master.
+    # ignoreFreeXp: the single standalone last control in column1, NOT bound to master.
     assert col1[-1]["varName"] == "ignoreFreeXp"
     assert "masterVarName" not in col1[-1]
+    # showPercent is no longer in column1.
+    assert "showPercent" not in [c.get("varName") for c in col1]
     # Mod-invented text comes from the tables (English in the test env).
     assert col1[0]["text"] == u"Show Progress Bar"                   # showBar master
-    assert tpl["column2"][0]["text"] == u"Scale"                     # scale Dropdown (first)
-    assert tpl["column2"][1]["text"] == u"Bar position (px)"         # barPosition Label
+    col2 = tpl["column2"]
+    assert col2[0]["text"] == u"Scale"                               # scale Dropdown (first)
+    assert col2[1]["text"] == u"Progress Mode"                       # progressMode Dropdown
+    assert col2[2]["text"] == u"Show Progress %"                     # showPercent (moved here)
+    assert col2[2]["varName"] == "showPercent"
+    assert "masterVarName" not in col2[2]
+    assert col2[3]["text"] == u"Bar position (px)"                   # barPosition Label
     # Per-mode checkbox labels come from WG's own strings (i18n.widget_labels(), which
     # fails soft to English feature names here).
     assert col1[1]["text"] == u"Research"                            # showTechTree
     assert col1[6]["text"] == u"Elite System"                        # showElite
-    # showWhenComplete / ignoreFreeXp are mod-invented children.
+    # showWhenComplete / ignoreFreeXp are mod-invented.
     assert col1[7]["text"] == u"Fully Progressed"                    # showWhenComplete
     assert col1[8]["text"] == u"Ignore Free XP"                      # ignoreFreeXp
 

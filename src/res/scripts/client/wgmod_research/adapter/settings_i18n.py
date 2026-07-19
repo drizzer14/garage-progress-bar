@@ -65,7 +65,7 @@ _FEATURE_EN = {
 COL1_KEYS = (u"showBar", u"showTechTree", u"showFieldMods", u"showPotentialTierXI",
              u"showSkillTree", u"showEliteRewards", u"showElite", u"showWhenComplete",
              u"ignoreFreeXp")
-COL2_KEYS = (u"scale", u"barPosition", u"posX", u"posY")
+COL2_KEYS = (u"scale", u"progressMode", u"showPercent", u"barPosition", u"posX", u"posY")
 
 
 def _norm(code):
@@ -94,6 +94,8 @@ _LABELS = {
         u"showBar": u"Show Progress Bar",
         u"showWhenComplete": u"Fully Progressed",
         u"ignoreFreeXp": u"Ignore Free XP",
+        u"showPercent": u"Show Progress %",
+        u"progressMode": u"Progress Mode",
         u"scale": u"Scale",
         u"barPosition": u"Bar position (px)",
         u"posX": u"Horizontal (center X)",
@@ -103,6 +105,8 @@ _LABELS = {
         u"showBar": u"Fortschrittsleiste anzeigen",
         u"showWhenComplete": u"Vollständig fortgeschritten",
         u"ignoreFreeXp": u"Freie Erfahrung ignorieren",
+        u"showPercent": u"Fortschritt in % anzeigen",
+        u"progressMode": u"Fortschrittsmodus",
         u"scale": u"Skalierung",
         u"barPosition": u"Leistenposition (px)",
         u"posX": u"Horizontal (Mitte X)",
@@ -112,6 +116,8 @@ _LABELS = {
         u"showBar": u"Afficher la barre de progression",
         u"showWhenComplete": u"Entièrement progressé",
         u"ignoreFreeXp": u"Ignorer l'expérience libre",
+        u"showPercent": u"Afficher la progression en %",
+        u"progressMode": u"Mode de progression",
         u"scale": u"Échelle",
         u"barPosition": u"Position de la barre (px)",
         u"posX": u"Horizontale (centre X)",
@@ -121,6 +127,8 @@ _LABELS = {
         u"showBar": u"Mostrar la barra de progreso",
         u"showWhenComplete": u"Progreso completo",
         u"ignoreFreeXp": u"Ignorar la experiencia libre",
+        u"showPercent": u"Mostrar el progreso en %",
+        u"progressMode": u"Modo de progreso",
         u"scale": u"Escala",
         u"barPosition": u"Posición de la barra (px)",
         u"posX": u"Horizontal (centro X)",
@@ -130,6 +138,8 @@ _LABELS = {
         u"showBar": u"Mostra la barra di avanzamento",
         u"showWhenComplete": u"Completamente progredito",
         u"ignoreFreeXp": u"Ignora l'esperienza libera",
+        u"showPercent": u"Mostra l'avanzamento in %",
+        u"progressMode": u"Modalità di avanzamento",
         u"scale": u"Scala",
         u"barPosition": u"Posizione della barra (px)",
         u"posX": u"Orizzontale (centro X)",
@@ -139,6 +149,8 @@ _LABELS = {
         u"showBar": u"Pokaż pasek postępu",
         u"showWhenComplete": u"W pełni ukończone",
         u"ignoreFreeXp": u"Ignoruj wolne doświadczenie",
+        u"showPercent": u"Pokaż postęp w %",
+        u"progressMode": u"Tryb postępu",
         u"scale": u"Skala",
         u"barPosition": u"Pozycja paska (px)",
         u"posX": u"Poziomo (środek X)",
@@ -148,6 +160,8 @@ _LABELS = {
         u"showBar": u"Zobrazit lištu postupu",
         u"showWhenComplete": u"Plně dokončeno",
         u"ignoreFreeXp": u"Ignorovat volné zkušenosti",
+        u"showPercent": u"Zobrazit postup v %",
+        u"progressMode": u"Režim postupu",
         u"scale": u"Měřítko",
         u"barPosition": u"Pozice lišty (px)",
         u"posX": u"Vodorovně (střed X)",
@@ -157,6 +171,8 @@ _LABELS = {
         u"showBar": u"Показывать полосу прогресса",
         u"showWhenComplete": u"Полностью пройдено",
         u"ignoreFreeXp": u"Игнорировать свободный опыт",
+        u"showPercent": u"Показывать прогресс в %",
+        u"progressMode": u"Режим прогресса",
         u"scale": u"Масштаб",
         u"barPosition": u"Положение полосы (px)",
         u"posX": u"По горизонтали (центр X)",
@@ -166,6 +182,8 @@ _LABELS = {
         u"showBar": u"Показувати смугу прогресу",
         u"showWhenComplete": u"Повністю пройдено",
         u"ignoreFreeXp": u"Ігнорувати вільний досвід",
+        u"showPercent": u"Показувати прогрес у %",
+        u"progressMode": u"Режим прогресу",
         u"scale": u"Масштаб",
         u"barPosition": u"Розташування смуги (px)",
         u"posX": u"По горизонталі (центр X)",
@@ -175,6 +193,8 @@ _LABELS = {
         u"showBar": u"Folyamatjelző sáv megjelenítése",
         u"showWhenComplete": u"Teljesen kész",
         u"ignoreFreeXp": u"Szabad tapasztalat mellőzése",
+        u"showPercent": u"Haladás megjelenítése %-ban",
+        u"progressMode": u"Haladási mód",
         u"scale": u"Méretezés",
         u"barPosition": u"A sáv helyzete (px)",
         u"posX": u"Vízszintes (középpont X)",
@@ -184,6 +204,8 @@ _LABELS = {
         u"showBar": u"İlerleme çubuğunu göster",
         u"showWhenComplete": u"Tamamen ilerlemiş",
         u"ignoreFreeXp": u"Serbest deneyimi yok say",
+        u"showPercent": u"İlerlemeyi % olarak göster",
+        u"progressMode": u"İlerleme modu",
         u"scale": u"Ölçek",
         u"barPosition": u"Çubuk konumu (px)",
         u"posX": u"Yatay (merkez X)",
@@ -210,6 +232,26 @@ _SCALE_OPTIONS = {
     u"uk": (u"За замовчуванням", u"Великий"),
     u"hu": (u"Alapértelmezett", u"Nagy"),
     u"tr": (u"Varsayılan", u"Büyük"),
+}
+
+
+# --- PROGRESS-MODE DROPDOWN OPTION LABELS (hand-translated) ---------------------------
+# The two option labels for the "progressMode" Dropdown: (Current, Current / Required).
+# Own table (see _SCALE_OPTIONS rationale). render_panel attaches the localized pair on
+# t["progressMode"]["options"]; English master + per-language fallback (marked on
+# fallback). Plain "/" only -- never an em-dash (the client renders one as "--").
+_PROGRESS_OPTIONS = {
+    u"en": (u"Current", u"Current / Required"),
+    u"de": (u"Aktuell", u"Aktuell / Benötigt"),
+    u"fr": (u"Actuel", u"Actuel / Requis"),
+    u"es": (u"Actual", u"Actual / Necesario"),
+    u"it": (u"Attuale", u"Attuale / Richiesto"),
+    u"pl": (u"Aktualne", u"Aktualne / Wymagane"),
+    u"cs": (u"Aktuální", u"Aktuální / Potřebné"),
+    u"ru": (u"Текущий", u"Текущий / Требуется"),
+    u"uk": (u"Поточний", u"Поточний / Потрібно"),
+    u"hu": (u"Jelenlegi", u"Jelenlegi / Szükséges"),
+    u"tr": (u"Mevcut", u"Mevcut / Gerekli"),
 }
 
 
@@ -252,6 +294,13 @@ _TOOLTIPS_EN = {
               u"Sets the on-screen size of the progress bar. Default keeps the standard "
               u"size; Large roughly doubles the bar's width and enlarges its text, icons, "
               u"and tooltip - handy on high-resolution or far-away displays."),
+    u"progressMode": (u"Progress Mode",
+                      u"Sets what the XP readout shows. Current shows only the XP you "
+                      u"have so far; Current / Required shows how much you have out of "
+                      u"how much the bar needs."),
+    u"showPercent": (u"Show Progress %",
+                     u"Adds a progress percentage to the left of the XP readout. Works on "
+                     u"its own or alongside Progress Mode. Off by default."),
     u"barPosition": (u"Bar position",
                      u"Ctrl+drag the bar in the garage to move it, or type exact "
                      u"on-screen pixel coordinates below. Reset returns it to the "
@@ -289,9 +338,11 @@ def render_panel(wg_labels, lang=None):
         header, body = _TOOLTIPS_EN[key]
         out[key] = {u"text": text,
                     u"tooltip": u"{HEADER}%s{/HEADER}{BODY}%s{/BODY}" % (header, body)}
-        # The scale Dropdown also carries its localized option labels (see _template()).
+        # The two Dropdowns also carry their localized option labels (see _template()).
         if key == u"scale":
             out[key][u"options"] = _scale_options(code)
+        elif key == u"progressMode":
+            out[key][u"options"] = _progress_options(code)
     return out
 
 
@@ -301,6 +352,17 @@ def _scale_options(code):
     labels). ``code`` is already a normalized ``_norm()`` key."""
     fb = code not in _SCALE_OPTIONS
     opts = _SCALE_OPTIONS[DEFAULT_LANGUAGE] if fb else _SCALE_OPTIONS[code]
+    if fb:
+        return [i18n._mark(o) for o in opts]
+    return list(opts)
+
+
+def _progress_options(code):
+    """The localized progressMode-Dropdown option labels ``[Current, Current / Required]``
+    for language ``code`` (English fallback, marked on fallback -- same policy as
+    _scale_options). ``code`` is already a normalized ``_norm()`` key."""
+    fb = code not in _PROGRESS_OPTIONS
+    opts = _PROGRESS_OPTIONS[DEFAULT_LANGUAGE] if fb else _PROGRESS_OPTIONS[code]
     if fb:
         return [i18n._mark(o) for o in opts]
     return list(opts)

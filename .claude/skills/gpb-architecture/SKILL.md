@@ -134,6 +134,38 @@ hide-when-complete option, the tank-setup-overlay state, and the fail-closed gar
     import fails) and defers to the pure helper, which then feeds `format.kpi_record`
     (`neg`=red / `pos`=green).
   - Widget rendering: see gpb-widget "Buff lines".
+- **Progress readout scalars (`progress_current` / `progress_required`) are per-mode; the two
+  elite axes differ from each other.** Every emitted `ResearchProgressModel` carries two
+  unified scalars the widget renders as `current / required` (+ an optional `%`); each mode
+  builder sets them differently and the rule is load-bearing:
+  - **XP-fill modes** (TECH_TREE / FIELD_MODS / POTENTIAL_TIER_XI): `progress_current` =
+    `spendable_xp` (vehicle + free XP), `progress_required` = `scale_max` — because for these
+    the bar axis genuinely IS an XP amount.
+  - **SKILL_TREE**: `progress_current` = `spendable_xp`; `progress_required` =
+    `max(0, snapshot.skilltree_total_xp - snapshot.skilltree_spent_xp)`. The skill-tree BAR is a
+    node-COUNT axis (`scale_max` = node count), so the readout denominator can't be `scale_max` —
+    it's the XP still needed to fully upgrade. These two snapshot fields were previously read but
+    DROPPED by `_b_skill`; this readout is their first consumer (`builder._b_skill`).
+  - **ELITE (grade band)**: a genuine WITHIN-BAND XP axis — the bar fill width EQUALS the readout
+    %. `elite.resolve_grade_band` sets `scale_min = level_xp[band_min]`, `scale_max =
+    level_xp[band_max]`, `fill = combat_xp − scale_min` (combat_xp = `level_xp[level] +
+    max(0, elite_current_xp)`, reconstructed in `_elite_model`); readout `progress_current =
+    max(0, combat_xp − scale_min)`, `progress_required = span (= scale_max − scale_min)`, and it
+    PROMOTES both scalars so `_elite_model` uses them verbatim (`res.get("progress_current",
+    combat)`). At a terminal MAX grade the span is ≤ 0 → BOTH scalars 0 (widget falls back to a
+    current-only readout, `%` hidden; `renderElite` still clamps the fill to a full bar).
+  - **ELITE_REWARDS (reward track)**: still LEVEL-based (NOT an XP axis) — do NOT conflate it with
+    the grade band. `progress_current` = `combat_xp` (the resolver promotes NO `progress_current`,
+    so `_elite_model` falls back to reconstructed cumulative `combat`); `progress_required` = the
+    resolver-PROMOTED trailing-tick cumulative XP (`resolve_reward_track` → last reward level's
+    cumulative XP, promoted to a scalar so the builder needn't walk ticks).
+  - **COMPLETE / HIDDEN**: neither scalar is set (0).
+  - **THE TRAP:** for ELITE_REWARDS and SKILL_TREE, `scale_max` is a LEVEL or NODE COUNT, not an
+    XP amount — the per-XP denominator lives per-tick as `Tick.xp_required` (from
+    `snapshot.elite_level_xp`). A naive `spendable_xp / scale_max` for those two modes is WRONG.
+    (ELITE grade band is the exception — its `scale_min`/`scale_max` ARE cumulative-XP bounds now,
+    so its fill == its readout %.) Anyone adding an XP-based readout must take `progress_required`
+    from the builder/resolver, never divide by a level/count `scale_max`.
 - **Settings-panel localization — read `wotmod-i18n-settings` FIRST.** The reusable MSA-panel
   pattern (lang-major tables with English master + per-key fallback + untranslated-leak diagnostic,
   `getClientLanguage`/`_norm` incl. `ua`→`uk`, `{HEADER}/{BODY}` tooltip assembly, and THE gotcha —
@@ -157,8 +189,13 @@ hide-when-complete option, the tank-setup-overlay state, and the fail-closed gar
     bump (confirmed live: it didn't render standalone until 5->6) — then 6->7 when the `scale`
     Dropdown was added to column2 (a new control + new `varName` + option labels; Aslain folds
     option labels into the template signature, so the bump is mandatory to push it and its
-    localized options to an existing install — see the scale bullet below). Text-only label/tooltip
-    edits do NOT bump (see the i18n bullet above). (MSA's full nesting toolkit —
+    localized options to an existing install — see the scale bullet below) — then 7->8 when the
+    `progressMode` Dropdown (column2) + `showPercent` CheckBox were added (two new
+    `varName`s + another option-bearing control, same mandatory-bump reason) — then 8->9 when
+    `showPercent` was RE-PARENTED from column1 to column2 (directly under `progressMode`, since
+    both govern the XP readout); re-parenting a control between columns is a layout change and
+    needs the bump exactly like the earlier `ignoreFreeXp` relocation did. Text-only
+    label/tooltip edits do NOT bump (see the i18n bullet above). (MSA's full nesting toolkit —
     `masterVarName`/`enableWhen`/`visibleWhen`, `column1..column4` — is in
     wotmod-architecture -> ModsSettingsAPI.)
   - **`settings_i18n.COL1_KEYS` must stay in lockstep with `_template()` column1 wire order.**
@@ -167,7 +204,7 @@ hide-when-complete option, the tank-setup-overlay state, and the fail-closed gar
     mislabels controls (no crash). Guard test: `test_col1_keys_match_template_wire_order` in
     `tests/test_mod_settings_template.py`.
   - **Only the panel LABELS are localized** — NOT tooltips, NOT anything outside the panel.
-    `settingsVersion` is **7** (bump history in the bullet above).
+    `settingsVersion` is **9** (bump history in the bullet above).
   - **The `scale` control is a `Dropdown`** (column2, ABOVE the Bar position controls) — the
     Default/Large bar-size selector. Its Aslain descriptor uses `value` = the current 0-based
     index (`_clamp_scale` coerces a bad/out-of-range read to `0`) and `options` =
@@ -176,11 +213,20 @@ hide-when-complete option, the tank-setup-overlay state, and the fail-closed gar
     folding them in would break the positional `COL*_KEYS` / `_sync_template_text` partition
     (its tests enforce this). `render_panel` resolves them (same `_norm` + English fallback) and
     attaches the localized pair onto `t["scale"]["options"]`; `_template()` drops it into the
-    descriptor. `COL2_KEYS` = `(scale, barPosition, posX, posY)`. Adding it bumped
+    descriptor. `COL2_KEYS` = `(scale, progressMode, showPercent, barPosition, posX, posY)`
+    (`progressMode`/`showPercent` sit between `scale` and `barPosition`). Adding it bumped
     `settingsVersion` 6->7 (option-set change — see wotmod-i18n-settings "Option-bearing
     controls"). `mod_settings.scale()` reads the index back; `bridge.push` writes it to
     `ResearchVM.scale` (prop 33); the widget folds `.wg-large` when it's `1` — the VISUAL
     mechanism (asymmetric width x2.0 / rest x1.5 via an explicit override class) is gpb-widget.
+  - **MSA Dropdown `_apply()` GOTCHA — clamp a Dropdown's int index BEFORE the generic
+    `bool()` fallthrough.** `mod_settings._apply()` type-coerces each key: position keys →
+    `clamp_pos`, `modeOverrides` → verbatim string, and **everything else → `bool(...)`**. A
+    Dropdown value is an int index, so it MUST get its own `elif` branch (`scale` →
+    `_clamp_scale`, `progressMode` → `_clamp_progress_mode`) placed ABOVE that `else: bool(...)`
+    — otherwise index `1` silently becomes `True` and index `0` becomes `False`, and the
+    selection is destroyed on the first settings-change round-trip. Any new Dropdown needs its own
+    clamp + `elif`; never let it reach the `bool()` branch.
   - **Two label sources.** (1) **WG feature names** (Research, Upgrades, Field Modifications,
     Elite System, Elite Rewards, Tier XI) reuse WG's OWN localized strings via
     `i18n.widget_labels()` — `FEATURE_WG` maps each checkbox → its widget-labels key, so they match

@@ -130,7 +130,7 @@ class UpgradeVM(ViewModel):
 
 
 class ResearchVM(ViewModel):
-    def __init__(self, properties=34, commands=8):
+    def __init__(self, properties=38, commands=8):
         super(ResearchVM, self).__init__(properties=properties, commands=commands)
 
     def _initialize(self):
@@ -171,6 +171,13 @@ class ResearchVM(ViewModel):
         self._addBoolProperty("ignoreFreeXp", False)  # 31 ("Ignore Free XP" setting: draw the combat-XP glyph, hide the free-XP tone)
         self._addNumberProperty("rev", 0)  # 32 (monotonic push counter; the JS poll re-renders when it changes -- cold-mount self-heal, see WGModResearch.js)
         self._addNumberProperty("scale", 0)  # 33 (bar scale index: 0 = Default, 1 = Large; the JS folds the .wg-large override class when 1)
+        # XP-readout display controls (see WGModResearch.js). progressCurrent/Required are
+        # the unified per-mode scalars (domain model); progressMode/showPercent are the
+        # user settings. The widget derives the "%" as min(100, round(cur/req*100)) in JS.
+        self._addNumberProperty("progressCurrent", 0)   # 34 (current XP figure for the readout)
+        self._addNumberProperty("progressRequired", 0)  # 35 (required XP figure; <= 0 hides the "/" and "%")
+        self._addNumberProperty("progressMode", 0)      # 36 (0 = Current, 1 = Current / Required)
+        self._addBoolProperty("showPercent", False)     # 37 ("Show Progress %" setting)
         # Reverse channel: JS click handlers invoke these commands. Each returns a
         # command object that connect_commands() wires to a Python handler. Wulf
         # delivers the JS-supplied argument(s) to those handlers.
@@ -286,6 +293,18 @@ class ResearchVM(ViewModel):
 
     def setScale(self, v):
         self._setNumber(33, v)
+
+    def setProgressCurrent(self, v):
+        self._setNumber(34, v)
+
+    def setProgressRequired(self, v):
+        self._setNumber(35, v)
+
+    def setProgressMode(self, v):
+        self._setNumber(36, v)
+
+    def setShowPercent(self, v):
+        self._setBool(37, v)
 
     @staticmethod
     def getTicksType():

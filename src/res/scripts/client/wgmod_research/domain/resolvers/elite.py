@@ -152,14 +152,18 @@ def resolve_grade_band(snapshot):
 
     # Sub-grade milestone ticks (each carrying its grade emblem + the cumulative
     # XP to reach it). The first not-yet-reached sub-grade is "next".
+    # NB PLACEMENT vs LABEL: `xp_position` places the pip on the cumulative-XP axis
+    # (level_xp[g.level]); the tick's on-screen badge NUMBER is the elite LEVEL and
+    # rides on `level` (the widget's numeric-glyph field). Do NOT source the badge
+    # from xp_position -- that renders the raw XP figure instead of the milestone.
     ticks = []
     for g, state in _mark_states(band_grades, lambda g: level >= g.level):
         ticks.append(t.Tick(
-            xp_position=g.level, category=Category.ELITE,
+            xp_position=level_xp.get(g.level, 0), category=Category.ELITE,
             icon=_emblem_url(band_family, g.sub),
             name=_grade_title(band_family, g.sub),
             xp_gained=0, xp_required=level_xp.get(g.level, 0), affordable=False,
-            completed=(level >= g.level), level=g.sub, state=state))
+            completed=(level >= g.level), level=g.level, state=state))
 
     # One extra tick at the band's end = the NEXT grade's first level, so the bar
     # always shows what you're climbing toward. Sits at scale_max (the right edge).
@@ -175,31 +179,50 @@ def resolve_grade_band(snapshot):
             trailing_state = ("achieved" if level >= ng.level
                               else ("next" if band_all_reached else "upcoming"))
             ticks.append(t.Tick(
-                xp_position=ng.level, category=Category.ELITE,
+                xp_position=level_xp.get(ng.level, 0), category=Category.ELITE,
                 icon=_emblem_url(nxt, ng.sub),
                 name=_grade_title(nxt, ng.sub),
                 xp_gained=0, xp_required=level_xp.get(ng.level, 0), affordable=False,
-                completed=(level >= ng.level), level=ng.sub,
+                completed=(level >= ng.level), level=ng.level,
                 state=trailing_state))
 
-    frac = _fill_fraction(snapshot.elite_current_xp, snapshot.elite_next_xp)
     if current_family == GradeFamily.PRESTIGE:
-        position = band_max  # maxed -> full bar
         sub = 0
     else:
-        position = _clamp(level + frac, band_min, band_max)
         achieved = [g for g in band_grades if g.level <= level]
         sub = max([g.sub for g in achieved]) if achieved else 0
 
+    # Re-express the bar AND the readout on cumulative combat XP WITHIN the current
+    # band, so the fill width equals the readout % exactly (both XP-based). The axis
+    # spans [level_xp[band_min] .. level_xp[band_max]]; the fill segment feeds
+    # data.fillVehicle, and renderElite computes fillPos = scale_min + fill = combat_xp,
+    # width = (combat_xp - scale_min) / (scale_max - scale_min) = readout %.
+    combat = int(level_xp.get(level, 0) or 0) + max(0, snapshot.elite_current_xp or 0)
+    scale_min = level_xp.get(band_min, 0)
+    scale_max = level_xp.get(band_max, 0)
+    # Readout scalars: XP earned since the current grade started vs. the grade's XP
+    # span. At the terminal MAX grade (no next band) the span is <= 0 -- leave both 0
+    # so the widget falls back to a current-only readout + hidden "%". The bar geometry
+    # still holds (renderElite clamps fillPos, showing a full bar at max).
+    span = scale_max - scale_min
+    if span > 0:
+        progress_current = max(0, combat - scale_min)
+        progress_required = span
+    else:
+        progress_current = 0
+        progress_required = 0
+
     return {
-        "scale_min": band_min,
-        "scale_max": band_max,
-        "fill": position - band_min,
+        "scale_min": scale_min,
+        "scale_max": scale_max,
+        "fill": combat - scale_min,
         "ticks": ticks,
         "grade": current_family,
         "sub": sub,
         "level": level,
         "max_level": max_level,
+        "progress_current": progress_current,
+        "progress_required": progress_required,
     }
 
 
@@ -224,6 +247,10 @@ def resolve_reward_track(snapshot):
 
     frac = _fill_fraction(snapshot.elite_current_xp, snapshot.elite_next_xp)
     position = _clamp(level + frac, 0, scale_max)
+    # Cumulative combat XP required to reach the LAST reward level (the trailing tick).
+    # Promoted to a scalar so the builder can feed the header "current / required"
+    # readout without walking the ticks.
+    progress_required = level_xp.get(rewards[-1].level, 0)
     return {
         "scale_min": 0,
         "scale_max": scale_max,
@@ -232,4 +259,5 @@ def resolve_reward_track(snapshot):
         "level": level,
         "max_level": max_level,
         "any_unearned": any(not r.achieved for r in rewards),
+        "progress_required": progress_required,
     }

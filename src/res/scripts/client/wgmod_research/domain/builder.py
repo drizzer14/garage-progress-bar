@@ -101,10 +101,12 @@ def _b_tech(snapshot, ctx, enabled):
     ticks = techtree.resolve(snapshot)
     if not ticks:
         return None
+    scale_max = _max_pos(ticks, 0)
     return (t.Mode.TECH_TREE, t.ResearchProgressModel(
-        mode=t.Mode.TECH_TREE, scale_min=0, scale_max=_max_pos(ticks, 0),
+        mode=t.Mode.TECH_TREE, scale_min=0, scale_max=scale_max,
         fill_vehicle=ctx["fill_vehicle"], fill_free=ctx["fill_free"], ticks=ticks,
-        vehicle_class=ctx["veh_class"], spendable_xp=ctx["spendable"], **ctx["est"]))
+        vehicle_class=ctx["veh_class"], spendable_xp=ctx["spendable"],
+        progress_current=ctx["spendable"], progress_required=scale_max, **ctx["est"]))
 
 
 def _b_skill(snapshot, ctx, enabled):
@@ -115,13 +117,19 @@ def _b_skill(snapshot, ctx, enabled):
     st = skilltree.resolve(snapshot)
     if st is None:
         return None
+    # The skill-tree bar itself is a node COUNT axis, but the "current / required"
+    # readout is the XP figure: XP already invested in the tree vs. the full-upgrade
+    # total, so both the "%" and the "current / required" text read researched / total.
+    # Both totals ride the snapshot.
     return (t.Mode.SKILL_TREE, t.ResearchProgressModel(
         mode=t.Mode.SKILL_TREE, scale_min=st["scale_min"],
         scale_max=st["scale_max"], fill_vehicle=st["fill"],
         fill_free=0, ticks=st["ticks"],
         fieldmods_done=st["done"], fieldmods_total=st["total"],
         vehicle_class=ctx["veh_class"], spendable_xp=ctx["spendable"],
-        avail_upgrades=st.get("avail_upgrades", []), **ctx["est"]))
+        avail_upgrades=st.get("avail_upgrades", []),
+        progress_current=snapshot.skilltree_spent_xp,
+        progress_required=snapshot.skilltree_total_xp, **ctx["est"]))
 
 
 def _b_field(snapshot, ctx, enabled):
@@ -130,11 +138,13 @@ def _b_field(snapshot, ctx, enabled):
     fm_ticks = fieldmods.resolve(snapshot)
     if not fm_ticks:
         return None
+    scale_max = _max_pos(fm_ticks, 0)
     return (t.Mode.FIELD_MODS, t.ResearchProgressModel(
-        mode=t.Mode.FIELD_MODS, scale_min=0, scale_max=_max_pos(fm_ticks, 0),
+        mode=t.Mode.FIELD_MODS, scale_min=0, scale_max=scale_max,
         fill_vehicle=ctx["fill_vehicle"], fill_free=ctx["fill_free"], ticks=fm_ticks,
         fieldmods_done=ctx["fm_done"], fieldmods_total=ctx["fm_total"],
-        vehicle_class=ctx["veh_class"], spendable_xp=ctx["spendable"], **ctx["est"]))
+        vehicle_class=ctx["veh_class"], spendable_xp=ctx["spendable"],
+        progress_current=ctx["spendable"], progress_required=scale_max, **ctx["est"]))
 
 
 def _b_potential(snapshot, ctx, enabled):
@@ -159,7 +169,9 @@ def _b_potential(snapshot, ctx, enabled):
         mode=t.Mode.POTENTIAL_TIER_XI, scale_min=pxi["scale_min"],
         scale_max=pxi["scale_max"], fill_vehicle=ctx["fill_vehicle"],
         fill_free=ctx["fill_free"], ticks=pxi["ticks"],
-        vehicle_class=ctx["veh_class"], spendable_xp=ctx["spendable"], **ctx["est"]))
+        vehicle_class=ctx["veh_class"], spendable_xp=ctx["spendable"],
+        progress_current=ctx["spendable"], progress_required=pxi["scale_max"],
+        **ctx["est"]))
 
 
 def _b_elite_rewards(snapshot, ctx, enabled):
@@ -302,4 +314,11 @@ def _elite_model(mode, res, snapshot, est, spendable):
         elite_current_icon=elite.current_grade_icon(snapshot),
         combat_xp=combat,
         spendable_xp=spendable,
+        # "current / required" readout, promoted to scalars by the resolver:
+        #   ELITE (grade band) -> combat XP earned since the current grade started, out
+        #     of the grade's XP span (so the "%" equals the bar fill width exactly).
+        #   ELITE_REWARDS      -> total combat XP (no progress_current promoted, so we
+        #     fall back to `combat` here) toward the last reward level's cumulative XP.
+        progress_current=res.get("progress_current", combat),
+        progress_required=res.get("progress_required", 0),
         **est)

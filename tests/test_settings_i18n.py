@@ -89,6 +89,33 @@ def test_scale_options_cover_every_shipped_language():
         assert len(opts) == 2, u"lang %s must have exactly 2 scale options" % code
 
 
+# --- progressMode dropdown option labels ------------------------------------
+
+def test_progress_mode_options_localized_with_english_fallback():
+    en = S.render_panel(_FAKE_WL, lang=u"en")
+    assert en[u"progressMode"][u"options"] == [u"Current", u"Current / Required"]
+    de = S.render_panel(_FAKE_WL, lang=u"de")
+    assert de[u"progressMode"][u"options"] == [u"Aktuell", u"Aktuell / Benötigt"]
+    xx = S.render_panel(_FAKE_WL, lang=u"xx")   # unknown code -> English options
+    assert xx[u"progressMode"][u"options"] == [u"Current", u"Current / Required"]
+
+
+def test_progress_mode_options_cover_every_shipped_language():
+    # The option table ships the same languages as the label table.
+    assert set(S._PROGRESS_OPTIONS.keys()) == set(S._LABELS.keys())
+    for code, opts in S._PROGRESS_OPTIONS.items():
+        assert len(opts) == 2, u"lang %s must have exactly 2 progressMode options" % code
+
+
+def test_show_percent_and_progress_mode_have_labels_and_tooltips():
+    # Both new controls must carry a label + tooltip in every language.
+    for code in (u"en", u"de", u"uk"):
+        r = S.render_panel(_FAKE_WL, lang=code)
+        for key in (u"showPercent", u"progressMode"):
+            assert r[key][u"text"]
+            assert r[key][u"tooltip"].startswith(u"{HEADER}")
+
+
 # --- tooltips are FIXED ENGLISH, never translated ---------------------------
 
 def test_tooltips_are_english_in_every_language():

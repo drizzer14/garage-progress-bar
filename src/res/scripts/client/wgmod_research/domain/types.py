@@ -52,8 +52,11 @@ class Tick(object):
         # True = prerequisites not yet met, so this item can't be researched yet
         # even if affordable (only meaningful for tech-tree unlocks).
         self.locked = locked
-        # Field-modification level (1..N) -> the roman numeral shown in the
-        # hexagon glyph. 0 for non-field-mod ticks.
+        # Numeric label shown ON the tick glyph. Field mods: the level (1..N) ->
+        # roman numeral in the hexagon glyph. Elite grade ticks: the elite LEVEL
+        # number painted on the grade tab/emblem badge (its placement rides on
+        # xp_position, a cumulative-XP value, so the badge number can't come from
+        # there). 0 for ticks with no numeric label.
         self.level = level
         # The two selectable variants of this level's paired modification
         # (MultiModsItem), e.g. ["Anti-Reflective Optics Coating", "External
@@ -277,7 +280,7 @@ class ResearchProgressModel(object):
                  combat_xp=0, avail_upgrades=None, spendable_xp=0,
                  avg_battle_xp=0, battle_count=0, account_avg_battle_xp=0,
                  reserve_mult=100, daily_double_factor=100, max_battle_xp=0,
-                 avail_modes=None):
+                 avail_modes=None, progress_current=0, progress_required=0):
         self.mode = mode
         self.scale_min = scale_min
         self.scale_max = scale_max
@@ -324,3 +327,15 @@ class ResearchProgressModel(object):
         # >=2 entries -> a dimmed switch title for the NEXT mode; <2 -> no switch.
         # The emitted model is still a SINGLE mode; this is only the switch menu.
         self.avail_modes = avail_modes or []
+        # UNIFIED progress scalars for the header XP readout's optional "current /
+        # required" display + "%" prefix (the "Progress Mode" / "Show Progress %"
+        # settings). Populated per-mode by the builder so the widget stays uniform:
+        #   tech_tree / potential / field_mods -> spendable_xp / scale_max
+        #   skill_tree                         -> spendable_xp / remaining skill-tree XP
+        #   elite_rewards / elite              -> combat_xp / cumulative XP to the trailing tick
+        #   complete                           -> 0 / 0 (no bar).
+        # The widget derives the percentage as min(100, round(cur/req*100)) in JS (so
+        # Wulf's int-truncating number setter can't lose precision); required <= 0 hides
+        # the "%" and falls back to a current-only readout.
+        self.progress_current = progress_current
+        self.progress_required = progress_required

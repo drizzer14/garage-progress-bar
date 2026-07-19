@@ -105,6 +105,46 @@ function xpCurrencyIcon() {
 // switches to the doubled-width basis for glyph de-crowding. Default stays byte-for-byte.
 let SCALE_LARGE = false;
 
+// XP-readout display controls (pushed on data.progressMode / showPercent /
+// progressCurrent / progressRequired, latched each render()). PROGRESS_MODE 1 makes the
+// readout show "current / required"; SHOW_PERCENT prepends a leading "%" derived HERE as
+// min(100, round(cur/req*100)) -- computed in JS so Wulf's int-truncating number setter
+// can't lose precision. PROGRESS_CUR/PROGRESS_REQ are the unified per-mode scalars used
+// for BOTH so the display is uniform across modes; a required <= 0 falls back to the
+// current-only readout and hides the "%". Both controls are independent + view-only.
+let PROGRESS_MODE = 0;
+let SHOW_PERCENT = false;
+let PROGRESS_CUR = 0;
+let PROGRESS_REQ = 0;
+
+// The XP figure text for the right-side readout. `cur` is the figure the current mode
+// already shows (spendable / combat / total XP); when Progress Mode is Current / Required
+// AND a denominator exists, show "current / required" from the unified scalars instead
+// (plain "/", never an em-dash). Otherwise the current figure alone, exactly as before.
+function xpReadoutText(cur) {
+    if (PROGRESS_MODE === 1 && PROGRESS_REQ > 0) {
+        return fmtXp(PROGRESS_CUR, ",") + " / " + fmtXp(PROGRESS_REQ, ",");
+    }
+    return fmtXp(cur, ",");
+}
+
+// The optional leading progress-percentage span (.wg-xp-pct). Text = the whole-number
+// percent when Show Progress % is on AND a denominator exists; empty + hidden otherwise
+// (so it takes no space when off / on a no-bar COMPLETE vehicle). "block" not
+// "inline-block" -- Gameface rejects the latter set imperatively (it stays inline as a
+// flex item regardless).
+function setXpPct(root) {
+    const el = root.querySelector(".wg-xp-pct");
+    if (!el) return;
+    if (SHOW_PERCENT && PROGRESS_REQ > 0) {
+        el.textContent = Math.min(100, Math.round((PROGRESS_CUR / PROGRESS_REQ) * 100)) + "%";
+        el.style.display = "block";
+    } else {
+        el.textContent = "";
+        el.style.display = "none";
+    }
+}
+
 // Credits glyph for the "done" tick footer (a researched item still costs credits to
 // buy). Matches the top-right account-balance credits icon.
 const CREDITS_ICON = "img://gui/maps/icons/library/CreditsIcon-3.png";
@@ -731,7 +771,7 @@ function setXp(root, vehXp, freeXp) {
     root.querySelector(".wg-xp-ico").style.backgroundImage =
         "url('" + xpCurrencyIcon() + "')";
     root.querySelector(".wg-xp-val").textContent =
-        fmtXp((vehXp || 0) + (freeXp || 0), ",");
+        xpReadoutText((vehXp || 0) + (freeXp || 0));
 }
 
 // The second right-side readout pair (.wg-xp2-*) is used ONLY by skill_tree mode to
@@ -835,6 +875,9 @@ function ensureRoot() {
             '<div class="wg-switch"></div>' +
             "</div>" +
             '<div class="wg-xp">' +
+            // Optional leading progress-% span (Show Progress % setting); empty/hidden
+            // when off or when there's no denominator (see setXpPct).
+            '<span class="wg-xp-pct"></span>' +
             '<span class="wg-xp-val"></span>' +
             '<span class="wg-xp-ico"></span>' +
             '<span class="wg-xp2-val"></span>' +
@@ -1324,13 +1367,16 @@ function eliteGlyph(t, isRewards) {
     }
     const gradeFam = gradeFamily(t.icon);
     const img = document.createElement("div");
+    // The badge NUMBER is the elite level (t.level); t.position is the cumulative-XP
+    // axis coordinate (placement only), so it must NOT feed the numeral/art size.
+    const lvl = t.level | 0;
     // Per-size class drives the centering nudge (the mirrored arrowhead arts are
     // right-anchored by different amounts, so each width sits centered under its tick).
-    img.className = "wg-tick-tab wg-tab wg-tab-" + tabBadgeSize(t.icon, t.position | 0, false);
-    if (!fillTabBadge(img, t.icon, t.position | 0, false)) {
+    img.className = "wg-tick-tab wg-tab wg-tab-" + tabBadgeSize(t.icon, lvl, false);
+    if (!fillTabBadge(img, t.icon, lvl, false)) {
         img.className = "wg-tick-emblem";
         img.style.backgroundImage = "url('" + t.icon + "')";
-        if (gradeFam) img.appendChild(emblemNumber(t.position | 0, gradeFam));
+        if (gradeFam) img.appendChild(emblemNumber(lvl, gradeFam));
     }
     return img;
 }
@@ -1375,7 +1421,7 @@ function switchHit(switchEl, x, y) {
 // (dynamic opacity + `transition` is the combination that doesn't repaint in this Coherent
 // build; cf. the :hover / :not() unreliability in gameface-css-gotchas). The fade comes from
 // `transition: color` on .wg-switch -- color transitions DO animate here.
-const SWITCH_COLOR = "#8e867d";       // dim / inactive (tertiary token)
+const SWITCH_COLOR = "#dce0e0";       // dim / inactive (matches the XP-readout total, .wg-xp-val)
 // bright / hovered == the current heading's color EXACTLY (.wg-label #ede6d9), so a hovered
 // switch title reads identically to the active title beside it -- keep these in lockstep.
 const SWITCH_COLOR_HOT = "#ede6d9";
@@ -1471,6 +1517,13 @@ function render(model) {
     // and ticksWidthRem() uses the doubled-width basis. index 1 == Large; anything else
     // (0 / absent / older Python build) stays Default.
     SCALE_LARGE = data.scale === 1;
+    // XP-readout display controls: latch for this render (also read by the elite branch
+    // below, which runs after this point). PROGRESS_CUR/PROGRESS_REQ are the unified
+    // per-mode scalars; PROGRESS_MODE/SHOW_PERCENT the user settings.
+    PROGRESS_MODE = data.progressMode | 0;
+    SHOW_PERCENT = !!data.showPercent;
+    PROGRESS_CUR = data.progressCurrent | 0;
+    PROGRESS_REQ = data.progressRequired | 0;
 
     // Show the bar ONLY in the plain garage. Python pushes visible=false while a
     // tank-setup / ammo loadout overlay is open (the params panel stays mounted to
@@ -1529,7 +1582,8 @@ function render(model) {
         // node COUNT / 0 here, so use the already-plumbed spendableXp total instead.
         const xp2Val = root.querySelector(".wg-xp2-val");
         const xp2Ico = root.querySelector(".wg-xp2-ico");
-        xp2Val.textContent = fmtXp(spendableXp, ",");
+        // The XP figure (beside the node counter) honors the "current / required" mode.
+        xp2Val.textContent = xpReadoutText(spendableXp);
         xp2Ico.style.backgroundImage = "url('" + xpCurrencyIcon() + "')";
         // NB: Gameface rejects `display:inline-block` set imperatively (the stylesheet
         // value is fine, the CSSOM setter is not) -- use "block". As flex items they
@@ -1540,6 +1594,8 @@ function render(model) {
         setXp(root, data.fillVehicle, data.fillFree);
         hideXp2(root);
     }
+    // Leading progress-% span (Show Progress %); a no-op display-wise when off.
+    setXpPct(root);
 
     const vehEl = root.querySelector(".wg-fill-veh");
     const freeEl = root.querySelector(".wg-fill-free");
@@ -1728,7 +1784,7 @@ function eliteTooltipHtml(t, isRewards, combatXp, est) {
     let iconHtml = "";
     if (t.icon && t.icon.indexOf("img://") === 0) {
         iconHtml = isRewards ? bgIconHtml(t.icon, "wg-tip-icon-reward")
-            : eliteTipIconHtml(t.icon, t.position | 0);
+            : eliteTipIconHtml(t.icon, t.level | 0);
     }
     let text = caption ? capHtml(caption) : "";
     if (name) text += '<div class="wg-tip-name">' + escapeHtml(name) + "</div>";
@@ -1811,8 +1867,9 @@ function renderElite(root, data, isRewards) {
     }
     xpEl.style.display = "flex";
     root.querySelector(".wg-xp-ico").style.backgroundImage = "url('" + COMBAT_XP_ICON + "')";
-    root.querySelector(".wg-xp-val").textContent = fmtXp(data.combatXp || 0, ",");
+    root.querySelector(".wg-xp-val").textContent = xpReadoutText(data.combatXp || 0);
     hideXp2(root);   // elite shows a single combat-XP figure -- no skill_tree XP pair
+    setXpPct(root);  // leading progress-% span (Show Progress %)
 
     // Single-segment fill across the band/roadmap axis.
     const sMin = data.scaleMin || 0;
