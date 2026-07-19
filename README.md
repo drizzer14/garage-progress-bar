@@ -69,14 +69,35 @@ works, troubleshooting, and uninstalling.
 ## Settings
 
 With **ModsSettingsAPI** installed, the mod's options appear in the **Modification
-list** window that ModsSettingsAPI adds — there you can hide the bar completely, or
-hide it only on fully-progressed vehicles. Without ModsSettingsAPI the bar simply
-shows everywhere with no options.
+list** window that ModsSettingsAPI adds. Without it the bar simply shows everywhere
+with the defaults and no options. The controls, in panel order:
+
+- **Show Progress Bar** — the master switch (on by default). Uncheck to hide the bar on
+  every vehicle. The six per-mode toggles below and **Fully Progressed** are its
+  children, and grey out while it's off.
+  - **Research**, **Field Modifications**, **Tier XI**, **Upgrades**, **Elite Rewards**,
+    **Elite System** — one checkbox per bar mode (all on by default except **Tier XI**,
+    the opt-in Potential Tier XI projection). Unchecking one hides the bar on any vehicle
+    that resolves to that mode.
+  - **Fully Progressed** — on by default; keeps the bar on vehicles with nothing left to
+    research, upgrade, or unlock. Uncheck to hide it once a vehicle is fully progressed.
+- **Ignore Free XP** — off by default; counts only the combat XP you earn on each vehicle
+  toward its progress, dropping account-wide Free XP from the bar, totals, and tooltips.
+- **Scale** (Default / Large) — Large roughly doubles the bar's width and enlarges its
+  text, icons, and tooltip.
+- **Progress Mode** (Current, or Current / Required) — sets what the XP readout shows: just
+  the XP you have so far, or how much you have out of how much the bar needs.
+- **Show Progress %** — off by default; prepends a progress percentage to the XP readout.
+- **Bar position** — Ctrl+drag the bar in the Garage to move it, or type exact on-screen
+  pixel coordinates (**Horizontal (center X)** / **Vertical (top Y)**). The panel's
+  per-mod reset returns it to the automatic default.
 
 ## Notes & limitations
 
 - **Event / special-mode hangars** (for example 7×7) don't expose the panel the bar
   attaches to, so it won't show there. It returns in the normal Garage.
+- **Reposition the bar** by holding **Ctrl** and dragging it in the Garage, or set exact
+  pixel coordinates in the settings panel; the panel's per-mod reset returns it to auto.
 - **After a game update**, move the `.wotmod` to the new `mods\<version>\` folder. A
   new client version may need a rebuilt mod — check the Releases page.
 
@@ -174,14 +195,40 @@ Building, deploying, testing, and the repo layout are documented in
 ## Налаштування
 
 Зі встановленим **ModsSettingsAPI** параметри мода з'являються у вікні **Список
-модифікацій**, яке додає ModsSettingsAPI — там можна повністю приховати смугу або
-ховати її лише на повністю прокачаній техніці. Без ModsSettingsAPI смуга просто
-показується скрізь без параметрів.
+модифікацій**, яке додає ModsSettingsAPI. Без нього смуга просто показується скрізь зі
+значеннями за замовчуванням і без параметрів. Параметри в порядку панелі:
+
+- **Показувати смугу прогресу** — головний перемикач (увімкнено за замовчуванням).
+  Зніміть позначку, щоб приховати смугу на всій техніці. Шість перемикачів режимів нижче
+  та **Повністю пройдено** є його дочірніми й стають неактивними, коли він вимкнений.
+  - **Дослідження**, **Польові модифікації**, **XI рівень**, **Вдосконалення**,
+    **Елітні нагороди**, **Елітна система** — по одній позначці на кожен режим смуги
+    (усі увімкнені за замовчуванням, крім **XI рівня** — це опційна проекція
+    Потенційного XI рівня). Зняття позначки приховує смугу на будь-якій техніці, яка
+    відповідає цьому режиму.
+  - **Повністю пройдено** — увімкнено за замовчуванням; лишає смугу на техніці, де вже
+    нічого досліджувати, вдосконалювати чи відкривати. Зніміть позначку, щоб ховати її
+    після повного проходження.
+- **Ігнорувати вільний досвід** — вимкнено за замовчуванням; враховує лише бойовий
+  досвід, зароблений на кожній техніці, виключаючи загальний вільний досвід зі смуги,
+  підсумків і підказок.
+- **Масштаб** (За замовчуванням / Великий) — «Великий» приблизно вдвічі збільшує ширину
+  смуги та збільшує її текст, іконки й підказку.
+- **Режим прогресу** (Поточний, або Поточний / Потрібно) — визначає, що показує лічильник
+  досвіду: лише наявний досвід чи скільки є з потрібного.
+- **Показувати прогрес у %** — вимкнено за замовчуванням; додає відсоток прогресу перед
+  лічильником досвіду.
+- **Розташування смуги** — Ctrl+перетягніть смугу в Ангарі, щоб перемістити її, або
+  введіть точні екранні координати в пікселях (**По горизонталі (центр X)** /
+  **По вертикалі (верх Y)**). Скидання мода в панелі повертає її в автоматичне положення.
 
 ## Примітки та обмеження
 
 - **Подієві та спеціальні ангари** (наприклад 7×7) не надають панель, до якої
   кріпиться смуга, тож там вона не з'явиться. У звичайному Ангарі вона повертається.
+- **Перемістити смугу** можна, утримуючи **Ctrl** і перетягуючи її в Ангарі, або задавши
+  точні координати в пікселях у панелі налаштувань; скидання мода в панелі повертає її в
+  автоматичне положення.
 - **Після оновлення гри** перемістіть `.wotmod` у нову папку `mods\<версія>\`. Нова
   версія клієнта може потребувати перезібраного мода — перевіряйте сторінку релізів.
 
