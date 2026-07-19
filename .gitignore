@@ -29,3 +29,7 @@ tools/dev/_stage_debug/
 /RESEARCH.md
 /TASKS.md
 /TASKS/
+
+# Durable cross-session memory — local working notes, not tracked
+/MEMORY.md
+/memory/
