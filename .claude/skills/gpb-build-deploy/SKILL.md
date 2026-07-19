@@ -43,6 +43,16 @@ skill is the concrete wiring for the Garage Progress Bar.
   fresh package); before a clean ship-verification, REMOVE the overlay so you test the
   packaged assets. Only `WGModResearch.js`/`.css` hot-reload — Python (mount/data) changes
   need build + deploy + full relaunch.
+- **Deploying an ALREADY-released `dist\` artifact as-is (NO rebuild):** do NOT use
+  `deploy_wotmod.py` — it calls `build_wotmod.main()` and re-packages from source every run, so
+  you'd ship a fresh size-optimized/minified rebuild, not the released bytes. When the point is
+  to land the exact tested/published artifact (e.g. a QA-gate + deploy of the released
+  v1.3.0 `.wotmod`), copy the precise
+  `dist\com.14th_ua.garageprogressbar_<ver>.wotmod` by hand into `mods\<client-version>\`
+  (e.g. `mods\2.3.1.0\`) with the CLIENT CLOSED — a running client locks the stale
+  `..._<oldver>.wotmod` (`Device or resource busy` on delete), so the old-copy cleanup can't
+  finish while it's open. (Same-`<id>` highest-version-wins and scan-only-at-launch mechanics:
+  see **wotmod-build-deploy**.) Reserve `deploy_wotmod.py` for the normal build-and-deploy loop.
 - **Target:** EU/global `2.3.1.0` only (the current `deploy.local.json` client version — the
   literal above is only an example; a client bump is run via **wotmod-upgrade-analyzer** /
   **wotmod-upgrade-implementer**, not hand-edited here).
