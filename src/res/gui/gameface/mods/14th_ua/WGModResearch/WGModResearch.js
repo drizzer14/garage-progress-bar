@@ -2025,12 +2025,32 @@ function ensureHover(hotEl, tipEl) {
     // TOP (the stored anchor). On release we report the final px to Python via
     // setPosition, which persists it (MSA) and re-pushes -- applyPosition then re-applies
     // the same coords (no jump). _wgDidDrag suppresses the click that follows the drag.
-    hotEl.addEventListener("mousedown", function (e) {
+    //
+    // Cross-mod drag-hijack guard: the listener lives at DOCUMENT level in CAPTURE phase
+    // (not on .wg-hot in bubble), registered ONCE via a document flag that survives
+    // re-mounts. OpenWG injects several mods into the SAME hangar document as body siblings
+    // at similar z-index, and any number of them may be independently Ctrl-draggable. We
+    // decide ownership by TARGET SUBTREE, not by rect: we claim the drag ONLY when the
+    // mousedown actually landed on OUR widget's DOM (root.contains(e.target) -- e.target is
+    // the true topmost pointer-events:auto element hit-tested under the cursor), and we NEVER
+    // stopImmediatePropagation for anyone else's mousedown. That is what makes this coexist
+    // with ANY number of other draggable mods and be INDEPENDENT of listener registration /
+    // mount order -- a rect hit-test can't do this, because two overlapping widgets' rects
+    // can both contain the point and the first-registered capture listener wins
+    // nondeterministically. .wg-hot (pointer-events:auto) is a child of #wgmod-root, so a
+    // click on the bar still resolves e.target inside our root -> contains() true -> we claim.
+    const onDragStart = function (e) {
         if (!e.ctrlKey) return;
         const root = getRoot();
-        if (!root) return;
+        // Bail (plain return, NO stopImmediatePropagation) unless the widget exists, is shown,
+        // AND the mousedown landed inside OUR DOM subtree -- so we only ever claim our own
+        // mousedown and never stop the event for another mod's.
+        if (!root || root.style.display === "none") return;
+        if (!root.contains(e.target)) return;
+        // It IS our drag: pre-empt any other mod's mousedown (stopImmediatePropagation also
+        // stops any later document-capture listener + all bubbling) so nothing else grabs it.
+        e.stopImmediatePropagation();
         e.preventDefault();
-        e.stopPropagation();
         const r0 = root.getBoundingClientRect();
         const halfW = r0.width / 2;
         const offX = e.clientX - (r0.left + halfW);   // cursor -> bar center-x
@@ -2070,7 +2090,15 @@ function ensureHover(hotEl, tipEl) {
         };
         document.addEventListener("mousemove", onMove, true);
         document.addEventListener("mouseup", onUp, true);
-    });
+    };
+    // Register the document-capture listener exactly once, independent of hotEl's
+    // lifecycle -- a document-level listener does not auto-clean on re-mount, so this
+    // flag (not hotEl._wgHoverBound) guards it across mounts. onDragStart bails cleanly
+    // when getRoot() is stale/unmounted, so a single registration serves every mount.
+    if (!document._wgmodDragCaptureBound) {
+        document._wgmodDragCaptureBound = true;
+        document.addEventListener("mousedown", onDragStart, true);
+    }
     // Click -> a Tier-XI chip (exact box hit) first, else the nearest clickable tick
     // (proximity-gated, with WG's confirm dialog backstopping any imprecise hit). Bail on
     // a Ctrl-click or the tail of a drag so repositioning never triggers research/unlock.
