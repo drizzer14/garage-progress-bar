@@ -411,7 +411,46 @@ def init():
                     LOG_CURRENT_EXCEPTION()
                 LOG_NOTE("[wgmod] repaired settings (re-added 'enabled')")
         else:
+            # Fresh-install OR settingsVersion-bump path (getModSettings returned None).
+            # Aslain's setModTemplate (decompiled api.py) RESETS every saved value to the
+            # template defaults whenever the template's settingsVersion exceeds the stored
+            # one -- which is how each feature release (we bump nearly every time) silently
+            # wiped the user's settings. Migrate: capture the raw previously-stored dict from
+            # THIS api BEFORE setModTemplate runs -- getModSettings reports None on the bump,
+            # but the old values are still readable at api.state['settings'][LINKAGE]. Reading
+            # state does NOT mutate/persist; only setModTemplate wipes. (izeberg's state
+            # layout differs; only Aslain is supported here -- an unrecognized shape falls
+            # back cleanly to a plain fresh install.)
+            old_raw = {}
+            try:
+                _state = getattr(g_modsSettingsApi, "state", None)
+                if isinstance(_state, dict):
+                    old_raw = dict((_state.get("settings") or {}).get(LINKAGE) or {})
+            except Exception:
+                old_raw = {}
+            # Register the new template. On a bump this resets Aslain's stored dict to fresh
+            # v-current defaults; _settings is still DEFAULTS in this branch (no saved _apply
+            # ran), so applying the return value just re-affirms the defaults.
             _apply(g_modsSettingsApi.setModTemplate(LINKAGE, template, _on_changed))
+            # MIGRATE: a non-empty old_raw means this is an UPDATE (settingsVersion bump), not
+            # a fresh install. Overlay the surviving user values onto the fresh defaults and
+            # persist them, so the transient reset never lands on disk (MSA's saveState is
+            # debounced to the next tick, so the reset + this overlay coalesce into one write).
+            # _apply drops keys removed from DEFAULTS and clamps the rest; keys NEW to this
+            # template keep their fresh default (old_raw simply lacks them). Fail-soft: any
+            # error here leaves the mod running on fresh defaults -- init still finishes below.
+            if old_raw:
+                try:
+                    _apply(old_raw)
+                    g_modsSettingsApi.updateModSettings(
+                        LINKAGE, _full_settings_for_write(g_modsSettingsApi))
+                    try:
+                        g_modsSettingsApi.saveState()
+                    except Exception:
+                        LOG_CURRENT_EXCEPTION()
+                    LOG_NOTE("[wgmod] migrated saved settings across a settingsVersion bump")
+                except Exception:
+                    LOG_CURRENT_EXCEPTION()
         # Wire the panel's "reset to defaults" button. It fires onResetMod (NOT
         # onSettingsChanged), on whichever api actually stores this client's settings.
         # Verified live: with Aslain installed our data lives in Aslain's api
