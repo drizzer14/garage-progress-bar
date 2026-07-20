@@ -475,6 +475,12 @@ def _on_changed(linkage, new_settings):
     """MSA callback when the user changes a setting. Update the cache and re-push the bar
     so the change applies live (refresh re-evaluates visibility)."""
     try:
+        # onSettingsChanged fires GLOBALLY -- once per mod change, handed the CHANGING
+        # mod's settings. A sibling mod ships identical posX/posY/posW/posH keys, so
+        # without this guard we'd ingest its coordinates and move our bar (mirrors the
+        # guard _on_reset carries).
+        if linkage != LINKAGE:
+            return
         _apply(new_settings)
         LOG_NOTE("[wgmod] settings changed: %s" % (_settings,))
         # Lazy import to avoid an import cycle (the bridge imports this module).
