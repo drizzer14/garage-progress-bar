@@ -94,6 +94,16 @@ font (not settable per-widget), so every `*rem` dimension scales together and th
 restates the enlarged values exactly (13→19.5rem, 36→54rem, …). Do NOT try to collapse it into
 `transform:scale` — the width/rest ratio differs, and the tooltip would blur/reflow.
 
+**The widget sets NO root font-size and does NO DPR/resolution-based SIZING.** Every element
+dimension is pure `rem`, delegated to the engine's `interfaceScale` (the WoT settings' UI scale /
+its power-of-two Auto gating), which scales WG's OWN chrome identically. The only resolution reads
+in the JS (`currentVP()`, `innerWidth`/`innerHeight`) are for bar POSITION/drag, never sizing;
+the root carries only `translateX(-50%)`, no `transform: scale`. Consequence for triage: any
+"everything is uniformly ~2x bigger on a 4K display" report is the ENGINE interface-scale, NOT a
+mod scaling race and NOT the "Large" Scale setting — the two are orthogonal (verified while
+diagnosing a Large-after-cold-launch bug: the uniform enlargement was engine scale, while the
+Scale setting's `.wg-large` is asymmetric x2.0/x1.5). Don't hunt for a mod-side DPR/rem race.
+
 **Restatement rule:** because Large is a font-size/dimension OVERRIDE (not a transform), any new
 element added to the `.wg-xp` header region — or anywhere that carries a `*rem` size — MUST ALSO
 be restated in the `#wgmod-root.wg-large` block, or it silently keeps its Default size in Large

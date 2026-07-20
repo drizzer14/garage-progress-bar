@@ -42,6 +42,28 @@ haven't `deploy_wotmod`'d + relaunched is NOT reflected. To sanity-check new pur
 against LIVE data without a redeploy, read inputs via the deployed adapter, then apply the
 new formula inline in the probe.
 
+### Inspecting settings WITHOUT a live client (on-disk MSA store)
+Aslain's MSA persistence lives at `%APPDATA%\Wargaming.net\WorldOfTanks\mods\aslainmenu.dat`
+as **UTF-8 JSON** (decode as UTF-8 — a naive Windows `open()` fails at byte `0x81`). Two keys
+matter for this mod:
+- `settings["com.14th_ua.garageprogressbar"]` — the LIVE stored values (e.g. `scale`, `posX`…).
+- `templates["com.14th_ua.garageprogressbar"].settingsVersion` — the STORED template version
+  (what the client will compare the mod's bumped `settingsVersion` against on next launch).
+
+Editing this file with the client CLOSED lets you stage a precise pre-state (e.g. set
+`settingsVersion` back to a pre-update number while forcing a value) to reproduce update-path
+bugs deterministically. The sibling izeberg store `modsettings.dat` does NOT contain this mod's
+linkage. (Used to root-cause the Large-after-cold-launch bug — see gpb-architecture "scale path
+fails safe" + `TASKS/scale-large-after-update-cold-launch.md`.)
+
+### Reading a write-only VM property back
+The bridge exposes the mounted pair as `gameface_bridge._active = (host_vm, rvm)`. VM properties
+are write-only (there's no `getScale`), but you can read any back via the generic Wulf accessor
+on the ViewModel: `rvm._getNumber(<index>)` — e.g. `scale` is prop index **33**, so
+`gameface_bridge._active[1]._getNumber(33)` returns what the bridge last pushed. Useful to prove
+the push value is correct vs. what the widget renders (splits a delivery bug from a Python bug).
+Property indices are hand-numbered in `bridge/view_models.py`.
+
 ## "The bar isn't loading / not updating" — this mod's specifics
 Beyond the generic checklist in the harness skill:
 1. **Listener dropped after a battle** — the bar stops updating only after entering/exiting a

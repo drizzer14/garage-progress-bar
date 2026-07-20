@@ -197,7 +197,9 @@ hide-when-complete option, the tank-setup-overlay state, and the fail-closed gar
     needs the bump exactly like the earlier `ignoreFreeXp` relocation did. Text-only
     label/tooltip edits do NOT bump (see the i18n bullet above). (MSA's full nesting toolkit —
     `masterVarName`/`enableWhen`/`visibleWhen`, `column1..column4` — is in
-    wotmod-architecture -> ModsSettingsAPI.)
+    wotmod-architecture -> ModsSettingsAPI. That skill also documents the WIPE every bump causes
+    and the merge-forward migration in `bridge/mod_settings.py` init() that survives it — which
+    is why the bumps above never lost users' settings.)
   - **`settings_i18n.COL1_KEYS` must stay in lockstep with `_template()` column1 wire order.**
     `_sync_template_text` walks the STORED template POSITIONALLY against
     `COL1_KEYS`/`COL2_KEYS`, so reordering column1 without updating `COL1_KEYS` silently
@@ -219,6 +221,28 @@ hide-when-complete option, the tank-setup-overlay state, and the fail-closed gar
     controls"). `mod_settings.scale()` reads the index back; `bridge.push` writes it to
     `ResearchVM.scale` (prop 33); the widget folds `.wg-large` when it's `1` — the VISUAL
     mechanism (asymmetric width x2.0 / rest x1.5 via an explicit override class) is gpb-widget.
+    - **The whole scale path FAILS SAFE to Default(0) on every layer**, so a "cold mount paints
+      Large" symptom is a runtime value-DELIVERY problem, NOT a static large-default/inversion —
+      don't re-hunt the source for a large default. The layers: JS strict `data.scale === 1`
+      (WGModResearch.js); Python DEFAULTS `scale: 0` + `_clamp_scale` coerces any bad/out-of-range
+      read to `0`; VM index 33 default `0`; CSS base `520rem` with `.wg-large 1040rem` as an
+      ADDITIVE override. Large can only appear if the mod's runtime read genuinely receives
+      `scale=1` at that mount. Confirmed diagnosis of one such case (post-update cold launch on
+      4K): the bridge push and disk value were both `0` yet the bar painted Large — a temporal
+      divergence at cold mount, traced to `mod_settings.init()`'s settingsVersion-mismatch branch
+      reading a STALE stored value (see `TASKS/scale-large-after-update-cold-launch.md`; leading
+      hypothesis, not yet fully confirmed). Same reasoning applies to `progressMode` (also a
+      fail-safe-to-0 Dropdown index).
+    - **`init()` on a settingsVersion bump (Aslain 1.6.4): `setModTemplate` self-persists.** When
+      `getModSettings` returns falsy (the bump/fresh branch), `setModTemplate` RESETS every stored
+      value to template defaults AND persists the version bump itself via two internal debounced
+      `saveState()` calls (decompiled api.py:209,226), then returns the fresh defaults — so the
+      mod's bump branch need NOT call `saveState` for the version to stick, and a Dropdown resets
+      to its template `value` (scale → 0 = small). The reset-to-defaults direction therefore
+      CANNOT produce Large; it DOES explain a wiped pinned position after an update. The
+      settings-preservation migration (HEAD `0fc07fc`: capture `old_raw` from
+      `api.state['settings'][LINKAGE]` before `setModTemplate`, overlay surviving values, re-write)
+      overlays the user's values back on top so the transient reset never lands on disk.
   - **MSA Dropdown `_apply()` GOTCHA — clamp a Dropdown's int index BEFORE the generic
     `bool()` fallthrough.** `mod_settings._apply()` type-coerces each key: position keys →
     `clamp_pos`, `modeOverrides` → verbatim string, and **everything else → `bool(...)`**. A
