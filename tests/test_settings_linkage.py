@@ -8,19 +8,10 @@ key names, so an unguarded handler would ingest the foreign coordinates and repo
 our bar to the sibling's position. _on_changed must IGNORE any change whose linkage is
 not our own LINKAGE (mirroring the linkage guard _on_reset already carries).
 
-mod_settings imports the game's `debug_utils` at module load, so stub it before
-importing -- the handler paths under test are otherwise engine-free (the lazy
-gameface_bridge.refresh() call inside the handler degrades to a caught no-op here,
-exactly as the set_position / _on_reset tests already rely on)."""
-import sys
-import types
-
-if "debug_utils" not in sys.modules:
-    _dbg = types.ModuleType("debug_utils")
-    _dbg.LOG_CURRENT_EXCEPTION = lambda *a, **k: None
-    _dbg.LOG_NOTE = lambda *a, **k: None
-    sys.modules["debug_utils"] = _dbg
-
+The handler paths under test are engine-free (the lazy gameface_bridge.refresh() call
+inside the handler degrades to a caught no-op here, exactly as the set_position /
+_on_reset tests already rely on); the game's `debug_utils` is stubbed once in
+conftest.py."""
 from wgmod_research.bridge import mod_settings
 
 # A real sibling mod that ships the SAME posX/posY/posW/posH key names.

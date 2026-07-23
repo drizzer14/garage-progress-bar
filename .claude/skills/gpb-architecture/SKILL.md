@@ -79,7 +79,11 @@ RESOLVES to a mode toggled off, `_emit()` returns a `Mode.HIDDEN` placeholder �
 fall-through** to a lower-priority mode. `bar_visible(overlay_closed, hide_always,
 hide_when_complete, mode, in_garage)` combines that with the master hide switch, the
 hide-when-complete option, the tank-setup-overlay state, and the fail-closed garage allowlist
-(`in_garage` = only the plain `hangar/{root}` view).
+(`in_garage` = only the plain `hangar/{root}` view). `mod_settings.enabled_modes()` is the
+settings→builder seam — it maps the six per-mode checkbox settings to the `Mode` set
+`build_model` consumes; builder tests pass a `Mode` set in directly, so a wrong/collapsed
+toggle→Mode mapping regression here hides behind a green builder suite and has its own guard in
+`test_enabled_modes_*` (`tests/test_mod_settings_template.py`).
 
 ## Conventions specific to this mod
 - **Tech-tree ticks are priced PER ITEM, not cumulatively.** `techtree.py` places each tick at

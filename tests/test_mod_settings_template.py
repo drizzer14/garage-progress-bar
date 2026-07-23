@@ -8,17 +8,8 @@ column1 (NOT bound to the master -- no ``masterVarName``). ``showPercent`` now l
 column2, directly beneath the ``progressMode`` Dropdown (also standalone). The old "Bar
 modes" Label is gone, and the polarity/position defaults are unchanged.
 
-mod_settings imports the game's ``debug_utils`` at module load, so stub it first (as
-test_position does); ``_template()`` itself is a pure dict, engine-free once imported."""
-import sys
-import types
-
-if "debug_utils" not in sys.modules:
-    _dbg = types.ModuleType("debug_utils")
-    _dbg.LOG_CURRENT_EXCEPTION = lambda *a, **k: None
-    _dbg.LOG_NOTE = lambda *a, **k: None
-    sys.modules["debug_utils"] = _dbg
-
+``_template()`` itself is a pure dict, engine-free once imported. (The game's
+``debug_utils`` is stubbed once in conftest.py.)"""
 from wgmod_research.bridge import mod_settings as M
 
 # The seven children of the showBar master, in the exact spec order (ignoreFreeXp and
@@ -174,13 +165,13 @@ def test_scale_default_is_zero():
 
 def test_clamp_scale_coerces_to_known_index():
     # Aslain returns a 0-based int; a bad / out-of-range value guards back to 0.
-    assert M._clamp_scale(0) == 0
-    assert M._clamp_scale(1) == 1
-    assert M._clamp_scale(2) == 0
-    assert M._clamp_scale(-1) == 0
-    assert M._clamp_scale(u"1") == 1
-    assert M._clamp_scale(None) == 0
-    assert M._clamp_scale(u"nope") == 0
+    assert M._clamp_index(0) == 0
+    assert M._clamp_index(1) == 1
+    assert M._clamp_index(2) == 0
+    assert M._clamp_index(-1) == 0
+    assert M._clamp_index(u"1") == 1
+    assert M._clamp_index(None) == 0
+    assert M._clamp_index(u"nope") == 0
 
 
 def test_scale_dropdown_is_first_in_column2_above_bar_position():
@@ -244,13 +235,13 @@ def test_progress_mode_default_is_zero():
 
 def test_clamp_progress_mode_coerces_to_known_index():
     # Aslain returns a 0-based int; a bad / out-of-range value guards back to 0 (Current).
-    assert M._clamp_progress_mode(0) == 0
-    assert M._clamp_progress_mode(1) == 1
-    assert M._clamp_progress_mode(2) == 0
-    assert M._clamp_progress_mode(-1) == 0
-    assert M._clamp_progress_mode(u"1") == 1
-    assert M._clamp_progress_mode(None) == 0
-    assert M._clamp_progress_mode(u"nope") == 0
+    assert M._clamp_index(0) == 0
+    assert M._clamp_index(1) == 1
+    assert M._clamp_index(2) == 0
+    assert M._clamp_index(-1) == 0
+    assert M._clamp_index(u"1") == 1
+    assert M._clamp_index(None) == 0
+    assert M._clamp_index(u"nope") == 0
 
 
 def test_progress_mode_reads_back_stored_int_not_coerced_to_bool():
@@ -287,3 +278,70 @@ def test_show_percent_reads_back_bool():
         assert M.show_percent() is True
     finally:
         M._apply({"showPercent": False})   # restore default for other tests
+
+
+# --- enabled_modes: the per-mode-toggle -> builder `enabled` set mapping -----
+# enabled_modes() is the SEAM between the six per-mode checkboxes and
+# build_model's `enabled` gate. Every builder test passes a Mode set directly, so
+# a wrong toggle->Mode mapping HERE (e.g. showElite feeding ELITE_REWARDS, or two
+# toggles collapsing onto one Mode) would pass the whole builder suite yet silently
+# break which vehicles show the bar. Lock the exact 1:1 mapping.
+
+# showTechTree..showPotentialTierXI (the six settings enabled_modes reads) -> Mode.
+_TOGGLE_MODE = None  # filled lazily below to keep types import local to the tests
+
+
+def _toggle_mode_map():
+    from wgmod_research.domain import types as t
+    return {
+        "showTechTree": t.Mode.TECH_TREE,
+        "showSkillTree": t.Mode.SKILL_TREE,
+        "showFieldMods": t.Mode.FIELD_MODS,
+        "showEliteRewards": t.Mode.ELITE_REWARDS,
+        "showElite": t.Mode.ELITE,
+        "showPotentialTierXI": t.Mode.POTENTIAL_TIER_XI,
+    }
+
+
+def test_enabled_modes_all_on_yields_exactly_the_six_modes():
+    mapping = _toggle_mode_map()
+    saved = {k: M._settings[k] for k in mapping}
+    try:
+        for k in mapping:
+            M._settings[k] = True
+        assert M.enabled_modes() == set(mapping.values())
+    finally:
+        M._settings.update(saved)
+
+
+def test_enabled_modes_each_toggle_controls_exactly_its_own_mode():
+    # Turning ONE toggle off must drop exactly that toggle's Mode and no other -- this
+    # catches both a wrong mapping (drops the wrong Mode) and a shared/duplicate mapping
+    # (dropping one collaterally drops another).
+    mapping = _toggle_mode_map()
+    saved = {k: M._settings[k] for k in mapping}
+    try:
+        for off in mapping:
+            for k in mapping:
+                M._settings[k] = True
+            M._settings[off] = False
+            modes = M.enabled_modes()
+            assert mapping[off] not in modes, (
+                "%s off must drop %s" % (off, mapping[off]))
+            for k, mode in mapping.items():
+                if k != off:
+                    assert mode in modes, (
+                        "%s off wrongly dropped %s" % (off, mode))
+    finally:
+        M._settings.update(saved)
+
+
+def test_enabled_modes_all_off_is_empty():
+    mapping = _toggle_mode_map()
+    saved = {k: M._settings[k] for k in mapping}
+    try:
+        for k in mapping:
+            M._settings[k] = False
+        assert M.enabled_modes() == set()
+    finally:
+        M._settings.update(saved)

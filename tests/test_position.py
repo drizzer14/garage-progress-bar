@@ -1,17 +1,8 @@
 # -*- coding: utf-8 -*-
 """Unit tests for the draggable bar-position storage (clamp + defaults).
 
-mod_settings imports the game's `debug_utils` at module load, so stub it before
-importing -- clamp_pos itself is pure and engine-free."""
-import sys
-import types
-
-if "debug_utils" not in sys.modules:
-    _dbg = types.ModuleType("debug_utils")
-    _dbg.LOG_CURRENT_EXCEPTION = lambda *a, **k: None
-    _dbg.LOG_NOTE = lambda *a, **k: None
-    sys.modules["debug_utils"] = _dbg
-
+clamp_pos itself is pure and engine-free; the game's `debug_utils` is stubbed once in
+conftest.py."""
 from wgmod_research.bridge import mod_settings
 
 

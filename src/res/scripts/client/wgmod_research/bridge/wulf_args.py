@@ -26,27 +26,33 @@ def map_get(a, key):
     return None
 
 
+def _cmd_value(args):
+    """Unwrap the scalar a command's single MAP arg carried, shared by cmd_int_arg /
+    cmd_str_arg: pull "value" (falling back to "id") from a plain dict, "value" from a
+    Wulf-wrapped map, or return a bare scalar as-is. None when there's no arg (or a
+    wrapped-map .get raises -- we then keep the original object, matching the old code)."""
+    if not args:
+        return None
+    a = args[0]
+    if isinstance(a, dict):
+        return a.get("value", a.get("id"))
+    getter = getattr(a, "get", None)
+    if callable(getter):
+        try:
+            return a.get("value")
+        except Exception:
+            return a
+    return a
+
+
 def cmd_int_arg(args):
     """Extract the int id a JS command invocation carried. Wulf delivers a single
     MAP argument (the JS side wraps the id as {value: id}); pull our key out of it,
     tolerating a plain dict, a wrapped map, or a bare scalar. 0 = nothing usable."""
     try:
-        if not args:
-            return 0
-        a = args[0]
-        if isinstance(a, dict):
-            a = a.get("value", a.get("id"))
-        else:
-            getter = getattr(a, "get", None)
-            if callable(getter):
-                try:
-                    a = a.get("value")
-                except Exception:
-                    pass
-        try:
-            return int(a)
-        except (TypeError, ValueError):
-            return 0
+        return int(_cmd_value(args))
+    except (TypeError, ValueError):
+        return 0
     except Exception:
         LOG_CURRENT_EXCEPTION()
         return 0
@@ -57,18 +63,7 @@ def cmd_str_arg(args):
     argument (the JS side wraps the value as {value: str}); pull the `value` key out of
     it, tolerating a plain dict, a wrapped map, or a bare scalar. "" = nothing usable."""
     try:
-        if not args:
-            return ""
-        a = args[0]
-        if isinstance(a, dict):
-            a = a.get("value", a.get("id"))
-        else:
-            getter = getattr(a, "get", None)
-            if callable(getter):
-                try:
-                    a = a.get("value")
-                except Exception:
-                    pass
+        a = _cmd_value(args)
         if a is None:
             return ""
         try:
@@ -87,29 +82,29 @@ def _as_int(v):
         return 0
 
 
-def cmd_xy_arg(args):
-    """Extract the (x, y) pixel pair a JS `setPosition` invocation carried. Wulf
-    delivers a single MAP argument ({x, y}); pull both keys, tolerating a plain dict
-    or a wrapped map. Missing/invalid -> 0 (auto)."""
+def _cmd_pair(args, k1, k2):
+    """Extract an (int, int) pair from keys k1/k2 of a command's single MAP arg,
+    tolerating a plain dict or a wrapped map. Missing/invalid -> 0. Shared by
+    cmd_xy_arg / cmd_wh_arg."""
     try:
         if not args:
             return 0, 0
         a = args[0]
-        return _as_int(map_get(a, "x")), _as_int(map_get(a, "y"))
+        return _as_int(map_get(a, k1)), _as_int(map_get(a, k2))
     except Exception:
         LOG_CURRENT_EXCEPTION()
         return 0, 0
+
+
+def cmd_xy_arg(args):
+    """Extract the (x, y) pixel pair a JS `setPosition` invocation carried. Wulf
+    delivers a single MAP argument ({x, y}); pull both keys, tolerating a plain dict
+    or a wrapped map. Missing/invalid -> 0 (auto)."""
+    return _cmd_pair(args, "x", "y")
 
 
 def cmd_wh_arg(args):
     """Extract the (w, h) capture-viewport pair a JS `setPosition` invocation carried
     (the resolution/scale the px were measured at, so a pinned position can be rescaled
     later). Same MAP-arg tolerance as cmd_xy_arg. Missing/invalid -> 0 (unknown)."""
-    try:
-        if not args:
-            return 0, 0
-        a = args[0]
-        return _as_int(map_get(a, "w")), _as_int(map_get(a, "h"))
-    except Exception:
-        LOG_CURRENT_EXCEPTION()
-        return 0, 0
+    return _cmd_pair(args, "w", "h")

@@ -73,13 +73,13 @@ DEFAULTS = {# showBar is the MASTER switch (default ON = bar shown everywhere). 
             # selection as an integer): 0 = Default (byte-for-byte the current rendering),
             # 1 = Large (~2x bar width, 1.5x track/font/icon dims). scale() reads it back;
             # the widget folds the .wg-large override class when it's 1. Coerced by
-            # _clamp_scale (an out-of-range/non-int value -> 0). Lives in column2, above
+            # _clamp_index (an out-of-range/non-int value -> 0). Lives in column2, above
             # the Bar position controls (see _template + settings_i18n scale options).
             "scale": 0,
             # XP readout display controls (opt-in, view-only -- neither touches the
             # domain model). "progressMode" (Dropdown, 0-based index): 0 = Current (show
             # only the current XP figure, as today), 1 = Current / Required (show
-            # "current / required"). Coerced by _clamp_progress_mode. "showPercent"
+            # "current / required"). Coerced by _clamp_index. "showPercent"
             # (CheckBox, default off): prepend a progress percentage to the LEFT of the
             # readout, independent of progressMode; the widget derives it as
             # min(100, round(current/required*100)) and hides it when required <= 0.
@@ -124,21 +124,11 @@ def clamp_pos(v):
     return v
 
 
-def _clamp_scale(v):
-    """Coerce the scale-dropdown selection to a known 0-based index: 0 = Default,
-    1 = Large. Aslain MSA returns the selection as an int; a non-int / out-of-range
-    value guards back to 0 (Default). Pure + engine-free (unit-tested)."""
-    try:
-        v = int(v)
-    except (TypeError, ValueError):
-        return 0
-    return v if v in (0, 1) else 0
-
-
-def _clamp_progress_mode(v):
-    """Coerce the progress-mode dropdown selection to a known 0-based index: 0 = Current,
-    1 = Current / Required. Aslain MSA returns the selection as an int; a non-int /
-    out-of-range value guards back to 0 (Current). Pure + engine-free (unit-tested)."""
+def _clamp_index(v):
+    """Coerce a 0-based dropdown selection (scale: 0=Default/1=Large; progressMode:
+    0=Current/1=Current-Required) to a known index. Aslain MSA returns the selection as
+    an int; a non-int / out-of-range value guards back to 0. Pure + engine-free
+    (unit-tested)."""
     try:
         v = int(v)
     except (TypeError, ValueError):
@@ -364,10 +354,10 @@ def _apply(settings):
         elif key == "scale":
             # An INTEGER dropdown index (0/1), NOT a bool -- coerce it as one so the
             # generic bool() branch below can't clobber the selection.
-            _settings[key] = _clamp_scale(settings[key])
+            _settings[key] = _clamp_index(settings[key])
         elif key == "progressMode":
             # Likewise an INTEGER dropdown index (0/1), coerced before the bool branch.
-            _settings[key] = _clamp_progress_mode(settings[key])
+            _settings[key] = _clamp_index(settings[key])
         elif key == "modeOverrides":
             # A JSON string (per-vehicle mode switch map); keep it verbatim, guarding a
             # non-string / missing value back to the empty map.

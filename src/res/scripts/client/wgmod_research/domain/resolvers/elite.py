@@ -87,6 +87,18 @@ def _mark_states(entries, reached):
         yield e, state
 
 
+def _current_grade(grades, level):
+    """The last (sub-)grade whose threshold has been reached (level <= elite level),
+    or None below the very first threshold. ``grades`` must be sorted by level."""
+    current = None
+    for g in grades:
+        if g.level <= level:
+            current = g
+        else:
+            break
+    return current
+
+
 def current_grade_icon(snapshot):
     """Emblem URL for the highest grade the player has currently REACHED (the
     last (sub-)grade whose level <= the current elite level). "" below the first
@@ -97,12 +109,7 @@ def current_grade_icon(snapshot):
     if not grades:
         return ""
     level = snapshot.elite_level
-    current = None
-    for g in grades:
-        if g.level <= level:
-            current = g
-        else:
-            break
+    current = _current_grade(grades, level)
     if current is None:
         return ""
     return _emblem_url(current.grade, current.sub)
@@ -119,12 +126,7 @@ def resolve_grade_band(snapshot):
 
     # Current grade = the last (sub-)grade whose threshold has been reached;
     # None when below the very first threshold (treat as the first family).
-    current_grade = None
-    for g in grades:
-        if g.level <= level:
-            current_grade = g
-        else:
-            break
+    current_grade = _current_grade(grades, level)
     current_family = current_grade.grade if current_grade is not None else families[0]
 
     # At MAX ("prestige", a single synthetic entry at max_level): show the last

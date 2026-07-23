@@ -243,12 +243,12 @@ def build_model(snapshot, enabled=None, override=None, ignore_free_xp=False):
     ctx = {"fill_vehicle": fill_vehicle, "fill_free": fill_free, "spendable": spendable,
            "est": est, "fm_done": fm_done, "fm_total": fm_total, "veh_class": veh_class}
 
-    def _hidden():
-        # The vehicle's resolved mode is toggled off: a placeholder model whose only
-        # job is to carry Mode.HIDDEN so bar_visible() hides the bar (the view never
-        # renders it). Carries the shared fill/counter fields for consistency.
+    def _placeholder(mode):
+        # A model with no bar of its own, carrying only the shared fill/counter fields:
+        # Mode.HIDDEN (resolved mode toggled off -> bar_visible() hides it) or
+        # Mode.COMPLETE (nothing left to research -> the elite badge).
         return t.ResearchProgressModel(
-            mode=t.Mode.HIDDEN, scale_min=0, scale_max=0,
+            mode=mode, scale_min=0, scale_max=0,
             fill_vehicle=fill_vehicle, fill_free=fill_free, ticks=[],
             fieldmods_done=fm_done, fieldmods_total=fm_total, vehicle_class=veh_class,
             spendable_xp=spendable, **est)
@@ -265,11 +265,7 @@ def build_model(snapshot, enabled=None, override=None, ignore_free_xp=False):
 
     if not cands:
         # nothing left to research and no prestige data: COMPLETE (elite badge).
-        result = t.ResearchProgressModel(
-            mode=t.Mode.COMPLETE, scale_min=0, scale_max=0,
-            fill_vehicle=fill_vehicle, fill_free=fill_free, ticks=[],
-            fieldmods_done=fm_done, fieldmods_total=fm_total, vehicle_class=veh_class,
-            spendable_xp=spendable, **est)
+        result = _placeholder(t.Mode.COMPLETE)
     else:
         by_mode = dict(cands)
         if override and override in avail:
@@ -281,7 +277,7 @@ def build_model(snapshot, enabled=None, override=None, ignore_free_xp=False):
             # Honor the per-mode user toggle for the priority default: a mode this vehicle
             # RESOLVED to but which the user turned off hides the bar -- NO fall-through
             # to a lower-priority mode.
-            result = winner_model if _on(enabled, winner_mode) else _hidden()
+            result = winner_model if _on(enabled, winner_mode) else _placeholder(t.Mode.HIDDEN)
 
     result.avail_modes = avail
     return result

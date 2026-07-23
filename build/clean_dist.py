@@ -18,8 +18,6 @@ current version's files or the unversioned INSTALL.txt:
   * GarageProgressBar-Setup-<ver>.exe  (build_installer.ps1)
   * GarageProgressBar_<ver>.zip        (consumer zip, hand-assembled)
   * GarageProgressBar-Bundle_<ver>.zip (wgmods bundle, build_wgmods_zip.py)
-  * legacy: Research-Progress-Bar_<ver>.zip (old consumer name) and the old
-    GarageProgressBar-<ver>.zip bundle name are both still swept.
 Anything else in dist/ (INSTALL.txt, the transient _build/ dir, unrelated files)
 is left untouched.
 """

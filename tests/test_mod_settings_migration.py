@@ -9,19 +9,12 @@ release. The shim reads the raw previously-stored dict (still at
 ``api.state['settings'][LINKAGE]`` before ``setModTemplate`` runs), overlays the surviving
 values onto the fresh defaults, and persists once, so the wipe never lands on disk.
 
-mod_settings imports the game's ``debug_utils`` at module load, so stub it first (as the
-sibling tests do); ``init()`` resolves its api through ``_primary_api()`` -> a faked
-``gui.aslainMenu`` module injected per test."""
+``init()`` resolves its api through ``_primary_api()`` -> a faked ``gui.aslainMenu`` module
+injected per test. (The game's ``debug_utils`` is stubbed once in conftest.py.)"""
 import sys
 import types
 
 import pytest
-
-if "debug_utils" not in sys.modules:
-    _dbg = types.ModuleType("debug_utils")
-    _dbg.LOG_CURRENT_EXCEPTION = lambda *a, **k: None
-    _dbg.LOG_NOTE = lambda *a, **k: None
-    sys.modules["debug_utils"] = _dbg
 
 from wgmod_research.bridge import mod_settings as M
 

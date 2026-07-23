@@ -75,10 +75,6 @@ _FALLBACK = {
     "sepOr": u"or",
 }
 
-# Keys with NO wired accessor -- always English. Marked untranslated in the bundle so
-# they're spottable in-client. (Currently none: every visible label is wired below.)
-_ENGLISH_ONLY = ()
-
 
 def widget_labels():
     """The resolved label bundle handed to the widget JS via the ``labels`` VM field.
@@ -88,8 +84,6 @@ def widget_labels():
     underscore-marked (see MARK_UNTRANSLATED). Returns plain ``unicode`` values --
     json.dumps in the bridge escapes non-ASCII for JS."""
     out = dict(_FALLBACK)
-    for k in _ENGLISH_ONLY:
-        out[k] = _mark(out[k])
 
     # Each label resolves INDEPENDENTLY: the full R.strings traversal lives inside the
     # thunk so _text catches a wrong/absent path and degrades just that one label to its

@@ -47,9 +47,10 @@ import xml.etree.ElementTree as ET
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 META = os.path.join(ROOT, "src", "meta.xml")
 # build_wgmods_zip.py holds the single canonical CLIENT version (the mods/<ver>/ folder the
-# bundle extracts into). check_version parses it (not imports -- no side effects) and
-# verifies the shipping/instruction files agree, so a client patch can't leave a straggler.
-WGMODS_ZIP = os.path.join(ROOT, "build", "build_wgmods_zip.py")
+# bundle extracts into). We import it (it has no import-time side effects) and verify the
+# shipping/instruction files agree, so a client patch can't leave a straggler.
+sys.path.insert(0, os.path.join(ROOT, "build"))
+from build_wgmods_zip import CLIENT_VERSION  # noqa: E402
 
 # Directories not worth scanning (build output, VCS, vendored binaries, editor cfg).
 _SKIP_DIRS = {".git", "dist", "__pycache__", "node_modules", ".idea", ".vscode",
@@ -88,8 +89,7 @@ _REQUIRED = (
 
 
 # --- client version (4-part, e.g. 2.3.1.0) -----------------------------------
-# Canonical source: build_wgmods_zip.CLIENT_VERSION.
-_CLIENT_RE = re.compile(r'CLIENT_VERSION\s*=\s*["\'](\d+\.\d+\.\d+\.\d+)["\']')
+# Canonical source: build_wgmods_zip.CLIENT_VERSION (imported above).
 # A 4-part version token (the client version's shape). Loopback / IP-shaped tokens that are
 # NOT the client version are excluded so an unrelated address (the debug REPL's 127.0.0.1)
 # never trips the check.
@@ -115,24 +115,12 @@ def _meta_version():
     return ET.parse(META).getroot().findtext("version").strip()
 
 
-def _client_version():
-    try:
-        with open(WGMODS_ZIP, "rb") as fh:
-            text = fh.read().decode("utf-8", "replace")
-    except (IOError, OSError):
-        return None
-    m = _CLIENT_RE.search(text)
-    return m.group(1) if m else None
-
-
 def _check_client_version():
     """Return a list of client-version problems (empty = OK). Scoped to _CLIENT_REQUIRED so
     it never false-fails on prose that merely mentions a version (this file's own examples,
     skill docs, TASKS notes)."""
     problems = []
-    client = _client_version()
-    if not client:
-        return ["could not parse CLIENT_VERSION from build/build_wgmods_zip.py"], None
+    client = CLIENT_VERSION
     for rel in _CLIENT_REQUIRED:
         path = os.path.join(ROOT, rel.replace("/", os.sep))
         try:
