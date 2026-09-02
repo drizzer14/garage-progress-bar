@@ -348,7 +348,7 @@ def _template():
             # ([x] Current  [ ] Current / Required) instead of a collapsed Dropdown. Its
             # value shape is IDENTICAL to a Dropdown's (the 0-based index into `options`),
             # so _clamp_index / progress_mode() / the widget wire are untouched.
-            # `inline` needs MSA >= 1.6.1 (we bundle 1.6.4); because this template is a
+            # `inline` needs MSA >= 1.6.1 (we bundle 1.7.1); because this template is a
             # plain dict rather than a templates.createRadioButtonGroup() call, an older
             # MSA just ignores the unknown key and renders a vertical stack -- degrades
             # cleanly, so no feature detection is needed. settings_i18n.panel_text()
