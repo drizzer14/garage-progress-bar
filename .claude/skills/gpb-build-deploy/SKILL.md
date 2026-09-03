@@ -63,7 +63,7 @@ skill is the concrete wiring for the Garage Progress Bar.
   literal above is only an example; a client bump is run via **wotmod-upgrade-analyzer** /
   **wotmod-upgrade-implementer**, not hand-edited here).
 - **Dependencies (same `mods/<version>/`):** OpenWG GameFace is a **hard** dependency; the
-  bar itself renders without ModsSettingsAPI (bundled `aslain.modssettingsapi_1.7.1` +
+  bar itself renders without Aslain ModMenu (bundled `aslain.modmenu_2.0.03` +
   `modslistapi_1.7.9`, import surface `gui.aslainMenu`), but the settings panel, per-mode
   toggles, and drag-position persistence need it. Mechanics: **wotmod-msa-settings**.
 

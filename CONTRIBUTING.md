@@ -25,7 +25,7 @@ installer/
   wgmod-setup.iss      # Inno Setup script -> dist/GarageProgressBar-Setup-<version>.exe
   build_installer.ps1  # locate ISCC + compile the installer
   readme.wgmods.txt    # bilingual readme template for the wgmods.net bundle ({VERSION} stamped)
-  vendor/              # bundled OpenWG GameFace + ModsSettingsAPI .wotmods (installed only if missing)
+  vendor/              # bundled OpenWG GameFace + Aslain ModMenu .wotmods (installed only if missing)
 tests/               # pytest (run with Python 3.13) for the domain layer
 tools/dev/
   sync_gameface.py       # hot-reload WGModResearch.js/.css into a running client (no relaunch)

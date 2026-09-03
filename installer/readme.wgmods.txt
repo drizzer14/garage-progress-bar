@@ -9,7 +9,7 @@ your World of Tanks folder and restart the game.
 WHAT'S IN THE BOX
     com.14th_ua.garageprogressbar_{VERSION}.wotmod   the mod
     net.openwg.gameface_1.1.6.wotmod                 REQUIRED dependency
-    aslain.modssettingsapi_1.7.1.wotmod              optional (settings)
+    aslain.modmenu_2.0.03.wotmod                     optional (settings)
     me.poliroid.modslistapi_1.7.9.wotmod             optional (Modification list window)
 
 
@@ -36,7 +36,7 @@ INSTALL  (2 steps)
 
 DEPENDENCIES
     OpenWG GameFace is REQUIRED - the bar will not appear without it.
-    ModsSettingsAPI is optional; it adds the in-game settings window.
+    Aslain ModMenu is optional; it adds the in-game settings window.
     If you already run either mod, keep your existing copy.
 
 UNINSTALL
@@ -69,7 +69,7 @@ UNINSTALL
 
 ЗАЛЕЖНОСТІ
     OpenWG GameFace ОБОВ'ЯЗКОВИЙ - без нього смуга не з'явиться.
-    ModsSettingsAPI необов'язковий; додає вікно налаштувань у грі.
+    Aslain ModMenu необов'язковий; додає вікно налаштувань у грі.
     Якщо котрийсь із модів уже стоїть, лишіть свою копію.
 
 ВИДАЛЕННЯ

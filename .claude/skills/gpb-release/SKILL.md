@@ -76,7 +76,7 @@ pwsh installer\build_installer.ps1                   # -> dist\GarageProgressBar
 The installer needs the `.wotmod` already built and ALL THREE vendor payloads present
 (`build_installer.ps1` throws if any is missing):
 `installer\vendor\net.openwg.gameface_1.1.6.wotmod`,
-`installer\vendor\aslain.modssettingsapi_1.7.1.wotmod`, and
+`installer\vendor\aslain.modmenu_2.0.03.wotmod`, and
 `installer\vendor\me.poliroid.modslistapi_1.7.9.wotmod`.
 
 Consumer zip (no committed generator — hand-assemble): bump `dist\INSTALL.txt` version, then

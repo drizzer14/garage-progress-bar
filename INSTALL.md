@@ -19,7 +19,7 @@ switch vehicles.
 |-------------|--------|
 | **Game** | World of Tanks **EU (Wargaming)** client, version **2.4.0.0**. Built and tested against this version. |
 | **Dependency** | **OpenWG GameFace** (required). The installer sets this up for you; for a manual install you add it yourself. |
-| **Optional** | **ModsSettingsAPI** — adds the mod's options to its in-game Modification list window. The installer adds it if missing; without it the bar simply shows everywhere with no options. |
+| **Optional** | **Aslain ModMenu** — adds the mod's options to its in-game Modification list window. The installer adds it if missing; without it the bar simply shows everywhere with no options. |
 
 This build targets the Wargaming EU/global client (version 2.4.0.0).
 
@@ -33,13 +33,13 @@ This build targets the Wargaming EU/global client (version 2.4.0.0).
    contains `version.xml`. The installer detects it automatically in most cases.
 4. If a newer version is available on GitHub, the installer offers to download and
    run the latest installer for you — accept to always get the newest build.
-5. The installer adds OpenWG GameFace and ModsSettingsAPI when your client doesn't
+5. The installer adds OpenWG GameFace and Aslain ModMenu when your client doesn't
    already have them, then installs the mod into `mods\<version>\`.
 6. Start the game and go to the Garage. Adjust the bar from the **Modification list**
-   window (added by ModsSettingsAPI) if you like.
+   window (added by Aslain ModMenu) if you like.
 
 To remove the mod later, use its entry in Windows **Apps & features**, or re-run the
-installer. OpenWG GameFace and ModsSettingsAPI stay in place for other mods that use them.
+installer. OpenWG GameFace and Aslain ModMenu stay in place for other mods that use them.
 
 ---
 
@@ -48,7 +48,7 @@ installer. OpenWG GameFace and ModsSettingsAPI stay in place for other mods that
 1. Get **OpenWG GameFace** from the official WG mod portal (**wgmods.net**) or the
    OpenWG project's GitLab releases, and install its `.wotmod` into your game's
    `mods\<version>\` folder. If you already run other GameFace mods you likely have it.
-   Optionally also install **ModsSettingsAPI** (Aslain's build) and **ModsList** the
+   Optionally also install **Aslain ModMenu** and **ModsList** the
    same way for the in-game "Modification list" options window — most modpacks (e.g.
    Aslain's) already include them.
 2. Open your World of Tanks folder and the version-matched mods folder inside it:
@@ -93,11 +93,11 @@ The `mods\2.4.0.0\` folder then holds the OpenWG GameFace `.wotmod` and
 - Fully restart the client after installing.
 
 **No settings appear for the mod.**
-- The mod's options need **ModsSettingsAPI** in the same `mods\<version>\` folder
+- The mod's options need **Aslain ModMenu** in the same `mods\<version>\` folder
   (the installer adds it if missing). Without it the bar still works — it just shows
   everywhere with no toggles.
 - If the bar is hidden and you want it back, open the **Modification list** window
-  (added by ModsSettingsAPI), find **Garage Progress Bar**, and uncheck the hide options.
+  (added by Aslain ModMenu), find **Garage Progress Bar**, and uncheck the hide options.
 
 **A game update stopped it from working.**
 - Game updates change the version folder. Move the `.wotmod` from the old

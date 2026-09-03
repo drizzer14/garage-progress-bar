@@ -23,7 +23,7 @@ $RepoRoot     = Split-Path -Parent $InstallerDir
 $Iss          = Join-Path $InstallerDir 'wgmod-setup.iss'
 $ModWotmod    = Join-Path $RepoRoot 'dist\com.14th_ua.garageprogressbar_5.0.0.wotmod'
 $OpenWg       = Join-Path $InstallerDir 'vendor\net.openwg.gameface_1.1.6.wotmod'
-$Msa          = Join-Path $InstallerDir 'vendor\aslain.modssettingsapi_1.7.1.wotmod'
+$Msa          = Join-Path $InstallerDir 'vendor\aslain.modmenu_2.0.03.wotmod'
 $ModsList     = Join-Path $InstallerDir 'vendor\me.poliroid.modslistapi_1.7.9.wotmod'
 
 function Find-ISCC {
@@ -46,7 +46,7 @@ if (-not (Test-Path $OpenWg)) {
     throw "Bundled OpenWG dependency not found: $OpenWg"
 }
 if (-not (Test-Path $Msa)) {
-    throw "Bundled ModsSettingsAPI dependency not found: $Msa"
+    throw "Bundled Aslain ModMenu dependency not found: $Msa"
 }
 if (-not (Test-Path $ModsList)) {
     throw "Bundled ModsList API dependency not found: $ModsList"

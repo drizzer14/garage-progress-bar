@@ -16,7 +16,7 @@
 #define ModVersion    "5.0.0"
 #define ModWotmod     "com.14th_ua.garageprogressbar_5.0.0.wotmod"
 #define OpenWgWotmod  "net.openwg.gameface_1.1.6.wotmod"
-#define MsaWotmod     "aslain.modssettingsapi_1.7.1.wotmod"
+#define MsaWotmod     "aslain.modmenu_2.0.03.wotmod"
 #define ModsListWotmod "me.poliroid.modslistapi_1.7.9.wotmod"
 ; Used by the GitHub update check (see [Code]): the Atom feed + release-asset URLs
 ; are built from these, and SetupBaseName must match this .exe's filename convention.
@@ -52,7 +52,7 @@ Source: "..\dist\{#ModWotmod}"; DestDir: "{code:GetModsVersionDir}"; Flags: igno
 ; Bundled OpenWG dependency -> only copied when not already installed, and never
 ; removed on uninstall (other GameFace mods may depend on it).
 Source: "vendor\{#OpenWgWotmod}"; DestDir: "{code:GetModsVersionDir}"; Flags: ignoreversion uninsneveruninstall; Check: NeedOpenWg
-; Bundled ModsSettingsAPI dependency (provides the in-game settings panel). Same
+; Bundled Aslain ModMenu dependency (provides the in-game settings panel). Same
 ; policy: only copied when absent, never removed on uninstall (shared by many mods).
 Source: "vendor\{#MsaWotmod}"; DestDir: "{code:GetModsVersionDir}"; Flags: ignoreversion uninsneveruninstall; Check: NeedMsa
 ; Bundled ModsList API dependency (the "Modification list" window that surfaces the
@@ -225,15 +225,15 @@ begin
   Result := not FindOpenWgIn(GetModsVersionDir(''));
 end;
 
-{ Recursive search for aslain.modssettingsapi*.wotmod under a directory (the bundled
-  build; any already-present Aslain ModsSettingsAPI copy satisfies the dependency). }
+{ Recursive search for aslain.modmenu*.wotmod under a directory (the bundled
+  build; any already-present Aslain ModMenu copy satisfies the dependency). }
 function FindMsaIn(Dir: string): Boolean;
 var
   FR: TFindRec;
 begin
   Result := False;
   { files in this dir }
-  if FindFirst(Dir + '\aslain.modssettingsapi*.wotmod', FR) then
+  if FindFirst(Dir + '\aslain.modmenu*.wotmod', FR) then
   begin
     try
       Result := True;
@@ -261,7 +261,7 @@ begin
   end;
 end;
 
-{ [Files] Check: copy bundled ModsSettingsAPI only when none is already present. }
+{ [Files] Check: copy bundled Aslain ModMenu only when none is already present. }
 function NeedMsa(): Boolean;
 begin
   Result := not FindMsaIn(GetModsVersionDir(''));

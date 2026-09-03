@@ -20,5 +20,5 @@ THE MOD IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED. T
 AUTHOR IS NOT LIABLE FOR ANY CLAIM, DAMAGE, OR OTHER LIABILITY ARISING FROM ITS USE.
 
 This license covers only the code authored in this repository. Bundled dependencies
-(**OpenWG GameFace**, **ModsSettingsAPI**) are the property of their respective authors
+(**OpenWG GameFace**, **Aslain ModMenu**) are the property of their respective authors
 and are governed by their own licenses.

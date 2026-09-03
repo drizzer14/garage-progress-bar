@@ -54,7 +54,7 @@ upgrades without leaving the Garage. **Hover** any tick or icon for a tooltip.
 |-------------|--------|
 | **Game** | World of Tanks **EU 2.4.0.0** (Wargaming global client). Built and tested against this version. |
 | **Required** | **OpenWG GameFace** 1.1.6+ — install it first, or the bar will not appear. From [wgmods.net](https://wgmods.net) or [gitlab.com/openwg/wot.gameface](https://gitlab.com/openwg/wot.gameface). |
-| **Optional** | **ModsSettingsAPI** + **ModsList** — add the mod's options to the in-game "Modification list" window. The installer bundles both; without them the bar simply shows everywhere with no toggles. Most modpacks already include them. |
+| **Optional** | **Aslain ModMenu** + **ModsList** — add the mod's options to the in-game "Modification list" window. The installer bundles both; without them the bar simply shows everywhere with no toggles. Most modpacks already include them. |
 
 ## Download & install
 
@@ -62,7 +62,7 @@ upgrades without leaving the Garage. **Hover** any tick or icon for a tooltip.
 **`GarageProgressBar-Setup-<version>.exe`** from the
 [**GitHub Releases**](https://github.com/drizzer14/garage-research-progress/releases)
 page and run it (close the game first). It finds your World of Tanks folder, installs
-the mod into `mods\<version>\`, and adds **OpenWG GameFace**, **ModsSettingsAPI** and
+the mod into `mods\<version>\`, and adds **OpenWG GameFace**, **Aslain ModMenu** and
 **ModsList** if you don't already have them. On each run it also checks GitHub and offers to
 fetch the newest installer, so a copy you keep around stays current.
 
@@ -73,8 +73,8 @@ works, troubleshooting, and uninstalling.
 
 ## Settings
 
-With **ModsSettingsAPI** installed, the mod's options appear in the **Modification
-list** window that ModsSettingsAPI adds. Without it the bar simply shows everywhere
+With **Aslain ModMenu** installed, the mod's options appear in the **Modification
+list** window that Aslain ModMenu adds. Without it the bar simply shows everywhere
 with the defaults and no options. The controls sit in three categories:
 
 | Category | Setting | Default | What it does |
@@ -117,7 +117,7 @@ Turning every **Modes** toggle off hides the bar on every vehicle.
 Free to use, redistribute, and include in modpacks as long as it stays free and
 credits the author (**14th_ua**) with a link back to this repository — see
 [`LICENSE.md`](./LICENSE.md). For modpacks, add only the `.wotmod` and list OpenWG
-GameFace as a required dependency; don't bundle GameFace or ModsSettingsAPI yourself.
+GameFace as a required dependency; don't bundle GameFace or Aslain ModMenu yourself.
 
 ## Contributing / developers
 
@@ -184,7 +184,7 @@ Building, deploying, testing, and the repo layout are documented in
 |--------|--------|
 | **Гра** | World of Tanks **EU 2.4.0.0** (глобальний клієнт Wargaming). Зібрано й перевірено для цієї версії. |
 | **Обов'язково** | **OpenWG GameFace** 1.1.6+ — встановіть першим, інакше смуга не з'явиться. З [wgmods.net](https://wgmods.net) або [gitlab.com/openwg/wot.gameface](https://gitlab.com/openwg/wot.gameface). |
-| **Необов'язково** | **ModsSettingsAPI** + **ModsList** — додають параметри мода у вікно «Список модифікацій» у грі. Інсталятор містить обидва; без них смуга просто показується скрізь без перемикачів. Більшість модпаків уже містять їх. |
+| **Необов'язково** | **Aslain ModMenu** + **ModsList** — додають параметри мода у вікно «Список модифікацій» у грі. Інсталятор містить обидва; без них смуга просто показується скрізь без перемикачів. Більшість модпаків уже містять їх. |
 
 ## Завантаження та встановлення
 
@@ -192,7 +192,7 @@ Building, deploying, testing, and the repo layout are documented in
 **`GarageProgressBar-Setup-<version>.exe`** зі сторінки
 [**релізів на GitHub**](https://github.com/drizzer14/garage-research-progress/releases)
 і запустіть (спершу закрийте гру). Він знаходить папку World of Tanks, встановлює мод
-у `mods\<version>\` і додає **OpenWG GameFace**, **ModsSettingsAPI** та **ModsList**,
+у `mods\<version>\` і додає **OpenWG GameFace**, **Aslain ModMenu** та **ModsList**,
 якщо їх ще немає. Під час кожного запуску він також перевіряє GitHub і пропонує завантажити
 найновіший інсталятор, тож збережена копія залишається актуальною.
 
@@ -202,8 +202,8 @@ Building, deploying, testing, and the repo layout are documented in
 
 ## Налаштування
 
-Зі встановленим **ModsSettingsAPI** параметри мода з'являються у вікні **Список
-модифікацій**, яке додає ModsSettingsAPI. Без нього смуга просто показується скрізь зі
+Зі встановленим **Aslain ModMenu** параметри мода з'являються у вікні **Список
+модифікацій**, яке додає Aslain ModMenu. Без нього смуга просто показується скрізь зі
 значеннями за замовчуванням і без параметрів. Параметри згруповані в три категорії:
 
 | Категорія | Параметр | За замовчуванням | Що робить |
@@ -247,7 +247,7 @@ Building, deploying, testing, and the repo layout are documented in
 Вільно використовувати, поширювати та включати в модпаки, доки це залишається
 безкоштовним і зазначає автора (**14th_ua**) з посиланням на цей репозиторій — див.
 [`LICENSE.md`](./LICENSE.md). Для модпаків додавайте лише `.wotmod` і вкажіть OpenWG
-GameFace як обов'язкову залежність; не вкладайте GameFace чи ModsSettingsAPI самі.
+GameFace як обов'язкову залежність; не вкладайте GameFace чи Aslain ModMenu самі.
 
 ## Розробка
 
