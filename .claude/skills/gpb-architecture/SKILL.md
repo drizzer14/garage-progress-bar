@@ -91,6 +91,31 @@ settings→builder seam — it maps the six per-mode checkbox settings to the `M
 toggle→Mode mapping regression here hides behind a green builder suite and has its own guard in
 `test_enabled_modes_*` (`tests/test_mod_settings_template.py`).
 
+### Onslaught garage is `hangar/{root}` too — `_in_garage()` doesn't exclude it
+Confirmed live via the debug REPL on client 2.4.0.0, both garages read side by side. The
+"Onslaught" mode is internally named **Comp7**: prebattle entity class `Comp7Entity`
+(module `comp7.gui.prb_control.entities.pre_queue.entity`), `getModeFlags()` = `536870912`
+= `FUNCTIONAL_FLAG.COMP7`, `getQueueType()` = `29`, lobby state id
+`subScope/subLayer/comp7/hangar/{root}`. The plain garage: entity `RandomEntity`, flags
+`32768` = `FUNCTIONAL_FLAG.RANDOM`, state id `subScope/subLayer/hangar/{root}`. Because the
+Onslaught state id still ENDS with `hangar/{root}`, `_in_garage()`'s allowlist matches it and
+the bar renders there too — Onslaught is a prebattle queue/functional mode reusing the
+default hangar view, not a distinct lobby leaf state.
+
+To detect the current prebattle mode: `g_prbLoader.getDispatcher().getEntity().getModeFlags()`
+(`g_prbLoader` from `gui.prb_control.dispatcher`; `FUNCTIONAL_FLAG` from
+`gui.prb_control.settings`). **`g_prbLoader.getEntity()` does NOT exist** — it's always
+`.getDispatcher().getEntity()`. `FUNCTIONAL_FLAG.MAPBOX` (bit 26) is a different flag, unset
+in both garages tested — it is NOT Onslaught. Two valid discriminators: `getModeFlags() &
+FUNCTIONAL_FLAG.COMP7`, or the substring `comp7` in the lobby state id.
+
+Used in `adapter/prb_read.py`'s `is_onslaught_garage()`, consumed by
+`bridge/gameface_bridge.py` to pick a per-mode position: the Onslaught (Comp7) garage has its
+OWN independent X and Y (`onslaughtPosX`/`onslaughtPosY` vs the plain garage's `posX`/`posY`),
+set by their own numeric steppers and Ctrl+drag; `posW`/`posH` (the capture-viewport size for
+rescale) stay shared across both garages. `onslaughtPosX` was added and `onslaughtPosY`
+promoted to a user-facing stepper in the `settingsVersion` 14->15 bump above.
+
 ## COMPLETE ("Fully Progressed") — the gate, not a builder
 Shipped in `e0ae891`. **The gate is "every category that APPLIES to this vehicle is finished"** —
 NOT, as it was before, "no builder returned a candidate". The old `not cands` gate was almost
@@ -358,8 +383,14 @@ tank now shows Fully Progressed instead of the Elite bar.)
     (`progressMode` + `showPercent` added — required), 8->9 (`showPercent` moved column1→column2
     — **unnecessary**), 9->10 (three-category restructure — required *only* because it REMOVED
     the `showBar` varName), 10->11 (`scale` + `progressMode` re-typed from `Dropdown` to inline
-    `RadioButtonGroup` — a `type` change, genuinely structural). Current `settingsVersion` =
-    **11**. (varName-less `Label`/`Empty` rows are NOT collected into
+    `RadioButtonGroup` — a `type` change, genuinely structural), 11->12 (two more `Empty`
+    spacers added to column2, a row-count change), 12->13 (the `excludeEliteSystem` child
+    CheckBox added under `showWhenComplete`), 13->14 (`excludeEliteSystem` replaced by the
+    standalone `allowFallthrough` checkbox — see "Allow Fallthrough" above), 14->15 (the
+    Onslaught garage got its own X axis: `onslaughtPosX` added and `onslaughtPosY` promoted
+    from an internal-only key to a user-facing stepper — see "Bar position is
+    resolution-aware" below for the Onslaught X/Y split). Current `settingsVersion` =
+    **15**. (varName-less `Label`/`Empty` rows are NOT collected into
     `_settingsStructure` — resolved in wotmod-msa-settings.)
   - **`settings_i18n.COL1_KEYS`/`COL2_KEYS` must stay in lockstep with `_template()` wire order,
     POSITIONALLY — textless rows included.** `_sync_template_text` zips the key tuples against
@@ -409,6 +440,27 @@ tank now shows Fully Progressed instead of the Elite bar.)
     `scale` → `_clamp_index`, `progressMode` → `_clamp_index`, position keys → `clamp_pos`,
     `modeOverrides` → verbatim string; everything else is a bool. Any new index-valued control
     needs its own clamp + branch. Why the generic `bool()` destroys an index: wotmod-msa-settings.
+  - **A new persisted key needs its `_apply()` branch in the SAME change that adds it** —
+    confirmed bug: `onslaughtPosY` was added to `DEFAULTS` and to `set_position()`'s write, but
+    not to the `("posX","posY","posW","posH")` position branch. `set_position()` calls
+    `g.updateModSettings(...)` then `g.saveState()`, and `saveState()` synchronously fires MSA's
+    global `onSettingsChanged` back into this mod's own `_on_changed` → `_apply(new_settings)`
+    **before `set_position()` returns** — so `_apply()` re-ingests the just-written dict
+    immediately. Missing from the position branch, `onslaughtPosY` fell through to the generic
+    `else: _settings[key] = bool(settings[key])`, turning a valid Y like `300` into `True`, pushed
+    to the widget as `int(True) == 1` — the bar snapped to the very top of the screen. Fixed by
+    adding `onslaughtPosY` to the position branch; `onslaught_pos_y()` also now rejects a
+    bool/non-numeric stored value explicitly (`isinstance(True, int)` is `True`, so bool must be
+    checked before the numeric check) and falls back to `pos_y()`. Rule: any `g.updateModSettings`
+    + `g.saveState()` writer round-trips synchronously through the mod's own `onSettingsChanged`
+    before it returns — so every new persisted key's `_apply()` coercion must land alongside the
+    key itself, not as a follow-up.
+  - **Don't stack a third read-time guard on top of those two layers.** `_apply()`'s coercion
+    branch (`clamp_pos` on every ingest) plus the settings migration already guarantee a clean
+    number at read time for a persisted position key — a bool-rejecting check in the accessor is
+    unreachable dead code, and wouldn't even catch the realistic case anyway (`clamp_pos(True) ==
+    1`, a valid int). Two-layer defense for a new key: `_apply()` coercion + migrate its
+    pre-existing stored form; the read accessor stays a plain `value or fallback`.
   - **Two label sources.** (1) **WG feature names** (Research, Upgrades, Field Modifications,
     Elite System, Elite Rewards, Tier XI) reuse WG's OWN localized strings via
     `i18n.widget_labels()` — `FEATURE_WG` maps each checkbox → its widget-labels key, so they match
