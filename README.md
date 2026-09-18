@@ -91,7 +91,9 @@ with the defaults and no options. The controls sit in three categories:
 | | **Show Progress %** | Off | Prepends a progress percentage to the XP readout. |
 | | **Progress Mode** | Current | What the XP readout shows — just the XP you have so far, or Current / Required. |
 | **Layout** | **Scale** | Default | Large roughly doubles the bar's width and enlarges its text, icons, and tooltip. |
-| | **Position** | Auto | Ctrl+drag the bar in the Garage to move it, or type exact on-screen pixel coordinates (**Horizontal (center X)** / **Vertical (top Y)**). The panel's per-mod reset returns it to the automatic default. |
+| | **Position** | Auto | Ctrl+drag the bar in the Garage to move it, or type exact on-screen pixel coordinates (**Horizontal (center X)** / **Vertical (top Y)**). The panel's per-mod reset returns it to the automatic default. The Onslaught garage keeps its own saved position, independent of the regular Garage. |
+| | **Horizontal position (Onslaught)** | Auto | The bar's center X in the Onslaught garage, in pixels. 0 inherits the regular Horizontal position. |
+| | **Vertical position (Onslaught)** | Auto | The bar's top Y in the Onslaught garage, in pixels. 0 inherits the regular Vertical position. |
 
 Turning every **Modes** toggle off hides the bar on every vehicle.
 
@@ -220,7 +222,9 @@ Building, deploying, testing, and the repo layout are documented in
 | | **Показувати прогрес у %** | Вимк. | Додає відсоток прогресу перед лічильником досвіду. |
 | | **Режим прогресу** | Поточний | Що показує лічильник досвіду — лише наявний досвід чи «Поточний / Потрібно». |
 | **Розташування** | **Масштаб** | За замовчуванням | «Великий» приблизно вдвічі збільшує ширину смуги та збільшує її текст, іконки й підказку. |
-| | **Позиція** | Автоматично | Ctrl+перетягніть смугу в Ангарі, щоб перемістити її, або введіть точні екранні координати в пікселях (**По горизонталі (центр X)** / **По вертикалі (верх Y)**). Скидання мода в панелі повертає її в автоматичне положення. |
+| | **Позиція** | Автоматично | Ctrl+перетягніть смугу в Ангарі, щоб перемістити її, або введіть точні екранні координати в пікселях (**По горизонталі (центр X)** / **По вертикалі (верх Y)**). Скидання мода в панелі повертає її в автоматичне положення. Ангар режиму «Штурм» (Onslaught) зберігає власну позицію, окремо від звичайного Ангара. |
+| | **Позиція по горизонталі (Onslaught)** | Автоматично | Центр смуги по X в ангарі режиму «Штурм», у пікселях. 0 означає успадкування звичайної позиції по горизонталі. |
+| | **Позиція по вертикалі (Onslaught)** | Автоматично | Верх смуги по Y в ангарі режиму «Штурм», у пікселях. 0 означає успадкування звичайної позиції по вертикалі. |
 
 Якщо вимкнути всі перемикачі в категорії **Режими**, смуга не показуватиметься на жодній техніці.
 
