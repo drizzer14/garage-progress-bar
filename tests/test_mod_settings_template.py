@@ -32,7 +32,7 @@ def _col1():
 
 # --- version ----------------------------------------------------------------
 
-def test_settings_version_is_14():
+def test_settings_version_is_15():
     # Bumped 9 -> 10 when the panel was restructured into three named categories and the
     # showBar master was REMOVED (the restructure alone wouldn't need it -- column identity
     # and masterVarName are absent from Aslain's template signature -- but dropping a
@@ -48,8 +48,10 @@ def test_settings_version_is_14():
     # the "excludeEliteSystem" child CheckBox was added under showWhenComplete -- a new
     # varName, so the bump was mandatory. Then 13 -> 14 when excludeEliteSystem was REMOVED
     # (replaced by the standalone "allowFallthrough" checkbox) -- removing AND adding a
-    # varName, so this bump is mandatory too.
-    assert M._template()["settingsVersion"] == 14
+    # varName, so this bump is mandatory too. Then 14 -> 15 when the Onslaught garage got
+    # its OWN X/Y: onslaughtPosY became a user-facing stepper and onslaughtPosX was added
+    # (two new varNames), so this bump is mandatory too.
+    assert M._template()["settingsVersion"] == 15
 
 
 # --- category headers -------------------------------------------------------
@@ -271,17 +273,19 @@ def test_col2_keys_match_template_wire_order():
     col2 = _col2()
     assert list(S.COL2_KEYS) == [
         "formatting", "ignoreFreeXp", "showPercent", S.SPACER, "progressMode",
-        S.SPACER, "layout", "scale", S.SPACER, "position", "posX", "posY"]
+        S.SPACER, "layout", "scale", S.SPACER, "position", "posX", "posY",
+        "onslaughtPosX", "onslaughtPosY"]
     # THE alignment guard: _sync_template_text zips these two sequences positionally, so
     # a length mismatch or a shifted slot silently relabels the wrong controls.
     assert len(col2) == len(S.COL2_KEYS)
     assert [c.get("varName") for c in col2] == [
         None, "ignoreFreeXp", "showPercent", None, "progressMode",
-        None, None, "scale", None, None, "posX", "posY"]
+        None, None, "scale", None, None, "posX", "posY",
+        "onslaughtPosX", "onslaughtPosY"]
     assert [c["type"] for c in col2] == [
         "Label", "CheckBox", "CheckBox", "Empty", "RadioButtonGroup",
         "Empty", "Label", "RadioButtonGroup", "Empty", "Label",
-        "NumericStepper", "NumericStepper"]
+        "NumericStepper", "NumericStepper", "NumericStepper", "NumericStepper"]
     # Every SPACER sentinel lines up with an Empty row and nothing else.
     spacer_idxs = [i for i, k in enumerate(S.COL2_KEYS) if k is S.SPACER]
     assert spacer_idxs == [3, 5, 8]

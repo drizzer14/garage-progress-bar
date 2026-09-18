@@ -100,6 +100,15 @@ DEFAULTS = {# showWhenComplete (default ON) keeps the bar on fully-progressed ve
             "progressMode": 0,
             "showPercent": False,
             "posX": 0, "posY": 0,
+            # Per-garage position: the Onslaught garage reuses the SAME default hangar view
+            # as the plain garage (so _in_garage admits it and the bar renders there), but its
+            # header sits at a different place. Both X and Y are per-garage now; only W/H (the
+            # capture viewport, for rescale) stay shared. 0 = "inherit the regular posX/posY"
+            # (onslaught_pos_x/onslaught_pos_y fall back), so before the first Onslaught drag
+            # it tracks the regular position. Unlike posW/posH these ARE user-facing (two
+            # steppers -- so they DO owe the settingsVersion bump the 14->15 changelog carries);
+            # written via set_position(onslaught=True) or the steppers.
+            "onslaughtPosX": 0, "onslaughtPosY": 0,
             # Viewport (px) a custom posX/posY was captured at, so the widget can rescale
             # the pinned position proportionally after a resolution / UI-scale change (see
             # applyPosition in WGModResearch.js). 0 = unknown (auto position, or a pre-fix
@@ -297,7 +306,14 @@ def _template():
         # REMOVING-a-varName rule, and adding the new one is too. Both default False and
         # mean different things, so no value migration is attempted: the standard bump
         # wipe simply drops the old key and seeds the new one at its default.
-        "settingsVersion": 14,
+        # Bumped 14 -> 15 when the Onslaught garage got its OWN X/Y: onslaughtPosY became a
+        # user-facing stepper AND onslaughtPosX was added (two new varNames -- onslaughtPosY
+        # existed as a non-varName key before, so surfacing it as a stepper is an ADD by
+        # Aslain's structure test) -- mandatory per the ADDING-a-varName rule. init()'s
+        # merge-forward migration carries every EXISTING setting (posX/posY/posW/posH + the
+        # rest) across the wipe; the two new keys default to 0 for existing users, which also
+        # clears any bad `True` a pre-fix build may have parked on onslaughtPosY.
+        "settingsVersion": 15,
         "column1": [
             # CATEGORY "Modes" -- the seven per-mode toggles, order per spec: Research,
             # Field Modifications, Tier XI, Upgrades, Elite Rewards, Elite System, Fully
@@ -413,6 +429,31 @@ def _template():
                 "tooltip": t["posY"]["tooltip"],
                 "varName": "posY",
             },
+            # The Onslaught garage's OWN X/Y (independent of the regular posX/posY above --
+            # the Onslaught header sits elsewhere). 0 == inherit the regular position (see
+            # onslaught_pos_x / onslaught_pos_y). Same stepper shape as posX/posY.
+            {
+                "type": "NumericStepper",
+                "text": t["onslaughtPosX"]["text"],
+                "value": DEFAULTS["onslaughtPosX"],
+                "minimum": 0,
+                "maximum": POS_MAX,
+                "snapInterval": 1,
+                "canManualInput": True,
+                "tooltip": t["onslaughtPosX"]["tooltip"],
+                "varName": "onslaughtPosX",
+            },
+            {
+                "type": "NumericStepper",
+                "text": t["onslaughtPosY"]["text"],
+                "value": DEFAULTS["onslaughtPosY"],
+                "minimum": 0,
+                "maximum": POS_MAX,
+                "snapInterval": 1,
+                "canManualInput": True,
+                "tooltip": t["onslaughtPosY"]["tooltip"],
+                "varName": "onslaughtPosY",
+            },
         ],
     }
 
@@ -483,7 +524,7 @@ def _apply(settings):
     for key in DEFAULTS:
         if key not in settings:
             continue
-        if key in ("posX", "posY", "posW", "posH"):
+        if key in ("posX", "posY", "posW", "posH", "onslaughtPosX", "onslaughtPosY"):
             _settings[key] = clamp_pos(settings[key])
         elif key == "scale":
             # An INTEGER dropdown index (0/1), NOT a bool -- coerce it as one so the
@@ -578,6 +619,20 @@ def init():
                         LOG_PROD(
                             "[wgmod] carried excludeEliteSystem -> allowFallthrough "
                             "+ showElite=False")
+                    # onslaughtPosX/Y became user-facing keys in v15. No LEGITIMATE pre-15
+                    # value can exist -- the only pre-15 producer was a buggy build that wrote
+                    # a BOOL, which _apply's clamp_pos above migrates to a stray 1px pin
+                    # (clamp_pos(True) == 1) that the read-time bool guard can't catch. Discard
+                    # a pre-15 bool back to the 0 default so the Onslaught bar cleanly inherits
+                    # the regular position until the user pins one. Self-retiring: a v15+ install
+                    # stores numeric coords, never a bool, so a future bump's migration leaves
+                    # real Onslaught values untouched -- same self-retiring shape as the
+                    # excludeEliteSystem carry-forward above (keyed on the pre-15 data signature,
+                    # not a version compare we can't read here).
+                    for _k in ("onslaughtPosX", "onslaughtPosY"):
+                        if isinstance(old_raw.get(_k), bool):
+                            _settings[_k] = DEFAULTS[_k]
+                            LOG_PROD("[wgmod] discarded pre-15 bool %s -> 0" % (_k,))
                     g_modsSettingsApi.updateModSettings(
                         LINKAGE, _full_settings_for_write(g_modsSettingsApi))
                     try:
@@ -724,7 +779,7 @@ def _full_settings_for_write(g_modsSettingsApi):
     return data
 
 
-def set_position(x, y, w=0, h=0):
+def set_position(x, y, w=0, h=0, onslaught=False):
     """Persist a new bar position (px) and re-push it to the widget. Called from the JS
     `setPosition` reverse command -- a real drag / stepper edit that pins posX/posY to the
     chosen px. (An auto default -- posX/posY == 0 -- is never sent from the widget; it just
@@ -734,13 +789,18 @@ def set_position(x, y, w=0, h=0):
     so the widget can rescale the pinned position proportionally after a resolution / UI-scale
     change (see applyPosition in WGModResearch.js).
 
+    `onslaught` routes BOTH coordinates: when True (the drag / stepper happened in the
+    Onslaught garage) x/y are stored in onslaughtPosX/onslaughtPosY, else in posX/posY. Only
+    W/H (the capture viewport) stay SHARED across both garages (see onslaught_pos_x /
+    onslaught_pos_y / the gameface_bridge push). The flag ONLY selects keys, never a value.
+
     Writes the FULL settings through ModsSettingsAPI so the panel's numeric fields track the
     position; guarded so a missing/broken MSA never breaks the bar. updateModSettings only
     mutates in-memory state, so saveState() flushes it to disk (survives a client restart)."""
     x = clamp_pos(x)
     y = clamp_pos(y)
-    _settings["posX"] = x
-    _settings["posY"] = y
+    _settings["onslaughtPosX" if onslaught else "posX"] = x
+    _settings["onslaughtPosY" if onslaught else "posY"] = y
     # Record the viewport the pin was captured at (for later proportional rescale).
     _settings["posW"] = clamp_pos(w)
     _settings["posH"] = clamp_pos(h)
@@ -804,6 +864,22 @@ def pos_x():
 
 def pos_y():
     return _settings["posY"]
+
+
+def onslaught_pos_x():
+    """The bar's center-x (px) for the Onslaught garage: the stored onslaughtPosX when the
+    user has pinned one (nonzero), else falls back to the regular pos_x(). 0 already means
+    "CSS auto default", so an unset Onslaught X simply inherits the regular garage's X until
+    the player drags/types an Onslaught position."""
+    return _settings["onslaughtPosX"] or pos_x()
+
+
+def onslaught_pos_y():
+    """The bar's top (px) for the Onslaught garage: the stored onslaughtPosY when the user
+    has pinned one (nonzero), else falls back to the regular pos_y(). 0 already means "CSS
+    auto default", so an unset Onslaught Y simply inherits the regular garage's Y until the
+    player drags the bar while in the Onslaught garage."""
+    return _settings["onslaughtPosY"] or pos_y()
 
 
 def pos_w():

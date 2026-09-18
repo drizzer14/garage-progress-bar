@@ -88,9 +88,23 @@ def test_uk_layout_and_position_captions_differ():
 
 
 def test_every_shipped_language_covers_all_mod_labels():
+    # EN_ONLY_KEYS are deliberately English-until-scheduled-translation, so a non-en block
+    # is allowed to omit them (render_panel falls back to the English master per key).
+    required = _MOD_KEYS - set(S.EN_ONLY_KEYS)
     for code in _SHIPPED:
-        assert set(S._LABELS[code].keys()) == _MOD_KEYS, (
-            u"lang %s missing labels: %s" % (code, _MOD_KEYS - set(S._LABELS[code])))
+        assert required <= set(S._LABELS[code].keys()), (
+            u"lang %s missing labels: %s" % (code, required - set(S._LABELS[code])))
+        # and it must not carry a key outside the English master's full set.
+        assert set(S._LABELS[code].keys()) <= _MOD_KEYS
+
+
+def test_en_only_keys_are_english_master_only():
+    # The pending-translation keys live in the en master (so the fallback has a source) and
+    # are absent from every shipped non-en block until translations are scheduled.
+    for key in S.EN_ONLY_KEYS:
+        assert key in S._LABELS[u"en"]
+        for code in _SHIPPED:
+            assert key not in S._LABELS[code]
 
 
 # --- feature labels come from WG --------------------------------------------
@@ -175,11 +189,15 @@ def test_every_shipped_language_covers_all_tooltips():
     # THE dropped-key guard: each of the 11 blocks must carry all 15 tooltip keys, each
     # with a non-empty header AND body. A missing key would silently render English.
     en_keys = set(S._TOOLTIPS[u"en"].keys())
+    # EN_ONLY_KEYS are English-until-scheduled-translation, so the non-en blocks may omit
+    # their tooltips (render_panel falls back per key). The en master still carries them.
+    required = en_keys - set(S.EN_ONLY_KEYS)
     assert set(S._TOOLTIPS.keys()) == set(S._LABELS.keys())      # same shipped languages
     for code, block in S._TOOLTIPS.items():
-        assert set(block.keys()) == en_keys, (
+        want = en_keys if code == u"en" else required
+        assert set(block.keys()) == want, (
             u"lang %s tooltip keys differ: missing %s / extra %s"
-            % (code, en_keys - set(block), set(block) - en_keys))
+            % (code, want - set(block), set(block) - want))
         for key, entry in block.items():
             assert len(entry) == 2, u"%s/%s must be a (header, body) pair" % (code, key)
             header, body = entry
@@ -189,9 +207,12 @@ def test_every_shipped_language_covers_all_tooltips():
 
 def test_tooltips_are_localized_not_english():
     en = S.render_panel(_FAKE_WL, lang=u"en")
+    # EN_ONLY_KEYS are intentionally English in every language (translations pending), so
+    # they legitimately match the English string -- exclude them from the "not English" guard.
+    checked = _ALL_KEYS - _HEADER_KEYS - set(S.EN_ONLY_KEYS)
     for code in _SHIPPED:
         r = S.render_panel(_FAKE_WL, lang=code)
-        for key in _ALL_KEYS - _HEADER_KEYS:
+        for key in checked:
             assert r[key][u"tooltip"] != en[key][u"tooltip"], (
                 u"tooltip for %s is still the English string in %s" % (key, code))
 

@@ -76,6 +76,13 @@ SPACER = None
 # hierarchy the spacer and headers exist to create.
 HEADER_KEYS = frozenset((u"modes", u"formatting", u"layout"))
 
+# Keys deliberately shipped ENGLISH-ONLY for now -- their translations are scheduled
+# separately. render_panel's per-key fallback already renders the English master (marked
+# when MARK_UNTRANSLATED) for every non-`en` language, so they degrade cleanly; this set
+# just names the intent so the coverage tests don't demand the 10 pending translations and
+# a future translator knows exactly what's outstanding. Empty this set as languages land.
+EN_ONLY_KEYS = frozenset((u"onslaughtPosX", u"onslaughtPosY"))
+
 # Ordered key lists per column -- the wire order of the controls in ``_template()``. Used
 # by mod_settings to walk a stored template in lockstep (Label/Empty rows carry no varName).
 # The panel is three named CATEGORIES opened by Label headers ("modes" / "formatting" /
@@ -89,7 +96,8 @@ COL1_KEYS = (u"modes", u"showTechTree", u"showFieldMods", u"showPotentialTierXI"
              u"showSkillTree", u"showEliteRewards", u"showElite", u"showWhenComplete",
              SPACER, u"allowFallthrough")
 COL2_KEYS = (u"formatting", u"ignoreFreeXp", u"showPercent", SPACER, u"progressMode",
-             SPACER, u"layout", u"scale", SPACER, u"position", u"posX", u"posY")
+             SPACER, u"layout", u"scale", SPACER, u"position", u"posX", u"posY",
+             u"onslaughtPosX", u"onslaughtPosY")
 
 
 def _norm(code):
@@ -129,6 +137,11 @@ _LABELS = {
         u"position": u"Position (px)",
         u"posX": u"Horizontal (center X)",
         u"posY": u"Vertical (top Y)",
+        # Onslaught garage's own X/Y steppers. English master only for now -- the other 10
+        # languages fall back to this via render_panel's per-key mark (translations scheduled
+        # separately).
+        u"onslaughtPosX": u"Horizontal (Onslaught X)",
+        u"onslaughtPosY": u"Vertical (Onslaught Y)",
     },
     u"de": {
         u"modes": u"Modi",
@@ -389,6 +402,12 @@ _TOOLTIPS = {
                   u"The bar's CENTER, in pixels from the left screen edge."),
         u"posY": (u"Vertical position",
                   u"The bar's TOP, in pixels from the top screen edge."),
+        u"onslaughtPosX": (u"Horizontal position (Onslaught)",
+                           u"The bar's CENTER in the Onslaught garage, in pixels from the "
+                           u"left screen edge. 0 inherits the regular Horizontal position."),
+        u"onslaughtPosY": (u"Vertical position (Onslaught)",
+                           u"The bar's TOP in the Onslaught garage, in pixels from the top "
+                           u"screen edge. 0 inherits the regular Vertical position."),
     },
     u"de": {
         u"showWhenComplete": (u"Vollständig fortgeschritten",

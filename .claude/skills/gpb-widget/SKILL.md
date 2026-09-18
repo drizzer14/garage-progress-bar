@@ -539,3 +539,9 @@ only** — it lives in the header, which the root's `pointer-events:none` covers
     sight (applied unchanged that once) so a later change can rescale it. Verified live 4K→1440p
     →1080p→4K: horizontal stays centered, vertical scales exactly and round-trips with no drift.
     (Python side: `g_guiResetters` + a broadened `onSettingsChanged` also refresh — see gpb-architecture.)
+- **The wire is mode-blind by design — `applyPosition` never sees "Onslaught".** Python picks
+  which stored position (plain-garage vs Onslaught/Comp7) to send; the JS field is always the
+  generic `data.posX`/`data.posY`/`posW`/`posH`. The Python setting name `onslaughtPosX` shows up
+  only in a JS comment and is stripped by the minifier, so grepping the packaged JS for it is NOT
+  a valid presence check for the per-garage-position feature — check `is_onslaught_garage()` +
+  the bridge branch instead (gpb-architecture → Onslaught garage).

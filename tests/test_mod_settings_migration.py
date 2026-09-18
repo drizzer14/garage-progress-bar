@@ -214,6 +214,43 @@ def test_migration_exclude_elite_system_absent_is_noop():
     assert api.saved == 1
 
 
+# --- onslaught X/Y (v14->15) ------------------------------------------------
+
+def test_migration_14_to_15_preserves_values_and_seeds_onslaught_defaults():
+    # A v14 stored dict (before the Onslaught garage got its own X/Y) with pinned position +
+    # other non-default settings must survive the 14->15 bump intact, and the two NEW keys
+    # (onslaughtPosX/onslaughtPosY, absent from the old dict) seed to their fresh 0 default.
+    old = {
+        "enabled": True,
+        "showWhenComplete": True,
+        "scale": 1,
+        "ignoreFreeXp": True,
+        "posX": 640, "posY": 190, "posW": 1920, "posH": 1080,
+        "showTechTree": False,
+        # The buggy pre-15 build parked a BOOL here. clamp_pos would turn True into a stray
+        # 1px pin the read-time bool guard can't catch -- the migration must discard it to 0.
+        "onslaughtPosY": True,
+    }
+    api = _FakeMsaApi(stored=old, stored_version=14)
+    _run_init_with(api)
+    # Every existing setting survives the bump, unchanged.
+    assert M.pos_x() == 640 and M.pos_y() == 190
+    assert M.pos_w() == 1920 and M.pos_h() == 1080
+    assert M.scale() == 1 and M.ignore_free_xp() is True
+    assert M._settings["showTechTree"] is False
+    # The new keys land at 0 -- the stray pre-15 True is discarded, NOT migrated to 1.
+    assert M._settings["onslaughtPosX"] == 0
+    assert M._settings["onslaughtPosY"] == 0
+    assert M._settings["onslaughtPosY"] is not True
+    # onslaught accessors therefore inherit the (surviving) regular position.
+    assert M.onslaught_pos_x() == 640
+    assert M.onslaught_pos_y() == 190
+    # The discarded value is not carried into the persisted payload either.
+    written = api.state["settings"][M.LINKAGE]
+    assert written["onslaughtPosX"] == 0 and written["onslaughtPosY"] == 0
+    assert api.updated == 1 and api.saved == 1
+
+
 # --- fresh install ----------------------------------------------------------
 
 def test_fresh_install_yields_defaults_without_spurious_persist():

@@ -8,7 +8,7 @@ from wgmod_research import _compat as c
 def test_scrub_windows_absolute_traceback_frame():
     line = (
         'File "C:\\Users\\Ivan\\Games\\WoT_EU\\mods\\2.3.1.2\\'
-        'com.14th_ua.garageprogressbar_5.0.0.wotmod\\res\\scripts\\client\\'
+        'com.14th_ua.garageprogressbar_6.0.0.wotmod\\res\\scripts\\client\\'
         'wgmod_research\\bridge\\gameface_bridge.py", line 88'
     )
     result = c._scrub_paths(line)
@@ -23,7 +23,7 @@ def test_scrub_windows_absolute_traceback_frame():
 def test_scrub_forward_slash_wotmod_packed_variant():
     line = (
         'File "C:/Users/Ivan/Games/WoT_EU/mods/2.3.1.2/'
-        'com.14th_ua.garageprogressbar_5.0.0.wotmod/res/scripts/client/'
+        'com.14th_ua.garageprogressbar_6.0.0.wotmod/res/scripts/client/'
         'wgmod_research/bridge/gameface_bridge.py", line 88'
     )
     result = c._scrub_paths(line)
@@ -47,7 +47,7 @@ def test_scrub_non_client_absolute_path_has_no_client_anchor():
 def test_scrub_unc_absolute_traceback_frame():
     line = (
         'File "\\\\BUILD-HOST\\share\\WoT_EU\\mods\\2.3.1.2\\'
-        'com.14th_ua.garageprogressbar_5.0.0.wotmod\\res\\scripts\\client\\'
+        'com.14th_ua.garageprogressbar_6.0.0.wotmod\\res\\scripts\\client\\'
         'wgmod_research\\bridge\\gameface_bridge.py", line 88'
     )
     result = c._scrub_paths(line)
@@ -69,11 +69,11 @@ def test_scrub_multiline_traceback_scrubs_every_frame():
     text = (
         "Traceback (most recent call last):\n"
         '  File "C:\\Users\\Ivan\\Games\\WoT_EU\\mods\\2.3.1.2\\'
-        'com.14th_ua.garageprogressbar_5.0.0.wotmod\\res\\scripts\\client\\'
+        'com.14th_ua.garageprogressbar_6.0.0.wotmod\\res\\scripts\\client\\'
         'wgmod_research\\bridge\\gameface_bridge.py", line 88, in refresh\n'
         "    push_model(vm)\n"
         '  File "C:\\Users\\Ivan\\Games\\WoT_EU\\mods\\2.3.1.2\\'
-        'com.14th_ua.garageprogressbar_5.0.0.wotmod\\res\\scripts\\client\\'
+        'com.14th_ua.garageprogressbar_6.0.0.wotmod\\res\\scripts\\client\\'
         'wgmod_research\\domain\\builder.py", line 40, in build_model\n'
         "    raise ValueError('boom')\n"
         "ValueError: boom"

@@ -1664,17 +1664,23 @@ function currentVP() {
     return { w: window.innerWidth || 0, h: window.innerHeight || 0 };
 }
 
-// Apply the user's dragged bar position (px), or fall back to the CSS default. posX = bar
-// CENTER-x, posY = bar TOP (px), both 0 == "auto". Both paths are VIEWPORT-AWARE so the bar
-// tracks a resolution / UI-scale change instead of freezing at the resolution it was placed on:
-//   - PINNED (posX/posY > 0): stored px were captured at data.posW x data.posH. If the
+// Apply the user's pinned bar position (px), or fall back to the CSS default. posX = bar
+// CENTER-x, posY = bar TOP (px), each axis independently 0 == "auto" for that axis. PER-AXIS:
+// the settings panel writes posX/posY (and onslaughtPosX/Y) one stepper at a time, so pinning
+// only Y (say) must leave X at its centered default rather than snapping to 0 -- an all-or-
+// nothing gate here used to wipe the whole pin on every single-axis edit. Both axes are
+// VIEWPORT-AWARE so the bar tracks a resolution / UI-scale change instead of freezing at the
+// resolution it was placed on:
+//   - PINNED (that axis > 0): stored px was captured at data.posW x data.posH. If the
 //     current viewport differs, rescale the px proportionally, apply, and echo the
 //     rescaled px + new capture size back via setPosition so the settings steppers track
 //     it (and the next push, now matching, won't re-rescale). A pre-fix pin with no
 //     posW/posH just applies as-is and self-heals on the next drag.
-//   - AUTO (0/0): clear inline left/top so the resolution-relative CSS default (centered,
-//     17.6vh) re-derives. Nothing is measured or sent back -- the panel's position steppers
-//     just show a plain 0 for "auto", so there's no default to feed.
+//   - AUTO (that axis == 0): clear that axis's inline left/top so its resolution-relative
+//     CSS default (centered, 17.6vh) re-derives. The panel's position stepper just shows a
+//     plain 0 for "auto".
+// No clamp here: a typed value applies verbatim, however far off-screen (the drag path's own
+// onMove clamp is separate and unaffected).
 // Fail-open: an older Python build without posX -> leave the CSS default untouched.
 function applyPosition(root, data) {
     if (root._wgDragging) return;   // never fight an in-progress drag
@@ -1682,32 +1688,29 @@ function applyPosition(root, data) {
     const vp = currentVP();
     const x = data.posX | 0;
     const y = data.posY | 0;
-    if (x > 0 && y > 0) {
-        let ax = x, ay = y;
-        const rw = data.posW | 0, rh = data.posH | 0;
-        if (rw && rh && vp.w && vp.h && (rw !== vp.w || rh !== vp.h)) {
-            // resolution/scale changed since the pin was captured -> rescale proportionally
-            ax = Math.round(x * vp.w / rw);
-            ay = Math.round(y * vp.h / rh);
-            // persist the rescaled px + the new capture size (steppers track it; converges
-            // because the next push carries posW/posH == the current viewport).
-            invokeCommand(CMD.SET_POSITION, { x: ax, y: ay, w: vp.w, h: vp.h });
-        } else if ((!rw || !rh) && vp.w && vp.h) {
-            // pinned px with NO recorded capture size -- a value typed into the panel
-            // steppers, or a position saved by a pre-fix build. Adopt the current viewport
-            // as the reference (apply the px unchanged now) so a LATER resolution / scale
-            // change can rescale it. Echo converges: the next push carries posW/posH.
-            invokeCommand(CMD.SET_POSITION, { x: x, y: y, w: vp.w, h: vp.h });
-        }
-        root.style.left = ax + "px";
-        root.style.top = ay + "px";
-        return;
+    const rw = data.posW | 0, rh = data.posH | 0;
+    const rescale = rw && rh && vp.w && vp.h && (rw !== vp.w || rh !== vp.h);
+    let ax = x, ay = y;
+    if (rescale) {
+        // resolution/scale changed since the pin was captured -> rescale proportionally
+        if (x > 0) ax = Math.round(x * vp.w / rw);
+        if (y > 0) ay = Math.round(y * vp.h / rh);
     }
-    // auto: keep the resolution-relative CSS default position (centered, 17.6vh) by clearing
-    // any inline override. Nothing is measured or sent -- posX/posY stay 0 (auto) and the
-    // panel's position steppers just show a plain 0.
-    root.style.left = "";
-    root.style.top = "";
+    // PER-AXIS pin: each axis is independent, so editing one settings stepper never moves
+    // or clears the other. 0 stays the "auto" sentinel for that axis.
+    root.style.left = x > 0 ? ax + "px" : "";
+    root.style.top = y > 0 ? ay + "px" : "";
+    if (rescale) {
+        // persist the rescaled px + the new capture size (steppers track it; converges
+        // because the next push carries posW/posH == the current viewport).
+        invokeCommand(CMD.SET_POSITION, { x: ax, y: ay, w: vp.w, h: vp.h });
+    } else if ((x > 0 || y > 0) && (!rw || !rh) && vp.w && vp.h) {
+        // at least one axis pinned with NO recorded capture size -- a value typed into the
+        // panel steppers, or a position saved by a pre-fix build. Adopt the current viewport
+        // as the reference (apply the px unchanged now) so a LATER resolution / scale
+        // change can rescale it. Echo converges: the next push carries posW/posH.
+        invokeCommand(CMD.SET_POSITION, { x: x, y: y, w: vp.w, h: vp.h });
+    }
 }
 
 // Keep a shown tooltip on-screen: clamp it horizontally within the BAR's own width

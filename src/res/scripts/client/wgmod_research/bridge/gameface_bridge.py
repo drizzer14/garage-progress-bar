@@ -28,6 +28,7 @@ from wgmod_research.adapter import engine_adapter
 from wgmod_research.adapter import actions
 from wgmod_research.adapter import i18n
 from wgmod_research.adapter import recent
+from wgmod_research.adapter.prb_read import is_onslaught_garage
 from wgmod_research.domain.builder import build_model, bar_visible
 from wgmod_research.domain.constants import Category
 from wgmod_research.domain.placement import choose_placement, INJECT, BLOCKED
@@ -518,7 +519,9 @@ def _on_set_position(*args):
         # default keeps the CSS position and sends nothing.)
         if x <= 0 or y <= 0:
             return
-        mod_settings.set_position(x, y, w=w, h=h)
+        # A drag in the Onslaught garage pins onslaughtPosY; in the plain garage, posY.
+        # X/W/H stay shared either way.
+        mod_settings.set_position(x, y, w=w, h=h, onslaught=is_onslaught_garage())
     except Exception:
         LOG_CURRENT_EXCEPTION()
 
@@ -750,8 +753,13 @@ def push(rvm, host_vm=None):
             # JSON so the whole bundle rides one field. ensure_ascii escapes non-ASCII
             # (e.g. Cyrillic) to \uXXXX, which JS JSON.parse decodes back.
             tx.setLabels(labels_json)
-            tx.setPosX(mod_settings.pos_x())
-            tx.setPosY(mod_settings.pos_y())
+            # Both X and Y are per-garage now (Onslaught reuses the same hangar view but its
+            # header sits elsewhere); only W/H (the capture viewport, for rescale) stay
+            # shared. onslaught_pos_x/onslaught_pos_y fall back to the regular posX/posY until
+            # the player pins an Onslaught position.
+            _ons = is_onslaught_garage()
+            tx.setPosX(mod_settings.onslaught_pos_x() if _ons else mod_settings.pos_x())
+            tx.setPosY(mod_settings.onslaught_pos_y() if _ons else mod_settings.pos_y())
             tx.setPosW(mod_settings.pos_w())
             tx.setPosH(mod_settings.pos_h())
             tx.setMode(model.mode)

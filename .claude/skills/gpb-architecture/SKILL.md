@@ -116,6 +116,17 @@ set by their own numeric steppers and Ctrl+drag; `posW`/`posH` (the capture-view
 rescale) stay shared across both garages. `onslaughtPosX` was added and `onslaughtPosY`
 promoted to a user-facing stepper in the `settingsVersion` 14->15 bump above.
 
+- **The Onslaught-vs-regular WIRE is mode-blind — the field name `onslaughtPosX`/`onslaughtPosY`
+  never crosses to JS, and a build-integrity grep for it in the packaged/minified widget WILL
+  find nothing.** Python is the only layer that knows which garage it is: the bridge branches on
+  `is_onslaught_garage()` to pick `mod_settings.onslaught_pos_x()/y()` vs `pos_x()/y()`, then
+  pushes the chosen value through the SAME generic wire field, `data.posX`/`data.posY` (also
+  `posW`/`posH`), consumed by the ONE `applyPosition()` in the widget (gpb-widget → "Position is
+  viewport-aware"). The Python setting-key spelling `onslaughtPosX` appears only in a JS source
+  comment and is stripped by the build minifier — it is not a real DOM/wire token. **A presence
+  check for this feature must grep `applyPosition` + `prb_read.py`'s `is_onslaught_garage` branch
+  in `gameface_bridge.py`, never the built/minified JS for `onslaughtPosX`.**
+
 ## COMPLETE ("Fully Progressed") — the gate, not a builder
 Shipped in `e0ae891`. **The gate is "every category that APPLIES to this vehicle is finished"** —
 NOT, as it was before, "no builder returned a candidate". The old `not cands` gate was almost

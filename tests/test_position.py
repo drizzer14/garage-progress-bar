@@ -160,6 +160,74 @@ def test_real_drag_persists_as_position():
     assert mod_settings._settings["posY"] == 300
 
 
+# --- per-garage X AND Y (Onslaught vs regular garage) --------------------------------
+
+def test_default_onslaught_pos_inherits_regular():
+    assert mod_settings.DEFAULTS["onslaughtPosX"] == 0
+    assert mod_settings.DEFAULTS["onslaughtPosY"] == 0
+
+
+def test_set_position_onslaught_writes_both_onslaught_coords_only():
+    # onslaught=True routes BOTH x/y into onslaughtPosX/onslaughtPosY, leaves the regular
+    # posX/posY untouched, and still writes the SHARED posW/posH.
+    mod_settings._settings["posX"] = 111
+    mod_settings._settings["posY"] = 222
+    mod_settings._settings["onslaughtPosX"] = 0
+    mod_settings._settings["onslaughtPosY"] = 0
+    mod_settings.set_position(30, 500, w=3840, h=2160, onslaught=True)
+    assert mod_settings._settings["onslaughtPosX"] == 30
+    assert mod_settings._settings["onslaughtPosY"] == 500
+    assert mod_settings._settings["posX"] == 111          # regular X unchanged
+    assert mod_settings._settings["posY"] == 222          # regular Y unchanged
+    assert mod_settings._settings["posW"] == 3840 and mod_settings._settings["posH"] == 2160
+
+
+def test_set_position_default_writes_only_regular_coords():
+    # Default (onslaught=False) writes posX/posY and leaves the onslaught keys untouched.
+    mod_settings._settings["posX"] = 0
+    mod_settings._settings["posY"] = 0
+    mod_settings._settings["onslaughtPosX"] = 111
+    mod_settings._settings["onslaughtPosY"] = 222
+    mod_settings.set_position(30, 500)
+    assert mod_settings._settings["posX"] == 30
+    assert mod_settings._settings["posY"] == 500
+    assert mod_settings._settings["onslaughtPosX"] == 111   # onslaught X unchanged
+    assert mod_settings._settings["onslaughtPosY"] == 222   # onslaught Y unchanged
+
+
+def test_onslaught_pos_falls_back_to_regular_when_unset():
+    mod_settings._settings["posX"] = 960
+    mod_settings._settings["posY"] = 190
+    mod_settings._settings["onslaughtPosX"] = 0
+    mod_settings._settings["onslaughtPosY"] = 0
+    assert mod_settings.onslaught_pos_x() == 960           # 0 -> inherit regular X
+    assert mod_settings.onslaught_pos_y() == 190           # 0 -> inherit regular Y
+
+
+def test_onslaught_pos_uses_pinned_when_set():
+    mod_settings._settings["posX"] = 960
+    mod_settings._settings["posY"] = 190
+    mod_settings._settings["onslaughtPosX"] = 42
+    mod_settings._settings["onslaughtPosY"] = 420
+    assert mod_settings.onslaught_pos_x() == 42
+    assert mod_settings.onslaught_pos_y() == 420
+
+
+def test_apply_clamps_onslaught_pos_as_a_position_not_a_bool():
+    # Root cause: _on_changed re-ingests the FULL settings dict (MSA's global
+    # onSettingsChanged broadcast, fired by set_position's own saveState()) through
+    # _apply(). Without their own clamp_pos branch, the onslaught keys fell through to the
+    # generic bool() coercion -- turning a just-written numeric coord into True.
+    mod_settings._apply({"onslaughtPosX": 300, "onslaughtPosY": 500})
+    assert mod_settings._settings["onslaughtPosX"] == 300
+    assert mod_settings._settings["onslaughtPosX"] is not True
+    assert mod_settings._settings["onslaughtPosY"] == 500
+    assert mod_settings._settings["onslaughtPosY"] is not True
+    # a passed bool coerces to the 0/1 int clamp_pos yields, never stays a bool.
+    mod_settings._apply({"onslaughtPosX": True})
+    assert mod_settings._settings["onslaughtPosX"] is not True
+
+
 # --- capture viewport (posW/posH) for resolution-aware rescale -----------------------
 
 def test_real_drag_stores_capture_viewport():
@@ -202,7 +270,8 @@ def test_reset_returns_to_auto_not_seeded_px():
 # fails soft to English -- _template() renders the English master here.
 _VARNAMES = {"showWhenComplete", "allowFallthrough", "ignoreFreeXp", "showPercent",
              "showTechTree", "showSkillTree", "showFieldMods", "showEliteRewards",
-             "showElite", "showPotentialTierXI", "scale", "progressMode", "posX", "posY"}
+             "showElite", "showPotentialTierXI", "scale", "progressMode", "posX", "posY",
+             "onslaughtPosX", "onslaughtPosY"}
 
 _COLUMNS = ("column1", "column2")
 
@@ -214,7 +283,7 @@ _MODES = {"showTechTree", "showFieldMods", "showPotentialTierXI", "showSkillTree
 def test_template_structure_and_english_text():
     tpl = mod_settings._template()
     # Structure the host owns is language-independent.
-    assert tpl["settingsVersion"] == 14          # bumped for the allowFallthrough varName
+    assert tpl["settingsVersion"] == 15          # bumped for the onslaught X/Y steppers
     assert tpl["modDisplayName"] == "Garage Progress Bar"   # brand, never translated
     varnames = [c["varName"] for col in _COLUMNS for c in tpl[col] if "varName" in c]
     assert set(varnames) == _VARNAMES
@@ -257,6 +326,12 @@ def test_template_structure_and_english_text():
     assert col2[7]["text"] == u"Scale"                               # scale radios
     assert col2[8]["type"] == "Empty"                                # spacer before Position
     assert col2[9]["text"] == u"Position (px)"                       # sub-header, NOT bold
+    assert col2[10]["varName"] == "posX"                             # regular steppers
+    assert col2[11]["varName"] == "posY"
+    assert col2[12]["varName"] == "onslaughtPosX"                    # Onslaught steppers
+    assert col2[12]["text"] == u"Horizontal (Onslaught X)"
+    assert col2[13]["varName"] == "onslaughtPosY"
+    assert col2[13]["text"] == u"Vertical (Onslaught Y)"
     # Per-mode checkbox labels come from WG's own strings (i18n.widget_labels(), which
     # fails soft to English feature names here).
     assert col1[1]["text"] == u"Research"                            # showTechTree
