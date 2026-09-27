@@ -2,7 +2,7 @@
 
 The **full generic symbol catalogue** (what each WoT/BigWorld/Wulf/OpenWG symbol is, its exact
 call/return shape, where it lives in the decompiled client, and the gotchas) is in the
-**wotmod-architecture** harness skill's `references/game-api.md`. Read that first for any symbol.
+**wotmod:architecture** harness skill's `references/game-api.md`. Read that first for any symbol.
 
 This file records only *which module in THIS mod uses which symbol* — the mapping the harness
 catalogue is deliberately generic about. All reads are wrapped in try/except so an API drift

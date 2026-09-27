@@ -1,6 +1,6 @@
 ---
 name: gpb-architecture
-description: Architecture of the Garage Progress Bar WoT mod specifically — its concrete wgmod_research file tree, the seven bar modes + priority order (including the opt-in POTENTIAL_TIER_XI speculative bar), the resolvers, per-item tech-tree pricing, blueprint discount, done-marker reconcile, and the ResearchVM/TickVM/UpgradeVM shapes. Use when editing or extending THIS mod's Python, adding a bar mode, tracing a click→research action, or debugging why the bar doesn't update. (For the reusable engine-free domain/adapter/bridge discipline and the conventions that bite, see the wotmod-architecture harness skill; for the JS/CSS widget, gpb-widget; for the ModsSettingsAPI panel's mechanics, wotmod-msa-settings; for the settings-panel localization pattern, wotmod-i18n-settings; for live game symbols, references/game-api.md.)
+description: Architecture of the Garage Progress Bar WoT mod specifically — its concrete wgmod_research file tree, the seven bar modes + priority order (including the opt-in POTENTIAL_TIER_XI speculative bar), the resolvers, per-item tech-tree pricing, blueprint discount, done-marker reconcile, and the ResearchVM/TickVM/UpgradeVM shapes. Use when editing or extending THIS mod's Python, adding a bar mode, tracing a click→research action, or debugging why the bar doesn't update. (For the reusable engine-free domain/adapter/bridge discipline and the conventions that bite, see the wotmod:architecture harness skill; for the JS/CSS widget, gpb-widget; for the ModsSettingsAPI panel's mechanics, wotmod:msa-settings; for the settings-panel localization pattern, wotmod:i18n-settings; for live game symbols, references/game-api.md.)
 ---
 
 # wgmod architecture (this mod's specifics)
@@ -8,9 +8,9 @@ description: Architecture of the Garage Progress Bar WoT mod specifically — it
 The reusable pattern — engine-free `domain/` vs `adapter/` (reads+writes) vs `bridge/`
 (Wulf/Gameface), and the conventions that bite (listeners re-arm every mount, Wulf MAP-arg,
 fail-soft reads, `_compat.py` shim, hand-numbered VM indices, import≠ready) — lives in the
-**wotmod-architecture** harness skill, and the MSA settings panel's mechanics
+**wotmod:architecture** harness skill, and the MSA settings panel's mechanics
 (register/migrate lifecycle, replace-not-merge + `saveState`, guards, bump rules) in
-**wotmod-msa-settings**. This skill is how the Garage Progress Bar realizes them.
+**wotmod:msa-settings**. This skill is how the Garage Progress Bar realizes them.
 
 ```
 src/res/scripts/client/
@@ -19,7 +19,7 @@ src/res/scripts/client/
     _compat.py                        # engine shims: LOG_* fallbacks + _safe/_safe_int guards
                                        #   owns the two log tiers (LOG_NOTE dev-gated / LOG_PROD
                                        #   always-on) + auto-path-scrubbed LOG_CURRENT_EXCEPTION
-                                       #   -- full pattern in the wotmod-logger harness skill
+                                       #   -- full pattern in the wotmod:logger harness skill
     adapter/engine_adapter.py         # READ orchestrator: build_snapshot() composes the readers
     adapter/tech_read.py              #   reader: tech-tree modules + next vehicles
     adapter/post_progression_read.py  #   reader: linear field modifications
@@ -205,7 +205,7 @@ tank now shows Fully Progressed instead of the Elite bar.)
 
 ## Conventions specific to this mod
 - **A GATE resolver must fail CLOSED — the repo-wide fail-soft rule INVERTS into a bug here.**
-  "Every engine read fails soft to empty" (the harness `wotmod-architecture` convention) is right
+  "Every engine read fails soft to empty" (the harness `wotmod:architecture` convention) is right
   for a resolver that *displays* data: one bad read degrades one category. It is **wrong** wherever
   the value gates a *claim*. Live bug, caught by qa before `e0ae891` shipped: `complete.resolve`
   originally wrapped applicability+doneness in one `try`, so a category whose probe raised was
@@ -217,7 +217,7 @@ tank now shows Fully Progressed instead of the Elite bar.)
   exception is indistinguishable from "not applicable", since the readers already degrade to
   empty). Rule of thumb: **fail soft when the answer is "what to show", fail closed when the answer
   is "is it finished / allowed / paid".** *(Generic — propagate a terse version to the harness
-  `wotmod-architecture` fail-soft bullet. Not edited there.)*
+  `wotmod:architecture` fail-soft bullet. Not edited there.)*
 - **Tech-tree ticks are priced PER ITEM, not cumulatively.** `techtree.py` places each tick at
   its own cost (`xp_position = cost`, `affordable = cost <= spendable`) — items are
   independently researchable. Field mods are the exception (`fieldmods.py` stays cumulative —
@@ -366,12 +366,12 @@ tank now shows Fully Progressed instead of the Elite bar.)
   ELITE grade-band tooltip already uses (gpb-widget → `eliteTipIconHtml`). Verified by parsing
   every `.mo` under `res/text/lc_messages` (no msgstr matches `^Elite Level$`) — that parse is how
   you answer "does this string exist / does it take a macro" with the client CLOSED.
-- **Settings-panel localization — read `wotmod-i18n-settings` FIRST.** The reusable MSA-panel
+- **Settings-panel localization — read `wotmod:i18n-settings` FIRST.** The reusable MSA-panel
   pattern (lang-major tables with English master + per-key fallback + untranslated-leak diagnostic,
   `getClientLanguage`/`_norm` incl. `ua`→`uk`, `{HEADER}/{BODY}` tooltip assembly, and THE gotcha —
   MSA caches a COPY of the template text at registration, so a text-only change never reaches an
   existing install without walking the stored template in place, and needs NO `settingsVersion`
-  bump) lives in the **wotmod-i18n-settings** harness skill. This mod's *concretes* only
+  bump) lives in the **wotmod:i18n-settings** harness skill. This mod's *concretes* only
   (`adapter/settings_i18n.py` + `bridge/mod_settings.py`):
   - **Panel shape: three `Label`-headed categories over TWO columns, no master checkbox.**
     column1 = "Modes" (the seven per-mode toggles, all STANDALONE — the old `showBar` master
@@ -382,10 +382,10 @@ tank now shows Fully Progressed instead of the Elite bar.)
     a third declared column only renders side-by-side while the USER's global MSA
     `multiColumnMode` toolbar toggle is on (default OFF); with it off Aslain folds the declared
     columns round-robin (`i % columnCount`, columnCount=2) and `column3` would stack UNDER
-    column1. Full mechanism + caveats: wotmod-msa-settings → columns.
+    column1. Full mechanism + caveats: wotmod:msa-settings → columns.
   - **DON'T bump `settingsVersion` for a layout change** — the bump rules (what is structural to
     Aslain's `(varName, type, domain)` signature and what isn't, and why every bump costs a wipe
-    `init()` then migrates back) are wotmod-msa-settings; the same correction is inlined in
+    `init()` then migrates back) are wotmod:msa-settings; the same correction is inlined in
     `mod_settings._template()`. This mod's 8->9 bump (a pure column move of `showPercent`) was
     gratuitous and wiped users' settings for nothing.
     Honest bump history: 4->5 (modes inverted into the then-`showBar` master — *the layout half
@@ -402,7 +402,7 @@ tank now shows Fully Progressed instead of the Elite bar.)
     from an internal-only key to a user-facing stepper — see "Bar position is
     resolution-aware" below for the Onslaught X/Y split). Current `settingsVersion` =
     **15**. (varName-less `Label`/`Empty` rows are NOT collected into
-    `_settingsStructure` — resolved in wotmod-msa-settings.)
+    `_settingsStructure` — resolved in wotmod:msa-settings.)
   - **`settings_i18n.COL1_KEYS`/`COL2_KEYS` must stay in lockstep with `_template()` wire order,
     POSITIONALLY — textless rows included.** `_sync_template_text` zips the key tuples against
     the STORED template's component list, so **every textless row (a `Label` header, an `Empty`
@@ -426,7 +426,7 @@ tank now shows Fully Progressed instead of the Elite bar.)
     descriptor. `COL2_KEYS` = `(formatting, ignoreFreeXp, showPercent, progressMode, SPACER,
     layout, scale, position, posX, posY)` — the three category `Label`s and the `Empty` spacer
     each own a slot (see the lockstep bullet above). Adding it bumped
-    `settingsVersion` 6->7 (option-set change — see wotmod-i18n-settings "Option-bearing
+    `settingsVersion` 6->7 (option-set change — see wotmod:i18n-settings "Option-bearing
     controls"). `mod_settings.scale()` reads the index back; `bridge.push` writes it to
     `ResearchVM.scale` (prop 33); the widget folds `.wg-large` when it's `1` — the VISUAL
     mechanism (asymmetric width x2.0 / rest x1.5 via an explicit override class) is gpb-widget.
@@ -446,11 +446,11 @@ tank now shows Fully Progressed instead of the Elite bar.)
       bump branch resets every stored value to the template's `value` (scale → `0` = small), so it
       explains a wiped pinned position after an update but never a Large bar. The bump/migrate
       mechanics themselves (`setModTemplate` self-persisting, the `old_raw` overlay landing as one
-      debounced write — shipped in `0fc07fc`) are wotmod-msa-settings.
+      debounced write — shipped in `0fc07fc`) are wotmod:msa-settings.
   - **The int-index keys need their own `_apply()` branch ABOVE the `bool()` fallthrough** —
     `scale` → `_clamp_index`, `progressMode` → `_clamp_index`, position keys → `clamp_pos`,
     `modeOverrides` → verbatim string; everything else is a bool. Any new index-valued control
-    needs its own clamp + branch. Why the generic `bool()` destroys an index: wotmod-msa-settings.
+    needs its own clamp + branch. Why the generic `bool()` destroys an index: wotmod:msa-settings.
   - **A new persisted key needs its `_apply()` branch in the SAME change that adds it** —
     confirmed bug: `onslaughtPosY` was added to `DEFAULTS` and to `set_position()`'s write, but
     not to the `("posX","posY","posW","posH")` position branch. `set_position()` calls
@@ -492,14 +492,14 @@ tank now shows Fully Progressed instead of the Elite bar.)
     separately from `text`/`tooltip`, so a text/tooltip-only rewrite loop leaves them frozen in
     whatever language the panel first registered with; a fresh install hides the bug because its
     template was already written in the current language). Still text-only, no `settingsVersion`
-    bump. Full mechanism in **wotmod-i18n-settings** → "THE gotcha"; regression test
+    bump. Full mechanism in **wotmod:i18n-settings** → "THE gotcha"; regression test
     `test_sync_template_text_relabels_stale_radio_options` (`tests/test_position.py`).
   - **The `<b>` bold-header wrap MUST live inside `render_panel()`, not `_template()`** — the
     single function both the initial build and `_sync_template_text` source their text from.
     `HEADER_KEYS` (frozenset of the three category `Label` keys) gates the wrap in
     `render_panel()`. Applying it a layer higher would make the sync compare stored (wrapped) vs
     freshly-rendered (unwrapped) text on every launch, strip the wrap back out, and
-    `saveState()` on every init — see wotmod-i18n-settings "A display transform belongs in ONE
+    `saveState()` on every init — see wotmod:i18n-settings "A display transform belongs in ONE
     function" for the mechanism. Guard: `test_sync_template_text_is_idempotent_over_the_bold_headers`
     (a DOUBLE sync asserting zero writes on the second pass — a single "is it bold" assertion
     would miss this). `bridge/mod_settings.py`'s `_label()` sets `useHTML: True` on the Label
@@ -507,7 +507,7 @@ tank now shows Fully Progressed instead of the Elite bar.)
   - **`scale` and `progressMode` ARE inline `RadioButtonGroup`s as of `settingsVersion` 11** —
     swapped from `Dropdown` with zero coercion changes (same 0-based-index value shape; only the
     descriptor `type` + `inline: True` moved), at the cost of the bump a `type` change forces.
-    `inline` is emitted as a plain KEY, not through the vendor kwarg — see wotmod-msa-settings.
+    `inline` is emitted as a plain KEY, not through the vendor kwarg — see wotmod:msa-settings.
 - **Bar position is resolution-aware, and the recompute lives in the WIDGET, not Python.**
   `posX`/`posY` are px, `0/0` = auto (the resolution-relative CSS default position — centered,
   ~17.6vh). The two position steppers (`posX` "Horizontal (center X)", `posY` "Vertical (top Y)")
@@ -559,5 +559,5 @@ the `view_models.py` command names in lockstep (see gpb-widget).
 
 ## Adding a new read or write?
 The concrete WoT/BigWorld symbols this mod uses — and which reader/action each lives in — are
-in `references/game-api.md`. The full generic symbol catalogue is the **wotmod-architecture**
+in `references/game-api.md`. The full generic symbol catalogue is the **wotmod:architecture**
 harness skill's `references/game-api.md`. Read before adding a `*_read.py` or an `actions.py` path.

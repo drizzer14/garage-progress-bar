@@ -1,13 +1,13 @@
 ---
 name: gpb-widget
-description: Front-end specifics of the Garage Progress Bar widget (WGModResearch.js/.css) — its #wgmod-root DOM tree, wire-contract constants, the unified tick-render loop, per-mode render branches, elite grade badges, the COMPLETE ("Fully Progressed") golden bar + finished-category row, icon-family size normalization, done markers, lane de-crowding, hover/click hit-testing, the Ctrl+drag y-floor sentinel, the cold-mount self-heal render poll (the fix for the bar frozen-until-camera-moves after a tank/mode switch), and the resolution/UI-scale-aware position rescale. Use when editing this mod's widget, changing how the bar/ticks/tooltips/chips look or behave, wiring a new tick category, or debugging "bar frozen after switch" / "bar position after resolution change". (For the generic Gameface/Wulf front-end conventions and CSS quirks, see the wotmod-gameface-widget harness skill; for the Python side, gpb-architecture. Widget text is localized by reusing WG's own strings via Python `i18n.widget_labels()` — see gpb-architecture; the mod's own MSA settings-PANEL prose is a separate concern owned by the wotmod-i18n-settings harness skill.)
+description: Front-end specifics of the Garage Progress Bar widget (WGModResearch.js/.css) — its #wgmod-root DOM tree, wire-contract constants, the unified tick-render loop, per-mode render branches, elite grade badges, the COMPLETE ("Fully Progressed") golden bar + finished-category row, icon-family size normalization, done markers, lane de-crowding, hover/click hit-testing, the Ctrl+drag y-floor sentinel, the cold-mount self-heal render poll (the fix for the bar frozen-until-camera-moves after a tank/mode switch), and the resolution/UI-scale-aware position rescale. Use when editing this mod's widget, changing how the bar/ticks/tooltips/chips look or behave, wiring a new tick category, or debugging "bar frozen after switch" / "bar position after resolution change". (For the generic Gameface/Wulf front-end conventions and CSS quirks, see the wotmod:gameface-widget harness skill; for the Python side, gpb-architecture. Widget text is localized by reusing WG's own strings via Python `i18n.widget_labels()` — see gpb-architecture; the mod's own MSA settings-PANEL prose is a separate concern owned by the wotmod:i18n-settings harness skill.)
 ---
 
 # wgmod widget (this mod's front-end)
 
 Generic Gameface/Wulf conventions (the `ModelObserver`+`unwrap` lifecycle, wire-contract
 discipline, `pointer-events` layering, `invokeCommand` MAP-wrapping, `img://` art, the CSS
-quirks) live in the **wotmod-gameface-widget** harness skill. This skill is the Garage
+quirks) live in the **wotmod:gameface-widget** harness skill. This skill is the Garage
 Progress Bar's concrete widget: `src/res/gui/gameface/mods/14th_ua/WGModResearch/WGModResearch.{js,css}`,
 which reads `wgResearch` and renders a single-axis XP bar.
 
@@ -23,7 +23,7 @@ fails silently). `MODE.HIDDEN` exists for completeness only: the HIDDEN model ar
 initial `renderAndTrack(observer.model)`, and `window.__wgPoll = setInterval(pollForChanges, 250)`
 (cleared first, so it re-arms per mount and never stacks). The poll is this mod's fix for OpenWG's
 **cold-mount dormant `viewEnv.onDataChanged`** event (the generic finding lives in
-wotmod-gameface-widget → Lifecycle): on a freshly-mounted sub-view the engine withholds the
+wotmod:gameface-widget → Lifecycle): on a freshly-mounted sub-view the engine withholds the
 data-changed event until the view next composites, so after a mode/tank switch in an idle garage
 the observer never fires and the bar looked **frozen until the camera moved** (the first paint
 survived only because it's the direct call, not observer-driven). `revOf(model)` reads
@@ -417,7 +417,7 @@ variants.** A buff row carries both `.wg-tip-effect` and `.wg-tip-buff`, so it i
 description row's wrapping: `.wg-tip-buff` needs explicit `flex-wrap:nowrap; white-space:normal`,
 or `wrap` drops the phrase under the value and `pre-wrap` turns the literal space emitted between
 the value and desc spans into a visible extra gap.
-*(Propagate the two blocks above to the harness `wotmod-gameface-widget` CSS-gotchas list — they
+*(Propagate the two blocks above to the harness `wotmod:gameface-widget` CSS-gotchas list — they
 are generic Coherent behaviour, not mod-specific. Not edited here.)*
 
 ### Scoping a rule to ONE tooltip variant — `xpFracHtml`'s `tailHtml`
@@ -443,7 +443,7 @@ warning at `.wg-tip-xp-tail .wg-tip-icon-elite` (`WGModResearch.css` ~1876-1888)
 **Debugging lesson, because it cost four rounds:** when an in-client observation says "nothing moved",
 believe it over the spec-derived reasoning on the FIRST null result. This engine's layout is a subset
 of CSS, so "it should work per the spec" is not evidence.
-*(Generic Coherent behaviour — propagate to the harness `wotmod-gameface-widget` CSS-gotchas list
+*(Generic Coherent behaviour — propagate to the harness `wotmod:gameface-widget` CSS-gotchas list
 alongside "box-shadow needs a fill" / "transform needs explicit dims" / ":not() unreliable".
 Propagated — the harness list now carries a terse version of this entry.)*
 

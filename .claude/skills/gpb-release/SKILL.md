@@ -1,12 +1,12 @@
 ---
 name: gpb-release
-description: Cut a release of the Garage Progress Bar WoT mod — the exact 6 files to bump, the concrete build scripts, artifact filenames, and vendor payloads for THIS mod. Use whenever bumping the version, building the Setup .exe installer, assembling the wgmods.net bundle, or publishing the GitHub release. (For the generic release shape and traps, see the wotmod-release harness skill.)
+description: Cut a release of the Garage Progress Bar WoT mod — the exact 6 files to bump, the concrete build scripts, artifact filenames, and vendor payloads for THIS mod. Use whenever bumping the version, building the Setup .exe installer, assembling the wgmods.net bundle, or publishing the GitHub release. (For the generic release shape and traps, see the wotmod:release harness skill.)
 ---
 
 # Releasing the wgmod
 
 Generic shape (canonical version mirrored, annotated tag + `gh release`, installer + zips
-with bundled vendor deps, the don't-rename-the-.exe trap): see the **wotmod-release** harness
+with bundled vendor deps, the don't-rename-the-.exe trap): see the **wotmod:release** harness
 skill. This skill is this mod's concrete file list and commands. `gh` CLI and Inno Setup are
 installed on this machine (paths at the bottom).
 
@@ -94,7 +94,7 @@ Runs on either Python (only zips already-built files). Needs the `.wotmod` + all
 `readme.txt` (generated from `installer\readme.wgmods.txt`, `{VERSION}` auto-stamped). The
 `2.4.0.0` folder is `CLIENT_VERSION` in the generator; bump when the supported client changes.
 When the game CLIENT version itself changes (a new WoT patch), do NOT hand-edit these version
-strings — run **wotmod-upgrade-analyzer** then **wotmod-upgrade-implementer** (they own the
+strings — run **wotmod:upgrade-analyzer** then **wotmod:upgrade-implementer** (they own the
 seam-diff, the client-vs-mod-version distinction, and the major-bump-per-patch rule; the last
 run's plan is `TASKS/upgrade-<clientver>.json`).
 

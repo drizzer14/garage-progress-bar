@@ -1,13 +1,13 @@
 ---
 name: gpb-planner
-description: Backlog keeper for the Garage Progress Bar mod — this repo's TASKS.md/TASKS/ workflow plus its cross-session task-list sync hooks. Use whenever someone hands you an idea or bug to "record"/"save"/"note for later", asks you to be the "planner", wants to scan the repo for unrecorded ideas, or says an idea has shipped and should be pruned. (For the generic capture→research→note→prune workflow and the research-note structure, see the wotmod-planner harness skill.)
+description: Backlog keeper for the Garage Progress Bar mod — this repo's TASKS.md/TASKS/ workflow plus its cross-session task-list sync hooks. Use whenever someone hands you an idea or bug to "record"/"save"/"note for later", asks you to be the "planner", wants to scan the repo for unrecorded ideas, or says an idea has shipped and should be pruned. (For the generic capture→research→note→prune workflow and the research-note structure, see the wotmod:planner harness skill.)
 ---
 
 # Planner for the wgmod
 
 The reusable workflow — the two artifacts (`TASKS.md` backlog + `TASKS/<slug>.md` note), the
 note structure, how to research a submission, and how to prune a shipped idea — lives in the
-**wotmod-planner** harness skill. This skill adds this repo's concrete wiring: the sibling
+**wotmod:planner** harness skill. This skill adds this repo's concrete wiring: the sibling
 skills to lean on, the Task-list mirror, and the cross-session sync hooks.
 
 When researching a submission, lean on the sibling skills for the map: **gpb-architecture**

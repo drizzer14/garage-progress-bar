@@ -1,5 +1,18 @@
 {
   "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "shell": "bash",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/check-fast.sh\"",
+            "statusMessage": "Checking edited Python (py27 compile + ruff)"
+          }
+        ]
+      }
+    ],
     "UserPromptSubmit": [
       {
         "matcher": "",
@@ -7,7 +20,7 @@
           {
             "type": "command",
             "shell": "bash",
-            "command": "bash .claude/hooks/sync-ideas.sh 2>/dev/null || true",
+            "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/sync-ideas.sh\" 2>/dev/null || true",
             "statusMessage": "Checking TASKS.md for changes"
           }
         ]

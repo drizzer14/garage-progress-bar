@@ -1,12 +1,12 @@
 ---
 name: gpb-debug-repl
-description: Live in-client introspection for the Garage Progress Bar WoT mod via its debug TCP REPL — the specific debug package, tools, and probe snippets for THIS mod. Use whenever you need to inspect live game state, force a widget refresh, or debug why the bar isn't loading/updating in the running client. (For the generic probe technique and decompiled-source navigation, see the wotmod-debug-repl harness skill.)
+description: Live in-client introspection for the Garage Progress Bar WoT mod via its debug TCP REPL — the specific debug package, tools, and probe snippets for THIS mod. Use whenever you need to inspect live game state, force a widget refresh, or debug why the bar isn't loading/updating in the running client. (For the generic probe technique and decompiled-source navigation, see the wotmod:debug-repl harness skill.)
 ---
 
 # Live introspection for the wgmod
 
 Generic technique (bytecode arg-name probing, slim debug package, decompiled-source
-navigation, the general "isn't loading" checklist): see the **wotmod-debug-repl** harness
+navigation, the general "isn't loading" checklist): see the **wotmod:debug-repl** harness
 skill. This skill is this mod's concrete REPL + snippets.
 
 ## The debug REPL

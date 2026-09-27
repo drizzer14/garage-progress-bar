@@ -1,12 +1,12 @@
 ---
 name: gpb-build-deploy
-description: Build, deploy, test, and hot-reload the Garage Progress Bar WoT mod locally — the exact scripts, install path, client version, and overlay path for THIS mod. Use whenever building the .wotmod package, deploying into a local World of Tanks install, running the pytest suite, hot-reloading JS/CSS changes, or verifying a change in-game. (For the generic packaging/deploy/hot-reload pattern behind these commands, see the wotmod-build-deploy harness skill; for live in-client REPL introspection, see gpb-debug-repl.)
+description: Build, deploy, test, and hot-reload the Garage Progress Bar WoT mod locally — the exact scripts, install path, client version, and overlay path for THIS mod. Use whenever building the .wotmod package, deploying into a local World of Tanks install, running the pytest suite, hot-reloading JS/CSS changes, or verifying a change in-game. (For the generic packaging/deploy/hot-reload pattern behind these commands, see the wotmod:build-deploy harness skill; for live in-client REPL introspection, see gpb-debug-repl.)
 ---
 
 # Building, deploying & testing the wgmod
 
 Generic mechanics (two Pythons, `.wotmod` stored-ZIP + `meta.xml`, the `res_mods` shadowing
-trap, the hot-reload overlay loop): see the **wotmod-build-deploy** harness skill. This
+trap, the hot-reload overlay loop): see the **wotmod:build-deploy** harness skill. This
 skill is the concrete wiring for the Garage Progress Bar.
 
 ## Commands
@@ -58,14 +58,14 @@ skill is the concrete wiring for the Garage Progress Bar.
   (e.g. `mods\2.4.0.0\`) with the CLIENT CLOSED — a running client locks the stale
   `..._<oldver>.wotmod` (`Device or resource busy` on delete), so the old-copy cleanup can't
   finish while it's open. (Same-`<id>` highest-version-wins and scan-only-at-launch mechanics:
-  see **wotmod-build-deploy**.) Reserve `deploy_wotmod.py` for the normal build-and-deploy loop.
+  see **wotmod:build-deploy**.) Reserve `deploy_wotmod.py` for the normal build-and-deploy loop.
 - **Target:** EU/global `2.4.0.0` only (the current `deploy.local.json` client version — the
-  literal above is only an example; a client bump is run via **wotmod-upgrade-analyzer** /
-  **wotmod-upgrade-implementer**, not hand-edited here).
+  literal above is only an example; a client bump is run via **wotmod:upgrade-analyzer** /
+  **wotmod:upgrade-implementer**, not hand-edited here).
 - **Dependencies (same `mods/<version>/`):** OpenWG GameFace is a **hard** dependency; the
   bar itself renders without Aslain ModMenu (bundled `aslain.modmenu_2.0.03` +
   `modslistapi_1.7.9`, import surface `gui.aslainMenu`), but the settings panel, per-mode
-  toggles, and drag-position persistence need it. Mechanics: **wotmod-msa-settings**.
+  toggles, and drag-position persistence need it. Mechanics: **wotmod:msa-settings**.
 
 ## What's unit-testable vs in-game-only (plan verification around this)
 `pytest` (Py 3.13, no client) covers the ENGINE-FREE code only: everything under `domain/`
