@@ -1,0 +1,18 @@
+{
+  "_comment": "Origin/licence/sha256 for every bundled vendor .wotmod (see installer/README.md \"Bundled dependencies\"). Bump the sha256 (and origin/licence if they changed) whenever a vendor file is replaced -- tests/test_vendor_manifest.py fails the build otherwise.",
+  "aslain.modmenu_2.0.03.wotmod": {
+    "origin": "Aslain ModMenu (bundled with Aslain's WoT ModPack / gui.aslainMenu)",
+    "licence": "unknown -- redistributed as-is, same as it ships in community modpacks",
+    "sha256": "944bde1ec3a1a8d010067e58ccbcc45d149f43a0fd95650698956c760b28895c"
+  },
+  "me.poliroid.modslistapi_1.7.9.wotmod": {
+    "origin": "ModsList (https://gitlab.com/Poliroid/modslistapi)",
+    "licence": "unknown -- redistributed as-is, same as it ships in community modpacks",
+    "sha256": "d62237cd755412189f1d62855219c9035d0d0fea315a0d4505971639c86d8283"
+  },
+  "net.openwg.gameface_1.1.6.wotmod": {
+    "origin": "OpenWG GameFace (https://gitlab.com/openwg/wot.gameface)",
+    "licence": "open source, routinely redistributed in WoT mod packs",
+    "sha256": "26b190d216c758ccffa824766cbd6bb7cbfc9dfa041e530b99b0d1f02129d5e1"
+  }
+}

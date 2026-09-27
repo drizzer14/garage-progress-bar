@@ -77,7 +77,8 @@ redistributed the same way.
 To update any of them: download the newer `.wotmod`, replace the file in `vendor/`, and
 bump the matching `OpenWgWotmod` / `MsaWotmod` / `ModsListWotmod` define in
 `wgmod-setup.iss` (and the `$OpenWg` / `$Msa` / `$ModsList` path in `build_installer.ps1`
-if its filename changed).
+if its filename changed). `vendor/manifest.json` records each bundled file's origin,
+licence, and SHA-256 — update its entry too, or `tests/test_vendor_manifest.py` fails.
 
 ## Building the installer
 
