@@ -12,12 +12,15 @@ testpaths = ["tests"]
 # lint set below deliberately excludes any py3-only / upgrade rules (no UP/pyupgrade).
 target-version = "py37"
 line-length = 100
-# The in-game debug REPL server is Python-2-only source (print statement, `exec x in
-# ns`) that ships inside a 2.7 .wotmod; a py3-based linter can't parse it.
-extend-exclude = ["tools/dev/mod_wgmod_debug.py"]
+# build/vendor holds third-party vendored minifiers (rjsmin/rcssmin) we don't own --
+# their `# noqa` style predates ours (bare `# noqa`, no code), so PGH004 would fail on
+# code we never touch.
+extend-exclude = ["build/vendor"]
 
 [tool.ruff.lint]
 # Intentionally minimal -- high-signal, no-reformat rules only. E9 = syntax errors,
 # F = pyflakes (unused/misplaced imports, unused vars, undefined names). This
 # formalizes the existing `# noqa: F401`/`E402` markers without churning formatting.
-select = ["E9", "F"]
+# PGH004 = a bare `# noqa` is banned; name the rule it silences.
+# RUF100 = an unused `# noqa` (the rule it names no longer fires) must be deleted.
+select = ["E9", "F", "PGH004", "RUF100"]

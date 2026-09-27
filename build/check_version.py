@@ -65,7 +65,7 @@ META = os.path.join(ROOT, "src", "meta.xml")
 # bundle extracts into). We import it (it has no import-time side effects) and verify the
 # shipping/instruction files agree, so a client patch can't leave a straggler.
 sys.path.insert(0, os.path.join(ROOT, "build"))
-from build_wgmods_zip import CLIENT_VERSION  # noqa: E402
+from build_wgmods_zip import CLIENT_VERSION
 
 # Directories not worth scanning (build output, VCS, vendored binaries, editor cfg).
 _SKIP_DIRS = {".git", "dist", "__pycache__", "node_modules", ".idea", ".vscode",

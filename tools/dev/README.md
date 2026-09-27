@@ -40,27 +40,17 @@ Unit tests (engine-free domain layer, Python 3):
 ```
 
 ## Debug REPL (live introspection)
-`com.14th_ua.garageprogressbar_debug.wotmod` runs a TCP REPL on **127.0.0.1:2223** in the client
-(the sibling MoE Calculator's debug REPL uses **2224**, so both can run at once).
-- Build/deploy it (client closed):
-  `& "C:\Python27\python.exe" tools\dev\build_debug_wotmod.py "D:\Games\World_of_Tanks_EU" 2.4.0.1`
-- Drive it from the host (client running, in Garage):
-  `& "<py3>" tools\dev\repl_client.py "<expr>"` or `--file cmds.txt`
-- One command per line; state shared only within one run → put interdependent
-  commands in one `--file`. For multi-line code: write a `.py` and send
-  `execfile(r'<abs path>')` as one command.
-- Keep the debug package SLIM (only `mod_wgmod_debug.pyc`). If it also ships
-  `wgmod_research`, it conflicts with the real mod and WoT ignores it.
-
-### Handy REPL snippets
-The canonical probe snippets (current-vehicle → snapshot → model; force a widget refresh)
-live in the **gpb-debug-repl** skill's "Handy snippets" section — kept there so the two
-copies can't drift. See `.claude/skills/gpb-debug-repl/SKILL.md`.
+This mod's own debug REPL package has been retired. Live in-client introspection now goes
+through ONE harness-owned REPL shared across all 14th_ua mods:
+`wotmod-harness/plugins/wotmod/tools/debug-repl/` (package id `com.wotmod_harness.debug_repl`,
+port **2223**, client `repl_client.py` there). See the **wotmod:debug-repl** harness skill for
+build/deploy/drive commands, and this repo's **gpb-debug-repl** skill for this mod's probe
+snippets.
 
 ## Decompiled source (re-clone as needed; not in repo)
-Match the client's branch/region — use the **EU** branch (`2.3`):
+Match the client's branch/region — use the **EU** branch of `IzeBerg/wot-src` (live 2.4.0.1):
 ```
-& $git clone --depth 1 --branch 2.3 --single-branch https://github.com/StranikS-Scan/WorldOfTanks-Decompiled.git wot-eu
+& $git clone --depth 1 --branch EU --single-branch https://github.com/IzeBerg/wot-src.git wot-src-eu
 ```
 (The repo's default branch is a different regional client — cross-check against
 the live `res/packages/scripts.pkg` by listing module filenames.)

@@ -10,25 +10,12 @@ navigation, the general "isn't loading" checklist): see the **wotmod:debug-repl*
 skill. This skill is this mod's concrete REPL + snippets.
 
 ## The debug REPL
-A separate debug package runs a TCP REPL on **127.0.0.1:2223** inside the client (the sibling
-MoE Calculator's debug REPL uses **2224**, so both mods' debug servers can run simultaneously).
-```sh
-# Build/deploy the debug package (Py 2.7, client CLOSED)
-& "C:\Python27\python.exe" tools/dev/build_debug_wotmod.py "D:\Games\World_of_Tanks_EU" 2.3.1.2
-# Drive it from the host (Py 3.13, client RUNNING, in Garage)
-& "<py3>" tools/dev/repl_client.py "<expr>"
-& "<py3>" tools/dev/repl_client.py --file cmds.txt
-```
-- One command per line; state is shared only WITHIN one run, so put interdependent commands
-  in a single `--file`. For multi-line code, write a `.py` and send `execfile(r'<abs path>')`.
-- Keep the debug package SLIM (only `mod_wgmod_debug.pyc`). If it also ships `wgmod_research`
-  it conflicts with the real mod and the client ignores BOTH.
-- **The debug package and the real mod are DISJOINT — rebuilding one never updates the
-  other.** `build_debug_wotmod.py` packages ONLY the REPL entry module
-  (`mod_wgmod_debug.pyc`); it never touches `wgmod_research`. A source fix only reaches the
-  client via `build/deploy_wotmod.py <install> <ver>` (the real
-  `com.14th_ua.garageprogressbar_<ver>.wotmod`) + relaunch — see **gpb-build-deploy**. Mixing
-  these up mid-session silently re-tests stale code.
+The per-mod debug REPL (`tools/dev/mod_wgmod_debug.py`, `build_debug_wotmod.py`,
+`repl_client.py`) has been retired in favour of ONE harness-owned REPL used across all
+14th_ua mods: `wotmod-harness/plugins/wotmod/tools/debug-repl/` (package id
+`com.wotmod_harness.debug_repl`, port **2223**, client `repl_client.py` there). See the
+**wotmod:debug-repl** harness skill for build/deploy/drive commands — nothing mod-specific
+remains here.
 
 ### Handy snippets
 ```python
