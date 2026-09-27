@@ -583,7 +583,7 @@ def note_mount(name, vm):
     """Record candidate sub-view `name`'s ViewModel at mount and (re)place the widget
     on the best FREE sub-view. Returns (host_vm, rvm) to push into, or None if there is
     nothing to do this mount. Never overwrites another mod's ModInjectModel."""
-    global _placed_name, _placed_vm
+    global _placed_name, _placed_vm, _active
     if vm is None:
         return None
     _candidate_vms[name] = vm
@@ -602,6 +602,10 @@ def note_mount(name, vm):
         # mod claimed it first this mount, yield rather than clobber; else re-inject.
         if has_inject_model(vm):
             LOG_PROD("[wgmod] sub-view '%s' claimed by another mod this mount -- yielding" % name)
+            # _active still points at the OLD (now torn-down) VM from before this
+            # remount -- clear it so refresh()/push() correctly report "no active
+            # widget" instead of writing into a dead ViewModel until we re-attach.
+            _active = None
             return None
         rvm = attach(vm)
         if rvm is not None:

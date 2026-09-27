@@ -105,6 +105,11 @@ Turning every **Modes** toggle off hides the bar on every vehicle.
   pixel coordinates in the settings panel; the panel's per-mod reset returns it to auto.
 - **After a game update**, move the `.wotmod` to the new `mods\<version>\` folder. A
   new client version may need a rebuilt mod — check the Releases page.
+- **Clicking a finished tech-tree module marker** buys and mounts it in one click
+  (WG's own "Buy and equip" action) instead of only opening the Research screen for the
+  other progression types — it still runs WG's own credits-spend/confirm dialogs, so it
+  can't skip or misrepresent a purchase, but it is a convenience shortcut the base game
+  UI doesn't offer on its own.
 
 ## Conflicts with mods
 
@@ -237,6 +242,11 @@ Building, deploying, testing, and the repo layout are documented in
   автоматичне положення.
 - **Після оновлення гри** перемістіть `.wotmod` у нову папку `mods\<версія>\`. Нова
   версія клієнта може потребувати перезібраного мода — перевіряйте сторінку релізів.
+- **Клік по позначці завершеного модуля техдерева** одразу купує та встановлює його
+  (рідна дія гри «Купити й встановити»), а не лише відкриває екран досліджень, як для
+  інших типів прогресу — при цьому все одно спрацьовують рідні діалоги гри
+  щодо витрат/підтвердження, тож покупку не можна обійти чи приховати, але це зручність,
+  якої немає в базовому інтерфейсі гри.
 
 ## Конфлікти з модами
 

@@ -139,6 +139,10 @@ def _meta_version():
 _VENDOR_WOTMOD_RE = re.compile(r"\b([A-Za-z0-9_.]+?)_(\d+(?:\.\d+)*)\.wotmod\b")
 _SETTINGS_VERSION_SRC_RE = re.compile(r'(?:SETTINGS_VERSION|settingsVersion)\s*"?\s*[:=]\s*(\d+)')
 _SETTINGS_VERSION_DOC_RE = re.compile(r"(?:SETTINGS_VERSION|settingsVersion)\D{0,10}?(\d+)")
+# A line describing a PAST settingsVersion bump ("...6->7...", "bumped 13->14...", or
+# "as of settingsVersion 11") names an old number on purpose -- it's changelog prose,
+# not a claim about the CURRENT value, so it must not be flagged as stale.
+_SETTINGS_VERSION_CHANGELOG_RE = re.compile(r"\d\s*->\s*\d|\bas of\b", re.IGNORECASE)
 _ATLAS_DIMS_DOC_RE = re.compile(r"\b(\d{2,5})\s*[xX]\s*(\d{2,5})\b")
 _OWN_WOTMOD_RE = re.compile(r"com\.14th_ua\.garageprogressbar_\d+\.\d+\.\d+\.wotmod")
 
@@ -231,7 +235,7 @@ def _scan_line(line, vendor_ids, settings_version, atlas_dims):
                 findings.append(
                     "unrecognized vendor wotmod '%s' (shipped: %s)"
                     % (m.group(0), ", ".join(sorted(vendor_ids))))
-    if settings_version is not None:
+    if settings_version is not None and not _SETTINGS_VERSION_CHANGELOG_RE.search(line):
         m = _SETTINGS_VERSION_DOC_RE.search(line)
         if m and int(m.group(1)) != settings_version:
             findings.append("settingsVersion %s (current %s)" % (m.group(1), settings_version))
@@ -387,6 +391,13 @@ def demo():
 
     found = _scan_line(settings_line, set(), 15, None)
     assert any("11" in f for f in found), found
+
+    # changelog-shaped mentions of an OLD settingsVersion (a "N->M" bump note, or "as
+    # of settingsVersion N") describe history on purpose and must NOT be flagged.
+    bump_line = "settingsVersion" + " bumped 6->7 for the option-set change."
+    as_of_line = "Inline as of " + "settingsVersion" + " 11, per the skill."
+    assert _scan_line(bump_line, set(), 15, None) == [], _scan_line(bump_line, set(), 15, None)
+    assert _scan_line(as_of_line, set(), 15, None) == [], _scan_line(as_of_line, set(), 15, None)
 
     found = _scan_line(atlas_line, set(), None, (4096, 5076))
     assert any("4096x5152" in f for f in found), found

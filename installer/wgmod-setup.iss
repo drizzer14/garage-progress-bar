@@ -638,6 +638,11 @@ begin
     { one-time migration: remove the pre-rename id (com.drizzer14.wgmod_*) so an
       upgrading user doesn't end up with two bars loaded side by side }
     DelTree(modsDir + '\com.drizzer14.wgmod_*.wotmod', False, True, False);
+    { one-time migration: v5 and earlier bundled the predecessor
+      aslain.modssettingsapi_*.wotmod as the settings-panel provider; 6.0.0 switched
+      to aslain.modmenu_*.wotmod (same gui.aslainMenu surface). Remove the old one so
+      an upgrading user doesn't end up with two providers of gui.aslainMenu. }
+    DelTree(modsDir + '\aslain.modssettingsapi_*.wotmod', False, True, False);
     { remove our stale loose res_mods leftovers (these would shadow the package) }
     resMods := ExpandConstant('{app}') + '\res_mods\' + GVersion;
     DeleteFile(resMods + '\scripts\client\gui\mods\mod_wgmod.py');
