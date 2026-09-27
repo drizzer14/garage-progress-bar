@@ -23,7 +23,7 @@ context-menu "Research" handler uses exactly this path):
 """
 from CurrentVehicle import g_currentVehicle
 
-from wgmod_research._compat import LOG_CURRENT_EXCEPTION, LOG_PROD
+from wgmod_research._compat import LOG_CURRENT_EXCEPTION, LOG_NOTE
 
 
 # --- public API (called by the bridge command handlers) ----------------------
@@ -36,7 +36,7 @@ def research_unlock(int_cd):
     try:
         row = _find_unlock_row(veh, int_cd)
         if row is None:
-            LOG_PROD("[wgmod] research_unlock: %s not an available unlock" % int_cd)
+            LOG_NOTE("[wgmod] research_unlock: %s not an available unlock" % int_cd)
             _open_research_screen(veh)
             return
         if not _do_research(veh, int_cd, row):
