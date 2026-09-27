@@ -98,10 +98,16 @@ strings — run **wotmod:upgrade-analyzer** then **wotmod:upgrade-implementer** 
 seam-diff, the client-vs-mod-version distinction, and the major-bump-per-patch rule; the last
 run's plan is `TASKS/upgrade-<clientver>.json`).
 
-## 4. Publish the GitHub Release (all 3 assets)
+## 4. Publish the GitHub Release (all 3 assets + the installer's .sha256)
+The installer's self-update flow (`wgmod-setup.iss` → `DownloadAndVerifySha256`) refuses to
+run a downloaded update unless a `<asset>.sha256` file next to the `.exe` matches — so publish
+one every release:
 ```powershell
+(Get-FileHash dist\GarageProgressBar-Setup-X.Y.Z.exe -Algorithm SHA256).Hash.ToLower() |
+  Set-Content -NoNewline dist\GarageProgressBar-Setup-X.Y.Z.exe.sha256
 gh release create vX.Y.Z --title "vX.Y.Z" --notes-file <body.md> `
   dist\GarageProgressBar-Setup-X.Y.Z.exe `
+  dist\GarageProgressBar-Setup-X.Y.Z.exe.sha256 `
   dist\com.14th_ua.garageprogressbar_X.Y.Z.wotmod `
   dist\GarageProgressBar_X.Y.Z.zip
 ```

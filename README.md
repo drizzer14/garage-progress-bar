@@ -60,7 +60,7 @@ upgrades without leaving the Garage. **Hover** any tick or icon for a tooltip.
 
 **Easiest — the one-click installer (Windows).** Download the latest
 **`GarageProgressBar-Setup-<version>.exe`** from the
-[**GitHub Releases**](https://github.com/drizzer14/garage-research-progress/releases)
+[**GitHub Releases**](https://github.com/drizzer14/garage-progress-bar/releases)
 page and run it (close the game first). It finds your World of Tanks folder, installs
 the mod into `mods\<version>\`, and adds **OpenWG GameFace**, **Aslain ModMenu** and
 **ModsList** if you don't already have them. On each run it also checks GitHub and offers to
@@ -192,7 +192,7 @@ Building, deploying, testing, and the repo layout are documented in
 
 **Найпростіше — інсталятор в один клік (Windows).** Завантажте найновіший
 **`GarageProgressBar-Setup-<version>.exe`** зі сторінки
-[**релізів на GitHub**](https://github.com/drizzer14/garage-research-progress/releases)
+[**релізів на GitHub**](https://github.com/drizzer14/garage-progress-bar/releases)
 і запустіть (спершу закрийте гру). Він знаходить папку World of Tanks, встановлює мод
 у `mods\<version>\` і додає **OpenWG GameFace**, **Aslain ModMenu** та **ModsList**,
 якщо їх ще немає. Під час кожного запуску він також перевіряє GitHub і пропонує завантажити

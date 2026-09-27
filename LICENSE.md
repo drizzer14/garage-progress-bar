@@ -1,7 +1,7 @@
 # License
 
 **Garage Progress Bar** — a World of Tanks mod
-Copyright © 2026 14th_ua · https://github.com/drizzer14/garage-research-progress
+Copyright © 2026 14th_ua · https://github.com/drizzer14/garage-progress-bar
 
 This mod is free. You may:
 

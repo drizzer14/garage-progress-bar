@@ -21,7 +21,7 @@
 ; Used by the GitHub update check (see [Code]): the Atom feed + release-asset URLs
 ; are built from these, and SetupBaseName must match this .exe's filename convention.
 #define RepoOwner     "drizzer14"
-#define RepoName      "garage-research-progress"
+#define RepoName      "garage-progress-bar"
 #define SetupBaseName "GarageProgressBar-Setup"
 
 [Setup]
@@ -29,7 +29,7 @@ AppId={{8B6A1C3E-9D42-4F7A-BE1C-0D2F7C4A9E51}
 AppName=Garage Progress Bar
 AppVersion={#ModVersion}
 AppPublisher=14th_ua
-AppPublisherURL=https://github.com/drizzer14/garage-research-progress
+AppPublisherURL=https://github.com/drizzer14/garage-progress-bar
 DefaultDirName={code:DetectWotRoot}
 DisableProgramGroupPage=yes
 DisableReadyPage=no
@@ -448,7 +448,40 @@ begin
   end;
 end;
 
-{ Download the given installer asset into the temp dir and launch it. True on ok. }
+{ Download <Url>.sha256 (a plain hex digest, optionally "sha256sum"-style "<hex>  name")
+  and compare it against the already-downloaded FileName's actual SHA-256. False if the
+  hash file is missing, unreadable, or doesn't match -- never runs an unverified binary. }
+function VerifyDownloadedSha256(Url, FileName: string): Boolean;
+var
+  hashFile, hashText, expected, actual: string;
+  sp: Integer;
+begin
+  Result := False;
+  hashFile := FileName + '.sha256';
+  DownloadPage.Clear;
+  DownloadPage.Add(Url + '.sha256', hashFile, '');
+  DownloadPage.Show;
+  try
+    try
+      DownloadPage.Download;
+    except
+      Exit;  { no .sha256 published for this asset -> refuse to run it }
+    end;
+  finally
+    DownloadPage.Hide;
+  end;
+  if not LoadStringFromFile(ExpandConstant('{tmp}\' + hashFile), hashText) then
+    Exit;
+  expected := Trim(hashText);
+  sp := Pos(' ', expected);
+  if sp > 0 then
+    expected := Copy(expected, 1, sp - 1);  { "sha256sum" format: "<hex>  filename" }
+  actual := GetSHA256OfFile(ExpandConstant('{tmp}\' + FileName));
+  Result := (expected <> '') and (actual <> '') and (CompareText(expected, actual) = 0);
+end;
+
+{ Download the given installer asset into the temp dir, verify it against the pinned
+  <asset>.sha256 published on the release, and launch it. True on ok. }
 function DownloadAndRun(Url, FileName: string): Boolean;
 var
   rc: Integer;
@@ -467,9 +500,22 @@ begin
   finally
     DownloadPage.Hide;
   end;
-  if Result then
-    Result := Exec(ExpandConstant('{tmp}\' + FileName), '', '',
-                   SW_SHOWNORMAL, ewNoWait, rc);
+  if not Result then
+    Exit;
+  if not VerifyDownloadedSha256(Url, FileName) then
+  begin
+    Result := False;
+    MsgBox('Could not verify the downloaded update''s checksum (missing or mismatched ' +
+           '.sha256 on the release). Refusing to run it for your safety.'#13#10#13#10 +
+           'Opening the release page so you can download and verify it manually.',
+           mbError, MB_OK);
+    ShellExec('open',
+      'https://github.com/{#RepoOwner}/{#RepoName}/releases/latest', '', '',
+      SW_SHOWNORMAL, ewNoWait, rc);
+    Exit;
+  end;
+  Result := Exec(ExpandConstant('{tmp}\' + FileName), '', '',
+                 SW_SHOWNORMAL, ewNoWait, rc);
 end;
 
 { If GitHub has a release newer than max(installed, bundled), offer to fetch and

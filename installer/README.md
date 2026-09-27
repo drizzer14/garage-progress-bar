@@ -38,11 +38,17 @@ place** (other mods may use them).
 
 After you confirm the WoT folder, the installer makes one best-effort call to the
 GitHub releases Atom feed
-(`https://github.com/drizzer14/garage-research-progress/releases.atom`) and compares
+(`https://github.com/drizzer14/garage-progress-bar/releases.atom`) and compares
 the latest published version against the higher of *this installer's bundled version*
 and *any already-installed mod build* under `mods\<version>\`. If GitHub has a newer
 release, it offers to **download and launch that installer** for you, then closes
 itself so you continue with the current version.
+
+Before running the downloaded update, the installer downloads the matching
+`<asset>.sha256` published next to it on the GitHub release and verifies the .exe's
+SHA-256 against it. If the hash file is missing or doesn't match, it refuses to run the
+download and opens the release page instead so you can fetch/verify it by hand — see
+`gpb-release`'s publish step for how that `.sha256` is produced.
 
 It's entirely best-effort: no internet, a changed feed, or a failed download all fall
 back silently to installing the bundled version. Pass **`/SKIPUPDATECHECK`** on the
