@@ -36,16 +36,19 @@ not carry a differing 4-part client token, so a client patch that misses one fil
 IP-shaped tokens (the debug REPL's 127.0.0.1) are excluded so they never false-fail.
 
 `.claude/skills/**/*.md` + `CLAUDE.md` are prose nothing else greps, so they silently
-rot after a release or client upgrade. The core check above already covers old-MOD-
-version drift there (`.claude` isn't skipped, `.md` is in `_SCAN_EXT`, same _PATTERNS)
--- so on top of that, this file ALSO prints a fix-list (file:line + what's stale) for
-three narrower signals the core check can't see: an old bundled vendor .wotmod name
-(compares against installer/vendor/*.wotmod, id-only so a version-only bump isn't a
-false positive), an old settingsVersion/SETTINGS_VERSION value (compares against the
-mod's own source), and old atlas WxH dimensions (compares against the mod's own atlas
-PNG, read via IHDR, only on lines mentioning "atlas"). Every one of these is fail-soft:
-a mod without a vendor dep / settings panel / atlas just emits no rows for that
-category, never an error.
+rot after a release or client upgrade. The core check above scans these files too
+(`.claude` isn't skipped, `.md` is in `_SCAN_EXT`) but its _PATTERNS only match THIS
+mod's version in unadorned prose (a bare "version <v>", `MOD_VERSION = "<v>"`) -- a
+markdown-fenced mention wrapped in backticks or bold does NOT match any of those
+patterns and drifts silently. So on top of that, this file ALSO prints a fix-list
+(file:line + what's stale) for four narrower signals the core check can't see: a
+backtick- or bold-fenced mention of THIS mod's own version, an old bundled vendor
+.wotmod name (compares against installer/vendor/*.wotmod, id-only so a version-only
+bump isn't a false positive), an old settingsVersion/SETTINGS_VERSION value (compares
+against the mod's own source), and old atlas WxH dimensions (compares against the
+mod's own atlas PNG, read via IHDR, only on lines mentioning "atlas"). Every one of
+these is fail-soft: a mod without a vendor dep / settings panel / atlas just emits no
+rows for that category, never an error.
 
 Run `python check_version.py --selfcheck` to exercise the stale-doc scan logic against
 fixtures (no repo state needed).
@@ -145,6 +148,12 @@ _SETTINGS_VERSION_DOC_RE = re.compile(r"(?:SETTINGS_VERSION|settingsVersion)\D{0
 _SETTINGS_VERSION_CHANGELOG_RE = re.compile(r"\d\s*->\s*\d|\bas of\b", re.IGNORECASE)
 _ATLAS_DIMS_DOC_RE = re.compile(r"\b(\d{2,5})\s*[xX]\s*(\d{2,5})\b")
 _OWN_WOTMOD_RE = re.compile(r"com\.14th_ua\.garageprogressbar_\d+\.\d+\.\d+\.wotmod")
+# THIS mod's own version mentioned as a markdown-fenced literal, e.g. "mod version
+# `6.0.0`" or "**6.0.0** is current" -- the core _PATTERNS loop only matches
+# unadorned prose, never these. A changelog-shaped "<old>-><new>" bump note is
+# exempt, same idiom as _SETTINGS_VERSION_CHANGELOG_RE above.
+_OWN_VERSION_DOC_RE = re.compile(r"`(\d+\.\d+\.\d+)`|\*\*(\d+\.\d+\.\d+)\*\*")
+_OWN_VERSION_CHANGELOG_RE = re.compile(r"\d[`*]*\s*->\s*[`*]*\d")
 
 
 def _read_text(path):
@@ -217,16 +226,22 @@ def _current_atlas_dims():
     return None
 
 
-def _scan_line(line, vendor_ids, settings_version, atlas_dims):
+def _scan_line(line, vendor_ids, settings_version, atlas_dims, own_version=None):
     """Pure per-line check: returns a list of human-readable "what's stale" strings
     for one prose line. No disk I/O -- kept separate so demo() can exercise it with
     a fixture string.
 
-    NOTE: old-MOD-version detection is NOT duplicated here -- main()'s existing
-    _iter_files()/_PATTERNS pass already recursively scans .claude/skills/**/*.md +
-    CLAUDE.md (`.claude` isn't in _SKIP_DIRS, `.md` is in _SCAN_EXT) and fails on a
-    stale version there before this scan ever runs."""
+    NOTE: old-MOD-version detection in UNADORNED prose is NOT duplicated here --
+    main()'s existing _iter_files()/_PATTERNS pass already recursively scans
+    .claude/skills/**/*.md + CLAUDE.md (`.claude` isn't in _SKIP_DIRS, `.md` is in
+    _SCAN_EXT) and fails on that there before this scan ever runs. This function
+    ONLY adds the markdown-fenced form (backtick / bold) that pass misses."""
     findings = []
+    if own_version is not None and not _OWN_VERSION_CHANGELOG_RE.search(line):
+        for m in _OWN_VERSION_DOC_RE.finditer(line):
+            got = m.group(1) or m.group(2)
+            if got != own_version:
+                findings.append("mod version `%s` (current %s)" % (got, own_version))
     if vendor_ids:
         for m in _VENDOR_WOTMOD_RE.finditer(line):
             if _OWN_WOTMOD_RE.search(line):
@@ -248,10 +263,11 @@ def _scan_line(line, vendor_ids, settings_version, atlas_dims):
     return findings
 
 
-def _scan_stale_docs():
+def _scan_stale_docs(own_version):
     """Fix-list rows (file, line, what) for every stale reference found in
-    .claude/skills/**/*.md + CLAUDE.md. (Old-MOD-version drift in these same files
-    is already caught by main()'s core _PATTERNS pass -- not duplicated here.)"""
+    .claude/skills/**/*.md + CLAUDE.md. (Old-MOD-version drift in UNADORNED prose in
+    these same files is already caught by main()'s core _PATTERNS pass; this scan
+    additionally covers the markdown-fenced own-version form that pass misses.)"""
     vendor_ids = _shipped_vendor_ids()
     settings_version = _current_settings_version()
     atlas_dims = _current_atlas_dims()
@@ -262,7 +278,7 @@ def _scan_stale_docs():
             continue
         rel = os.path.relpath(path, ROOT).replace(os.sep, "/")
         for lineno, line in enumerate(text.splitlines(), 1):
-            for what in _scan_line(line, vendor_ids, settings_version, atlas_dims):
+            for what in _scan_line(line, vendor_ids, settings_version, atlas_dims, own_version):
                 rows.append((rel, lineno, what))
     return rows
 
@@ -333,7 +349,7 @@ def main():
                     or os.path.isfile(os.path.join(ROOT, rel.replace("/", os.sep))))]
 
     client_problems, client = _check_client_version()
-    stale_docs = _scan_stale_docs()
+    stale_docs = _scan_stale_docs(expected)
 
     rc = 0
     if mismatches:
@@ -384,7 +400,19 @@ def demo():
     stale_vendor_line = "Depends on " + "aslain.modssettingsapi_1.7.1" + ".wotmod for settings."
     settings_line = "settingsVersion" + " 11 is what ships today."
     atlas_line = "The atlas is " + "4096x5152" + " at build time."
+    own_backtick_line = "mod version `" + "0.1.0" + "`, unreleased."
+    own_bold_line = "**" + "0.1.0" + "** is what ships today."
+    own_changelog_line = "bumped `" + "0.1.0" + "`->`" + "2.0.0" + "` for the client upgrade."
     clean_line = "See MOD_VERSION" + " = \"2.0.0\" in the mod entry point."
+
+    found = _scan_line(own_backtick_line, set(), None, None, "2.0.0")
+    assert any("0.1.0" in f for f in found), found
+
+    found = _scan_line(own_bold_line, set(), None, None, "2.0.0")
+    assert any("0.1.0" in f for f in found), found
+
+    assert _scan_line(own_changelog_line, set(), None, None, "2.0.0") == []
+    assert _scan_line(own_backtick_line, set(), None, None) == []
 
     found = _scan_line(stale_vendor_line, {"aslain.modmenu"}, None, None)
     assert any("aslain.modssettingsapi_1.7.1.wotmod" in f for f in found), found
