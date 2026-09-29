@@ -453,7 +453,8 @@ end;
   hash file is missing, unreadable, or doesn't match -- never runs an unverified binary. }
 function VerifyDownloadedSha256(Url, FileName: string): Boolean;
 var
-  hashFile, hashText, expected, actual: string;
+  hashFile, expected, actual: string;
+  hashText: AnsiString;
   sp: Integer;
 begin
   Result := False;
@@ -472,7 +473,7 @@ begin
   end;
   if not LoadStringFromFile(ExpandConstant('{tmp}\' + hashFile), hashText) then
     Exit;
-  expected := Trim(hashText);
+  expected := Trim(String(hashText));
   sp := Pos(' ', expected);
   if sp > 0 then
     expected := Copy(expected, 1, sp - 1);  { "sha256sum" format: "<hex>  filename" }
