@@ -52,7 +52,7 @@ upgrades without leaving the Garage. **Hover** any tick or icon for a tooltip.
 
 | Requirement | Detail |
 |-------------|--------|
-| **Game** | World of Tanks **EU 2.4.0.1** (Wargaming global client). Built and tested against this version. |
+| **Game** | World of Tanks **EU 2.4.0.2** (Wargaming global client). Built and tested against this version. |
 | **Required** | **OpenWG GameFace** 1.1.6+ — install it first, or the bar will not appear. From [wgmods.net](https://wgmods.net) or [gitlab.com/openwg/wot.gameface](https://gitlab.com/openwg/wot.gameface). |
 | **Optional** | **Aslain ModMenu** + **ModsList** — add the mod's options to the in-game "Modification list" window. The installer bundles both; without them the bar simply shows everywhere with no toggles. Most modpacks already include them. |
 
@@ -189,7 +189,7 @@ Building, deploying, testing, and the repo layout are documented in
 
 | Вимога | Деталі |
 |--------|--------|
-| **Гра** | World of Tanks **EU 2.4.0.1** (глобальний клієнт Wargaming). Зібрано й перевірено для цієї версії. |
+| **Гра** | World of Tanks **EU 2.4.0.2** (глобальний клієнт Wargaming). Зібрано й перевірено для цієї версії. |
 | **Обов'язково** | **OpenWG GameFace** 1.1.6+ — встановіть першим, інакше смуга не з'явиться. З [wgmods.net](https://wgmods.net) або [gitlab.com/openwg/wot.gameface](https://gitlab.com/openwg/wot.gameface). |
 | **Необов'язково** | **Aslain ModMenu** + **ModsList** — додають параметри мода у вікно «Список модифікацій» у грі. Інсталятор містить обидва; без них смуга просто показується скрізь без перемикачів. Більшість модпаків уже містять їх. |
 
