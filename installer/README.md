@@ -18,7 +18,7 @@ installs the Garage Progress Bar mod and its dependencies — **OpenWG GameFace*
    `net.openwg.gameface_1.1.6.wotmod` in.
 4. **Installs Aslain ModMenu only if missing** — recursively checks for any
    `aslain.modmenu*.wotmod` (the Aslain build, bundled in most packs). If
-   absent, it copies the bundled `aslain.modmenu_2.0.03.wotmod` in. This powers
+   absent, it copies the bundled `aslain.modmenu_2.0.16.wotmod` in. This powers
    the settings; the bar still works without it (it just falls back to its default
    visibility).
 5. **Installs ModsList only if missing** — recursively checks for any
@@ -66,7 +66,7 @@ updating that define, or the updater won't find the new build.
 asset is not directly downloadable by an automated client (login/Cloudflare gated).
 OpenWG is open source and is routinely redistributed in WoT mod packs.
 
-`vendor/aslain.modmenu_2.0.03.wotmod` is the Aslain ModMenu library mod
+`vendor/aslain.modmenu_2.0.16.wotmod` is the Aslain ModMenu library mod
 (exposing `gui.aslainMenu`), the de-facto standard in-game settings
 framework bundled in modpacks like Aslain's. It is redistributed the same way.
 

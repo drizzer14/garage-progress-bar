@@ -23,7 +23,7 @@ $RepoRoot     = Split-Path -Parent $InstallerDir
 $Iss          = Join-Path $InstallerDir 'wgmod-setup.iss'
 $ModWotmod    = Join-Path $RepoRoot 'dist\com.14th_ua.garageprogressbar_6.0.0.wotmod'
 $OpenWg       = Join-Path $InstallerDir 'vendor\net.openwg.gameface_1.1.6.wotmod'
-$Msa          = Join-Path $InstallerDir 'vendor\aslain.modmenu_2.0.03.wotmod'
+$Msa          = Join-Path $InstallerDir 'vendor\aslain.modmenu_2.0.16.wotmod'
 $ModsList     = Join-Path $InstallerDir 'vendor\me.poliroid.modslistapi_1.7.9.wotmod'
 
 function Find-ISCC {
