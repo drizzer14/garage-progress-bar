@@ -76,12 +76,7 @@ SPACER = None
 # hierarchy the spacer and headers exist to create.
 HEADER_KEYS = frozenset((u"modes", u"formatting", u"layout"))
 
-# Keys deliberately shipped ENGLISH-ONLY for now -- their translations are scheduled
-# separately. render_panel's per-key fallback already renders the English master (marked
-# when MARK_UNTRANSLATED) for every non-`en` language, so they degrade cleanly; this set
-# just names the intent so the coverage tests don't demand the 10 pending translations and
-# a future translator knows exactly what's outstanding. Empty this set as languages land.
-EN_ONLY_KEYS = frozenset((u"onslaughtPosX", u"onslaughtPosY"))
+EN_ONLY_KEYS = frozenset()
 
 # Ordered key lists per column -- the wire order of the controls in ``_template()``. Used
 # by mod_settings to walk a stored template in lockstep (Label/Empty rows carry no varName).
@@ -137,9 +132,7 @@ _LABELS = {
         u"position": u"Position (px)",
         u"posX": u"Horizontal (center X)",
         u"posY": u"Vertical (top Y)",
-        # Onslaught garage's own X/Y steppers. English master only for now -- the other 10
-        # languages fall back to this via render_panel's per-key mark (translations scheduled
-        # separately).
+        # Onslaught garage's own X/Y steppers.
         u"onslaughtPosX": u"Horizontal (Onslaught X)",
         u"onslaughtPosY": u"Vertical (Onslaught Y)",
     },
@@ -156,6 +149,8 @@ _LABELS = {
         u"position": u"Position (px)",
         u"posX": u"Horizontal (Mitte X)",
         u"posY": u"Vertikal (oben Y)",
+        u"onslaughtPosX": u"Horizontal (Ansturm X)",
+        u"onslaughtPosY": u"Vertikal (Ansturm Y)",
     },
     u"fr": {
         u"modes": u"Modes",
@@ -170,6 +165,8 @@ _LABELS = {
         u"position": u"Position (px)",
         u"posX": u"Horizontale (centre X)",
         u"posY": u"Verticale (haut Y)",
+        u"onslaughtPosX": u"Horizontale (Assaut X)",
+        u"onslaughtPosY": u"Verticale (Assaut Y)",
     },
     u"es": {
         u"modes": u"Modos",
@@ -184,6 +181,8 @@ _LABELS = {
         u"position": u"Posición (px)",
         u"posX": u"Horizontal (centro X)",
         u"posY": u"Vertical (arriba Y)",
+        u"onslaughtPosX": u"Horizontal (Embestida X)",
+        u"onslaughtPosY": u"Vertical (Embestida Y)",
     },
     u"it": {
         u"modes": u"Modalità",
@@ -198,6 +197,8 @@ _LABELS = {
         u"position": u"Posizione (px)",
         u"posX": u"Orizzontale (centro X)",
         u"posY": u"Verticale (alto Y)",
+        u"onslaughtPosX": u"Orizzontale (Assalto X)",
+        u"onslaughtPosY": u"Verticale (Assalto Y)",
     },
     u"pl": {
         u"modes": u"Tryby",
@@ -212,6 +213,8 @@ _LABELS = {
         u"position": u"Pozycja (px)",
         u"posX": u"Pozioma (środek X)",
         u"posY": u"Pionowa (góra Y)",
+        u"onslaughtPosX": u"Pozioma (Napór X)",
+        u"onslaughtPosY": u"Pionowa (Napór Y)",
     },
     u"cs": {
         u"modes": u"Režimy",
@@ -226,6 +229,8 @@ _LABELS = {
         u"position": u"Pozice (px)",
         u"posX": u"Vodorovná (střed X)",
         u"posY": u"Svislá (nahoře Y)",
+        u"onslaughtPosX": u"Vodorovná (Nápor X)",
+        u"onslaughtPosY": u"Svislá (Nápor Y)",
     },
     u"ru": {
         u"modes": u"Режимы",
@@ -240,6 +245,8 @@ _LABELS = {
         u"position": u"Позиция (px)",
         u"posX": u"Горизонтальная (центр X)",
         u"posY": u"Вертикальная (верх Y)",
+        u"onslaughtPosX": u"Горизонтальная (Натиск X)",
+        u"onslaughtPosY": u"Вертикальная (Натиск Y)",
     },
     u"uk": {
         u"modes": u"Режими",
@@ -256,6 +263,8 @@ _LABELS = {
         u"position": u"Позиція (px)",
         u"posX": u"Горизонтальна (центр X)",
         u"posY": u"Вертикальна (верх Y)",
+        u"onslaughtPosX": u"Горизонтальна (Натиск X)",
+        u"onslaughtPosY": u"Вертикальна (Натиск Y)",
     },
     u"hu": {
         u"modes": u"Módok",
@@ -270,6 +279,8 @@ _LABELS = {
         u"position": u"Pozíció (px)",
         u"posX": u"Vízszintes (középpont X)",
         u"posY": u"Függőleges (felső Y)",
+        u"onslaughtPosX": u"Vízszintes (Roham X)",
+        u"onslaughtPosY": u"Függőleges (Roham Y)",
     },
     u"tr": {
         u"modes": u"Modlar",
@@ -284,6 +295,8 @@ _LABELS = {
         u"position": u"Konum (px)",
         u"posX": u"Yatay (merkez X)",
         u"posY": u"Dikey (üst Y)",
+        u"onslaughtPosX": u"Yatay (Hücum X)",
+        u"onslaughtPosY": u"Dikey (Hücum Y)",
     },
 }
 
@@ -468,6 +481,12 @@ _TOOLTIPS = {
                   u"Die MITTE der Leiste, in Pixeln vom linken Bildschirmrand."),
         u"posY": (u"Vertikale Position",
                   u"Die OBERKANTE der Leiste, in Pixeln vom oberen Bildschirmrand."),
+        u"onslaughtPosX": (u"Horizontale Position (Ansturm)",
+                           u"Die MITTE der Leiste in der Ansturm-Garage, in Pixeln vom linken "
+                           u"Bildschirmrand. 0 übernimmt die normale horizontale Position."),
+        u"onslaughtPosY": (u"Vertikale Position (Ansturm)",
+                           u"Die OBERKANTE der Leiste in der Ansturm-Garage, in Pixeln vom "
+                           u"oberen Bildschirmrand. 0 übernimmt die normale vertikale Position."),
     },
     u"fr": {
         u"showWhenComplete": (u"Entièrement progressé",
@@ -524,6 +543,14 @@ _TOOLTIPS = {
                   u"Le CENTRE de la barre, en pixels depuis le bord gauche de l'écran."),
         u"posY": (u"Position verticale",
                   u"Le HAUT de la barre, en pixels depuis le bord supérieur de l'écran."),
+        u"onslaughtPosX": (u"Position horizontale (Assaut)",
+                           u"Le CENTRE de la barre dans le garage Assaut, en pixels depuis le "
+                           u"bord gauche de l'écran. 0 reprend la position horizontale "
+                           u"habituelle."),
+        u"onslaughtPosY": (u"Position verticale (Assaut)",
+                           u"Le HAUT de la barre dans le garage Assaut, en pixels depuis le "
+                           u"bord supérieur de l'écran. 0 reprend la position verticale "
+                           u"habituelle."),
     },
     u"es": {
         u"showWhenComplete": (u"Progreso completo",
@@ -584,6 +611,14 @@ _TOOLTIPS = {
         u"posY": (u"Posición vertical",
                   u"La PARTE SUPERIOR de la barra, en píxeles desde el borde superior de la "
                   u"pantalla."),
+        u"onslaughtPosX": (u"Posición horizontal (Embestida)",
+                           u"El CENTRO de la barra en el garaje de Embestida, en píxeles desde "
+                           u"el borde izquierdo de la pantalla. 0 hereda la posición "
+                           u"horizontal normal."),
+        u"onslaughtPosY": (u"Posición vertical (Embestida)",
+                           u"La PARTE SUPERIOR de la barra en el garaje de Embestida, en "
+                           u"píxeles desde el borde superior de la pantalla. 0 hereda la "
+                           u"posición vertical normal."),
     },
     u"it": {
         u"showWhenComplete": (u"Completamente progredito",
@@ -643,6 +678,14 @@ _TOOLTIPS = {
         u"posY": (u"Posizione verticale",
                   u"La PARTE SUPERIORE della barra, in pixel dal bordo superiore dello "
                   u"schermo."),
+        u"onslaughtPosX": (u"Posizione orizzontale (Assalto)",
+                           u"Il CENTRO della barra nell'hangar Assalto, in pixel dal bordo "
+                           u"sinistro dello schermo. 0 eredita la normale posizione "
+                           u"orizzontale."),
+        u"onslaughtPosY": (u"Posizione verticale (Assalto)",
+                           u"La PARTE SUPERIORE della barra nell'hangar Assalto, in pixel dal "
+                           u"bordo superiore dello schermo. 0 eredita la normale posizione "
+                           u"verticale."),
     },
     u"pl": {
         u"showWhenComplete": (u"W pełni ukończone",
@@ -698,6 +741,12 @@ _TOOLTIPS = {
                   u"ŚRODEK paska, w pikselach od lewej krawędzi ekranu."),
         u"posY": (u"Pozycja pionowa",
                   u"GÓRA paska, w pikselach od górnej krawędzi ekranu."),
+        u"onslaughtPosX": (u"Pozycja pozioma (Napór)",
+                           u"ŚRODEK paska w garażu Napór, w pikselach od lewej krawędzi "
+                           u"ekranu. 0 przejmuje zwykłą pozycję poziomą."),
+        u"onslaughtPosY": (u"Pozycja pionowa (Napór)",
+                           u"GÓRA paska w garażu Napór, w pikselach od górnej krawędzi "
+                           u"ekranu. 0 przejmuje zwykłą pozycję pionową."),
     },
     u"cs": {
         u"showWhenComplete": (u"Plně dokončeno",
@@ -751,6 +800,12 @@ _TOOLTIPS = {
                   u"STŘED lišty, v pixelech od levého okraje obrazovky."),
         u"posY": (u"Svislá pozice",
                   u"HORNÍ HRANA lišty, v pixelech od horního okraje obrazovky."),
+        u"onslaughtPosX": (u"Vodorovná pozice (Nápor)",
+                           u"STŘED lišty v garáži Nápor, v pixelech od levého okraje "
+                           u"obrazovky. 0 převezme běžnou vodorovnou pozici."),
+        u"onslaughtPosY": (u"Svislá pozice (Nápor)",
+                           u"HORNÍ HRANA lišty v garáži Nápor, v pixelech od horního okraje "
+                           u"obrazovky. 0 převezme běžnou svislou pozici."),
     },
     u"ru": {
         u"showWhenComplete": (u"Полностью пройдено",
@@ -805,6 +860,12 @@ _TOOLTIPS = {
                   u"ЦЕНТР полосы, в пикселях от левого края экрана."),
         u"posY": (u"Позиция по вертикали",
                   u"ВЕРХ полосы, в пикселях от верхнего края экрана."),
+        u"onslaughtPosX": (u"Позиция по горизонтали (Натиск)",
+                           u"ЦЕНТР полосы в ангаре режима «Натиск», в пикселях от левого "
+                           u"края экрана. 0 наследует обычную позицию по горизонтали."),
+        u"onslaughtPosY": (u"Позиция по вертикали (Натиск)",
+                           u"ВЕРХ полосы в ангаре режима «Натиск», в пикселях от верхнего "
+                           u"края экрана. 0 наследует обычную позицию по вертикали."),
     },
     u"uk": {
         u"showWhenComplete": (u"Повністю пройдено",
@@ -859,6 +920,12 @@ _TOOLTIPS = {
                   u"ЦЕНТР смуги, у пікселях від лівого краю екрана."),
         u"posY": (u"Позиція по вертикалі",
                   u"ВЕРХ смуги, у пікселях від верхнього краю екрана."),
+        u"onslaughtPosX": (u"Позиція по горизонталі (Натиск)",
+                           u"ЦЕНТР смуги в ангарі режиму «Натиск», у пікселях від лівого "
+                           u"краю екрана. 0 успадковує звичайну позицію по горизонталі."),
+        u"onslaughtPosY": (u"Позиція по вертикалі (Натиск)",
+                           u"ВЕРХ смуги в ангарі режиму «Натиск», у пікселях від верхнього "
+                           u"краю екрана. 0 успадковує звичайну позицію по вертикалі."),
     },
     u"hu": {
         u"showWhenComplete": (u"Teljesen kész",
@@ -917,6 +984,12 @@ _TOOLTIPS = {
                   u"A sáv KÖZEPE, pixelben a képernyő bal szélétől."),
         u"posY": (u"Függőleges pozíció",
                   u"A sáv FELSŐ SZÉLE, pixelben a képernyő felső szélétől."),
+        u"onslaughtPosX": (u"Vízszintes pozíció (Roham)",
+                           u"A sáv KÖZEPE a Roham hangárban, pixelben a képernyő bal "
+                           u"szélétől. A 0 a szokásos vízszintes pozíciót örökli."),
+        u"onslaughtPosY": (u"Függőleges pozíció (Roham)",
+                           u"A sáv FELSŐ SZÉLE a Roham hangárban, pixelben a képernyő felső "
+                           u"szélétől. A 0 a szokásos függőleges pozíciót örökli."),
     },
     u"tr": {
         u"showWhenComplete": (u"Tamamen ilerlemiş",
@@ -972,6 +1045,12 @@ _TOOLTIPS = {
                   u"Çubuğun MERKEZİ, ekranın sol kenarından piksel cinsinden."),
         u"posY": (u"Dikey konum",
                   u"Çubuğun ÜST KENARI, ekranın üst kenarından piksel cinsinden."),
+        u"onslaughtPosX": (u"Yatay konum (Hücum)",
+                           u"Hücum garajında çubuğun ORTASI, ekranın sol kenarından piksel "
+                           u"cinsinden. 0 normal yatay konumu devralır."),
+        u"onslaughtPosY": (u"Dikey konum (Hücum)",
+                           u"Hücum garajında çubuğun ÜST KENARI, ekranın üst kenarından "
+                           u"piksel cinsinden. 0 normal dikey konumu devralır."),
     },
 }
 

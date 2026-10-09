@@ -403,9 +403,10 @@ tank now shows Fully Progressed instead of the Elite bar.)
     resolution-aware" below for the Onslaught X/Y split). Current `settingsVersion` =
     **15**. (varName-less `Label`/`Empty` rows are NOT collected into
     `_settingsStructure` — resolved in wotmod:msa-settings.)
-  - **Open hedge:** `EN_ONLY_KEYS` in `adapter/settings_i18n.py` marks the 2 Onslaught labels
-    (`onslaughtPosX`/`onslaughtPosY`) as English-only; translations to the other 10 languages are
-    pending — empty the set as languages land.
+  - `EN_ONLY_KEYS` in `adapter/settings_i18n.py` is now EMPTY: the 2 Onslaught keys
+    (`onslaughtPosX`/`onslaughtPosY`) have labels + tooltips in all 11 languages (non-en terms are
+    best-effort, pending native-speaker review). Add a key to the set only to ship a new
+    setting English-first.
   - **`settings_i18n.COL1_KEYS`/`COL2_KEYS` must stay in lockstep with `_template()` wire order,
     POSITIONALLY — textless rows included.** `_sync_template_text` zips the key tuples against
     the STORED template's component list, so **every textless row (a `Label` header, an `Empty`

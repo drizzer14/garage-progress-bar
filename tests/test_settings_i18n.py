@@ -351,3 +351,12 @@ def test_panel_text_labels_and_english_tooltips(monkeypatch):
     assert t[u"modes"][u"text"] == u"<b>Modes</b>"
     assert t[u"showFieldMods"][u"text"] == u"Field Modifications"
     assert t[u"showFieldMods"][u"tooltip"].startswith(u"{HEADER}Field Modifications{/HEADER}")
+
+
+def test_onslaught_keys_translated_in_every_language():
+    # EN_ONLY_KEYS must stay empty and the Onslaught keys must never leak English.
+    assert not S.EN_ONLY_KEYS
+    for key in (u"onslaughtPosX", u"onslaughtPosY"):
+        for code in _SHIPPED:
+            assert S._LABELS[code][key] != S._LABELS[u"en"][key], (code, key)
+            assert S._TOOLTIPS[code][key] != S._TOOLTIPS[u"en"][key], (code, key)

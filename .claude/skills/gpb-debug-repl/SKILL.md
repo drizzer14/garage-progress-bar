@@ -10,9 +10,8 @@ navigation, the general "isn't loading" checklist): see the **wotmod:debug-repl*
 skill. This skill is this mod's concrete REPL + snippets.
 
 ## The debug REPL
-The per-mod debug REPL (`tools/dev/mod_wgmod_debug.py`, `build_debug_wotmod.py`,
-`repl_client.py`) has been retired in favour of ONE harness-owned REPL used across all
-14th_ua mods: `wotmod-harness/plugins/wotmod/tools/debug-repl/` (package id
+The per-mod debug REPL (`tools/dev/mod_wgmod_debug.py`, `build_debug_wotmod.py`, `repl_client.py`) has been retired in favour of ONE
+harness-owned REPL used across all 14th_ua mods: `wotmod-harness/plugins/wotmod/tools/debug-repl/` (package id
 `com.wotmod_harness.debug_repl`, port **2223**, client `repl_client.py` there). See the
 **wotmod:debug-repl** harness skill for build/deploy/drive commands — nothing mod-specific
 remains here.

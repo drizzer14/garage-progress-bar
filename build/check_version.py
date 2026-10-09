@@ -283,6 +283,34 @@ def _scan_stale_docs(own_version):
     return rows
 
 
+# Evidence / historical prose names an old client on purpose; skip lines with these markers.
+_CLIENT_DOC_RE = re.compile(r"\b2\.\d+\.\d+\.\d+\b")
+_CLIENT_DOC_EXEMPT = ("confirmed", "on client", "not re-measured", "eu 2.3", "example")
+
+
+def _client_drift(line, client):
+    """Pure per-line check: stale 4-part client tokens in a doc line (exempt lines -> [])."""
+    if any(w in line.lower() for w in _CLIENT_DOC_EXEMPT):
+        return []
+    return [t for t in _CLIENT_DOC_RE.findall(line) if t != client]
+
+
+def _scan_client_docs(client):
+    """Gating rows (file, line, token) for stale client versions in skills + CLAUDE.md."""
+    rows = []
+    for path in _iter_doc_files():
+        if not path.endswith(("SKILL.md", "CLAUDE.md")):
+            continue
+        text = _read_text(path)
+        if text is None:
+            continue
+        rel = os.path.relpath(path, ROOT).replace(os.sep, "/")
+        for lineno, line in enumerate(text.splitlines(), 1):
+            for tok in _client_drift(line, client):
+                rows.append((rel, lineno, tok))
+    return rows
+
+
 def _check_client_version():
     """Return a list of client-version problems (empty = OK). Scoped to _CLIENT_REQUIRED so
     it never false-fails on prose that merely mentions a version (this file's own examples,
@@ -350,8 +378,15 @@ def main():
 
     client_problems, client = _check_client_version()
     stale_docs = _scan_stale_docs(expected)
+    client_docs = _scan_client_docs(client)
 
     rc = 0
+    if client_docs:
+        print("Stale client version in skills/CLAUDE.md (build_wgmods_zip.py says %s):"
+              % client)
+        for rel, lineno, tok in client_docs:
+            print("  %s:%d  found %s" % (rel, lineno, tok))
+        rc = 1
     if mismatches:
         print("Version mismatch (src/meta.xml says %s):" % expected)
         for rel, lineno, got, line in mismatches:
@@ -432,6 +467,12 @@ def demo():
 
     found = _scan_line(clean_line, set(), None, None)
     assert found == [], found
+
+    # client-version drift in docs: mismatch flagged, exempt line skipped, match clean.
+    assert _client_drift("Targets client " + "2.1.0.0 today.", "2.4.0.2") == ["2.1.0.0"]
+    assert _client_drift("Confirmed " + "2.1.0.0 only.", "2.4.0.2") == []
+    assert _client_drift("on client " + "2.1.0.0 it broke.", "2.4.0.2") == []
+    assert _client_drift("Targets client " + "2.4.0.2 today.", "2.4.0.2") == []
 
     # fail-soft: missing category data -> never flags, never errors.
     assert _scan_line(stale_vendor_line, set(), None, None) == []
