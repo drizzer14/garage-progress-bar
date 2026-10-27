@@ -15,7 +15,7 @@ skill is the concrete wiring for the Garage Progress Bar.
 & "C:\Python27\python.exe" build/build_wotmod.py
 
 # Clean-build-and-deploy into a local install (Py 2.7, CLIENT CLOSED — file locks)
-& "C:\Python27\python.exe" build/deploy_wotmod.py "D:/Games/World_of_Tanks_EU" 2.4.1.0
+& "C:\Python27\python.exe" build/deploy_wotmod.py "D:/Games/World_of_Tanks_EU" 2.4.1.1
 & "C:\Python27\python.exe" build/deploy_wotmod.py          # uses deploy.local.json (gitignored)
 
 # Domain-layer tests (Py 3.13) — engine-free, no game needed
@@ -23,7 +23,7 @@ skill is the concrete wiring for the Garage Progress Bar.
 & "<py3>" -m pytest tests/test_resolver_techtree.py -q     # single file
 
 # Hot-reload JS/CSS ONLY, no relaunch (Py 3.13) — then switch screens in-game to refresh
-& "<py3>" tools/dev/sync_gameface.py "D:/Games/World_of_Tanks_EU" 2.4.1.0
+& "<py3>" tools/dev/sync_gameface.py "D:/Games/World_of_Tanks_EU" 2.4.1.1
 ```
 `<py3>` = `%LOCALAPPDATA%\Programs\Python\Python313\python.exe`.
 
@@ -55,7 +55,7 @@ skill is the concrete wiring for the Garage Progress Bar.
   to land the exact tested/published artifact (e.g. a QA-gate + deploy of the released
   v1.3.0 `.wotmod`), copy the precise
   `dist\com.14th_ua.garageprogressbar_<ver>.wotmod` by hand into `mods\<client-version>\`
-  (e.g. `mods\2.4.1.0\`) with the CLIENT CLOSED — a running client locks the stale
+  (e.g. `mods\2.4.1.1\`) with the CLIENT CLOSED — a running client locks the stale
   `..._<oldver>.wotmod` (`Device or resource busy` on delete), so the old-copy cleanup can't
   finish while it's open. (Same-`<id>` highest-version-wins and scan-only-at-launch mechanics:
   see **wotmod:build-deploy**.) Reserve `deploy_wotmod.py` for the normal build-and-deploy loop.

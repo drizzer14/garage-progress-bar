@@ -117,7 +117,7 @@ Body: intro + `### What's new in X.Y.Z` + Requirements + Install (recommended, .
 install (.wotmod). **Only ever reference Wargaming's World of Tanks.** Never name or contrast
 against any other/regional fork of the game in release notes, readmes, or any doc — these mods
 target Wargaming's World of Tanks only, which every consumer already knows. State compatibility
-positively ("World of Tanks EU 2.4.1.0", "Wargaming EU/global client"). Before publishing,
+positively ("World of Tanks EU 2.4.1.1", "Wargaming EU/global client"). Before publishing,
 proofread every release body + readme to confirm no other client is named.
 
 **Published releases are IMMUTABLE here.** Once a release is published you CANNOT add, delete,
