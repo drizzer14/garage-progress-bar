@@ -68,6 +68,8 @@ locally first (see gpb-build-deploy) so a drifted version, ruff error, or red te
 turn the release commit red after the fact.
 
 ## 3. Build the artifacts (into gitignored dist/)
+Run `pytest` BEFORE preparing the release `dist/`, never after: `tests/test_build_no_path_leak.py`
+rebuilds `dist/*.wotmod` and changes its hash.
 ```powershell
 python build\clean_dist.py            # tidy dist/ to one release's files; --dry-run to preview
 & "C:\Python27\python.exe" build\build_wotmod.py    # -> dist\com.14th_ua.garageprogressbar_X.Y.Z.wotmod
