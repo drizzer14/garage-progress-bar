@@ -189,7 +189,7 @@ Building, deploying, testing, and the repo layout are documented in
 
 | Вимога | Деталі |
 |--------|--------|
-| **Гра** | World of Tanks **EU 2.4.2.0** (глобальний клієнт Wargaming). Зібрано й перевірено для цієї версії. |
+| **Гра** | World of Tanks **EU 2.4.2.0** (глобальний клієнт Wargaming). Зібрано для цієї версії. |
 | **Обов'язково** | **OpenWG GameFace** 1.2.2+ — встановіть першим, інакше смуга не з'явиться. З [wgmods.net](https://wgmods.net) або [gitlab.com/openwg/wot.gameface](https://gitlab.com/openwg/wot.gameface). |
 | **Необов'язково** | **Aslain ModMenu** + **ModsList** — додають параметри мода у вікно «Список модифікацій» у грі. Інсталятор містить обидва; без них смуга просто показується скрізь без перемикачів. Більшість модпаків уже містять їх. |
 

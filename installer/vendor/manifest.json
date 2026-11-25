@@ -2,6 +2,7 @@
   "_comment": "Origin/licence/sha256 for every bundled vendor .wotmod (see installer/README.md \"Bundled dependencies\"). Bump the sha256 (and origin/licence if they changed) whenever a vendor file is replaced -- tests/test_vendor_manifest.py fails the build otherwise.",
   "aslain.modmenu_2.1.06.wotmod": {
     "origin": "https://wgmods.net (Aslain ModMenu)",
+    "source_note": "this build copied from a local client install (mods/2.4.1.1)",
     "licence": "proprietary, redistributable as a vendored dependency per Aslain's distribution terms",
     "sha256": "2df0eb0a2f4debff9b02f40d37e79d6f510e9ff2d869efb269771aa2c8f8f0a6"
   },
