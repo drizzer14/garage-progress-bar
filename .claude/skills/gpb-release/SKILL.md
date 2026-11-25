@@ -78,7 +78,7 @@ pwsh installer\build_installer.ps1                   # -> dist\GarageProgressBar
 The installer needs the `.wotmod` already built and ALL THREE vendor payloads present
 (`build_installer.ps1` throws if any is missing):
 `installer\vendor\net.openwg.gameface_1.2.2.wotmod`,
-`installer\vendor\aslain.modmenu_2.1.04.wotmod`, and
+`installer\vendor\aslain.modmenu_2.1.06.wotmod`, and
 `installer\vendor\me.poliroid.modslistapi_1.8.0.wotmod`.
 
 Consumer zip (no committed generator — hand-assemble): bump `dist\INSTALL.txt` version, then
@@ -119,7 +119,7 @@ Body: intro + `### What's new in X.Y.Z` + Requirements + Install (recommended, .
 install (.wotmod). **Only ever reference Wargaming's World of Tanks.** Never name or contrast
 against any other/regional fork of the game in release notes, readmes, or any doc — these mods
 target Wargaming's World of Tanks only, which every consumer already knows. State compatibility
-positively ("World of Tanks EU 2.4.1.1", "Wargaming EU/global client"). Before publishing,
+positively ("World of Tanks EU 2.4.2.0", "Wargaming EU/global client"). Before publishing,
 proofread every release body + readme to confirm no other client is named.
 
 **Published releases are IMMUTABLE here.** Once a release is published you CANNOT add, delete,

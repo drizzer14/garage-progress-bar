@@ -1,9 +1,9 @@
 {
   "_comment": "Origin/licence/sha256 for every bundled vendor .wotmod (see installer/README.md \"Bundled dependencies\"). Bump the sha256 (and origin/licence if they changed) whenever a vendor file is replaced -- tests/test_vendor_manifest.py fails the build otherwise.",
-  "aslain.modmenu_2.1.04.wotmod": {
+  "aslain.modmenu_2.1.06.wotmod": {
     "origin": "https://wgmods.net (Aslain ModMenu)",
     "licence": "proprietary, redistributable as a vendored dependency per Aslain's distribution terms",
-    "sha256": "674f95cf3526e646cea64be55767a9bfe51b19b109326e8c4132881a7a76a5b4"
+    "sha256": "2df0eb0a2f4debff9b02f40d37e79d6f510e9ff2d869efb269771aa2c8f8f0a6"
   },
   "me.poliroid.modslistapi_1.8.0.wotmod": {
     "origin": "ModsList (https://gitlab.com/wot-public-mods/mods-list)",
